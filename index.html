@@ -1,5 +1,164 @@
 <!doctype html>
 <html lang="en">
+
+<!--
+================================================================================
+QUADGEN DEVELOPMENT CONTINUATION DOCUMENT
+================================================================================
+
+CURRENT VERSION: v1.2
+LAST UPDATED: 2025-01-27
+
+================================================================================
+OVERVIEW
+================================================================================
+quadGEN is a web-based tool for generating QuadToneRIP .quad files for Epson 
+inkjet printers. It creates 256-step linearization curves with support for 
+custom ink limits, linearization data, and various interpolation methods.
+
+SUPPORTED PRINTERS:
+- P800: 8 channels (K,C,M,Y,LC,LM,LK,LLK)
+- P700-P900: 10 channels (K,C,M,Y,LC,LM,LK,LLK,V,MK)
+
+================================================================================
+KEY ARCHITECTURAL DECISIONS
+================================================================================
+
+CURVE GENERATION PIPELINE:
+1. Base Curve: Either loaded .quad curve data OR generated linear ramp
+2. Per-Channel Linearization: Applied if loaded (.cube files)
+3. Global Linearization: Applied if loaded (.cube/.txt files)
+4. Interpolation Method: Determines how sparse linearization data is interpolated
+
+INTERPOLATION METHODS:
+- Only enabled when linearization data with <256 points is loaded
+- Disabled for loaded .quad files (already have 256 points)
+- Methods: Cubic, Catmull-Rom (with tension), PCHIP, Linear
+
+CHANNEL STATE MANAGEMENT:
+- Channels can be enabled/disabled via checkboxes
+- Disabled channels: Set to 0, remember previous values for restore
+- Apply-to-all functions skip disabled channels
+- Visual feedback: Compact layout, reduced opacity for disabled channels
+
+FILE FORMAT SUPPORT:
+- .quad files: Complete 256-point curves (input/output)
+- .cube files: 1D LUTs for linearization corrections
+- .txt files: Color Muse measurement data for linearization
+- .acv files: REMOVED in v1.2 (limited open-source support)
+
+================================================================================
+VERSION HISTORY
+================================================================================
+
+v1.2 (2025-01-27) - Major Feature Release:
+ADDED:
+- Complete .quad file loading with curve preservation
+- Layered processing system (base curves + linearization)
+- Enhanced file validation and error handling
+- Info popup with version information
+- Compact UI controls and improved UX
+
+CHANGED:
+- Merged P700/P900 into single "P700-P900" option (identical 10-channel config)
+- Interpolation controls now properly disabled for loaded .quad files
+- Apply-to-all functions respect disabled channel checkboxes
+- Enhanced scrollbar styling for file preview (24px, bright white, 60px min)
+
+REMOVED:
+- ACV file support (Photoshop curve files)
+- Smoothing intensity controls (pure interpolation preferred)
+
+TECHNICAL:
+- Loaded .quad data stored in loadedQuadData global variable
+- make256() function checks for loaded curves before generating linear ramps
+- hasAnyLinearization() determines when interpolation controls are relevant
+- updateInterpolationControls() manages UI state and visual feedback
+
+v1.1 (Previous):
+- Catmull-Rom spline interpolation with tension parameter
+- Channel memory system for disabled channels
+- Cube file inverse mapping corrections
+- Tension controls for spline customization
+
+v1.0 (Initial):
+- Basic linear ramp generation
+- Printer configuration support
+- File download functionality
+- Chart visualization
+
+================================================================================
+IMPORTANT IMPLEMENTATION NOTES
+================================================================================
+
+CURVE DATA HANDLING:
+- Linear ramps: Generated mathematically from 0 to endValue over 256 steps
+- Loaded curves: Scaled proportionally when ink limits change
+- Linearization: Applied as lookup table transformations
+- All values clamped to 0-65535 range (QuadToneRIP standard)
+
+INTERPOLATION BEHAVIOR:
+- Only applies to linearization data with sparse control points
+- Uses 1D LUT application via apply1DLUT() function
+- Forward mapping: input value → LUT lookup → output value
+- Different methods affect smoothness of sparse data expansion
+
+CHANNEL MANAGEMENT:
+- Each channel has: percentage, end value, enable/disable state
+- Percentage and end value stay in sync (computed conversion)
+- Disabled channels: checkbox unchecked, values = 0, previous values stored
+- Channel memory: channelPreviousValues object stores values for restore
+
+UI STATE MANAGEMENT:
+- Interpolation controls enabled/disabled based on hasAnyLinearization()
+- File info displayed for loaded .quad files
+- Status messages provide user feedback
+- Tooltips explain control functionality
+
+FILENAME GENERATION:
+- Auto-generated from: PrinterModel_Ch1Value_Ch2Value...
+- User can override by editing (marked as userEdited)
+- Loaded .quad files default to: originalname_copy
+- Sanitized for filesystem compatibility
+
+================================================================================
+TESTING NOTES
+================================================================================
+
+KEY TEST SCENARIOS:
+1. Load .quad file → verify curve preservation and limit scaling
+2. Load .quad + add linearization → verify layered processing
+3. Enable/disable channels → verify apply-to-all skips disabled
+4. Switch printers → verify channel count and layout changes
+5. File validation → verify error handling for corrupted/invalid files
+
+EDGE CASES:
+- Empty .quad files or corrupted data
+- Linearization files with invalid ranges
+- Channel limit changes on loaded curves
+- Printer switching with loaded data
+- File size limits and validation
+
+================================================================================
+FUTURE CONSIDERATIONS
+================================================================================
+
+POTENTIAL ENHANCEMENTS:
+- Additional printer model support
+- Batch processing capabilities  
+- Curve comparison tools
+- Export format options
+- Advanced curve editing features
+
+ARCHITECTURAL NOTES:
+- Single HTML file approach for simplicity and portability
+- Client-side processing (no server dependencies)
+- Tailwind CSS for styling consistency
+- Vanilla JavaScript for maximum compatibility
+
+================================================================================
+-->
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
