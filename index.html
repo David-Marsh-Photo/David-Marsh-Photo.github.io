@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>quadGEN v1.0</title>
+  <title>quadGEN v1.1</title>
   <meta name="description" content="quadGEN - Generate Epson P900/P800 QuadToneRIP .quad files with 256-step ramps per channel." />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -21,123 +21,265 @@
     input[type="number"]::-moz-number-spin-box {
       -moz-appearance: spin-textfield !important;
     }
+
+    /* Slider toggle styles */
+    .slider-toggle {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+
+    .slider-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 20px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #10b981;
+    }
+
+    input:focus + .slider {
+      box-shadow: 0 0 1px #10b981;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    input:disabled + .slider {
+      background-color: #e5e5e5;
+      cursor: not-allowed;
+    }
+
+    input:disabled + .slider:before {
+      background-color: #f5f5f5;
+    }
+
+    /* Custom scrollbar styling for file preview */
+    #previewFull::-webkit-scrollbar {
+      width: 24px;
+    }
+
+    #previewFull::-webkit-scrollbar-track {
+      background: #2d3748;
+      border-radius: 12px;
+    }
+
+    #previewFull::-webkit-scrollbar-thumb {
+      background: #ffffff;
+      border-radius: 12px;
+      border: 3px solid #2d3748;
+      min-height: 60px;
+    }
+
+    #previewFull::-webkit-scrollbar-thumb:hover {
+      background: #f7fafc;
+    }
+
+    #previewFull::-webkit-scrollbar-thumb:active {
+      background: #e2e8f0;
+    }
+
+    /* Instant tooltip for linearization buttons */
+    .per-channel-btn, #globalLinearizationBtn {
+      position: relative;
+    }
+
+    .per-channel-btn:hover::after, #globalLinearizationBtn:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #1f2937;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 1000;
+      margin-bottom: 4px;
+      pointer-events: none;
+    }
+
+    .per-channel-btn:hover::before, #globalLinearizationBtn:hover::before {
+      content: '';
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 4px solid #1f2937;
+      z-index: 1000;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body class="min-h-screen bg-gray-50 p-6">
   <main class="mx-auto max-w-6xl">
     <section class="bg-white rounded-2xl shadow-lg p-6 md:p-8">
       <header class="mb-6">
-        <div class="flex items-center gap-4 mb-2">
-          <svg id="quadgenLogo" xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 160 160" role="img" aria-labelledby="quadgenTitle quadgenDesc">
-            <title id="quadgenTitle">quadGEN icon (CMYK)</title>
-            <desc id="quadgenDesc">Four CMYK bars with a rising Bezier-style curve and nodes, flat design.</desc>
-            <!-- baseline -->
-            <path d="M16 132H144" fill="none" stroke="#1A1A1A" stroke-width="8" stroke-linecap="round"/>
-            <!-- CMYK bars -->
-            <rect id="cyanBar" x="20" y="90" width="20" height="40" rx="6" ry="6" fill="#00B5E2"/>
-            <rect id="magentaBar" x="52" y="70" width="20" height="60" rx="6" ry="6" fill="#FF2A8A"/>
-            <rect id="yellowBar" x="84" y="50" width="20" height="80" rx="6" ry="6" fill="#FFD400"/>
-            <rect id="blackBar" x="116" y="22" width="20" height="110" rx="6" ry="6" fill="#1A1A1A"/>
-            <!-- Bezier-like curve -->
-            <path id="logoPath" d="M30 88 C 44 84, 50 72, 62 68 S 86 50, 94 48 S 118 28, 126 18"
-                  fill="none" stroke="#1A1A1A" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-            <!-- curve nodes -->
-            <circle id="node1" cx="30" cy="88" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
-            <circle id="node2" cx="62" cy="68" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
-            <circle id="node3" cx="94" cy="48" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
-            <circle id="node4" cx="126" cy="18" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
-          </svg>
-          <div>
-            <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">
-              quadGEN
-              <span class="text-gray-400 text-lg">v1.0</span>
-            </h1>
-            <p class="text-gray-400 text-sm -mt-1">by David Marsh</p>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center mb-2">
+          <div class="flex items-center gap-4 lg:col-span-2">
+            <svg id="quadgenLogo" xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 160 160" role="img" aria-labelledby="quadgenTitle quadgenDesc">
+              <title id="quadgenTitle">quadGEN icon (CMYK)</title>
+              <desc id="quadgenDesc">Four CMYK bars with a rising Bezier-style curve and nodes, flat design.</desc>
+              <!-- baseline -->
+              <path d="M16 132H144" fill="none" stroke="#1A1A1A" stroke-width="8" stroke-linecap="round"/>
+              <!-- CMYK bars -->
+              <rect id="cyanBar" x="20" y="90" width="20" height="40" rx="6" ry="6" fill="#00B5E2"/>
+              <rect id="magentaBar" x="52" y="70" width="20" height="60" rx="6" ry="6" fill="#FF2A8A"/>
+              <rect id="yellowBar" x="84" y="50" width="20" height="80" rx="6" ry="6" fill="#FFD400"/>
+              <rect id="blackBar" x="116" y="22" width="20" height="110" rx="6" ry="6" fill="#1A1A1A"/>
+              <!-- Bezier-like curve -->
+              <path id="logoPath" d="M30 88 C 44 84, 50 72, 62 68 S 86 50, 94 48 S 118 28, 126 18"
+                    fill="none" stroke="#1A1A1A" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- curve nodes -->
+              <circle id="node1" cx="30" cy="88" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
+              <circle id="node2" cx="62" cy="68" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
+              <circle id="node3" cx="94" cy="48" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
+              <circle id="node4" cx="126" cy="18" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
+            </svg>
+            <div>
+              <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">
+                quadGEN
+                <span class="text-gray-400 text-lg">v1.1</span>
+              </h1>
+              <p class="text-gray-400 text-sm -mt-1">by David Marsh</p>
+            </div>
+            
+            <!-- Compact printer selector -->
+            <div class="flex items-center gap-2 bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 ml-auto">
+              <label for="printerSelect" class="text-sm font-medium text-gray-700">Printer:</label>
+              <select id="printerSelect" class="text-sm rounded border border-gray-300 px-2 py-1">
+                <option value="P700">P700</option>
+                <option value="P800">P800</option>
+                <option value="P900" selected>P900</option>
+              </select>
+              <p id="channelInfo" class="text-xs text-gray-600 ml-1"></p>
+            </div>
+          </div>
+          
+          <!-- Status Display -->
+          <div class="lg:col-span-1">
+            <div class="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-center">
+              <span id="status" class="text-xs text-gray-600 font-medium transition-opacity duration-500 ease-in-out">&nbsp;</span>
+            </div>
           </div>
         </div>
         <p id="printerDescription" class="text-gray-600 mt-1"></p>
       </header>
-
-      <!-- Printer selector -->
-      <div class="mb-6">
-        <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
-          <div class="font-medium text-gray-700">Select Printer</div>
-          <div class="flex flex-wrap items-center gap-3 mt-1">
-            <label for="printerSelect" class="sr-only">Printer</label>
-            <select id="printerSelect" class="rounded-lg border border-gray-300 px-3 py-2">
-              <option value="P700">Epson P700</option>
-              <option value="P800">Epson P800</option>
-              <option value="P900" selected>Epson P900</option>
-            </select>
-            <p id="channelInfo" class="text-sm text-gray-600"></p>
-          </div>
-        </div>
-      </div>
 
       <!-- Ink Limits Graph and Linearization -->
       <div class="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Graph Section -->
         <div class="lg:col-span-2">
           <div class="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 class="text-lg font-semibold mb-3">Ink Limits Visualization</h3>
             <div class="bg-gray-50 rounded-lg p-4">
-              <canvas id="inkChart" width="950" height="600" class="w-full h-auto max-h-96"></canvas>
+              <canvas id="inkChart" width="950" height="700" class="w-full h-auto max-h-none"></canvas>
             </div>
           </div>
         </div>
         
         <!-- Linearization Section -->
-        <div class="lg:col-span-1">
-          <div class="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 class="text-lg font-semibold mb-3">Linearization Data</h3>
-            <p class="text-sm text-gray-600 mb-4">Apply correction curves to modify ink channel outputs uniformly.</p>
+        <div class="lg:col-span-1 space-y-4">
+          <!-- Global Linearization -->
+          <div class="bg-white border border-gray-200 rounded-xl p-3">
+            <h3 class="text-lg font-semibold mb-2">Global Linearization Data</h3>
+            <p class="text-xs text-gray-600 mb-2">Apply correction curves to modify all ink channels uniformly.</p>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3">
+              <p class="text-xs text-blue-800 font-medium mb-1">File Format Info:</p>
+              <p class="text-xs text-blue-700">
+                <strong>.txt (Color Muse):</strong> Raw measurements → calculates correction curve<br>
+                <strong>.cube:</strong> Pre-made correction curves → applies directly
+              </p>
+            </div>
             
             <!-- Linearization Controls -->
-            <div class="space-y-4">              
+            <div class="space-y-3">              
               <!-- File Upload -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Upload Linearization File</label>
-                <input type="file" id="linearizationFile" accept=".cube,.txt,.csv,.quad" class="w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-black file:text-white hover:file:bg-black/90">
-                <p class="text-xs text-gray-500 mt-1">accepts EDN 1D .cube files</p>
-              </div>
-              
-              <!-- Apply Button -->
-              <button id="applyLinearization" class="w-full rounded-lg px-4 py-2 bg-gray-300 text-gray-500 cursor-not-allowed" disabled>
-                Apply Linearization
-              </button>
-              
-              <!-- Smoothing Method -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Curve Smoothing Method</label>
-                <select id="curveSmoothingMethod" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" disabled>
-                  <option value="cubic">Cubic Spline</option>
-                  <option value="pchip" selected>PCHIP (monotonic)</option>
-                  <option value="linear">Linear (none)</option>
-                </select>
-                <p class="text-xs text-gray-500 mt-1">Choose how to interpolate between LUT data points</p>
-                
-                <!-- Smoothing Intensity -->
-                <div class="mt-3" id="smoothingIntensityContainer" style="display: none;">
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Smoothing Intensity</label>
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-500">None</span>
-                    <input type="range" id="smoothingIntensity" min="0" max="100" value="100" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" disabled>
-                    <span class="text-xs text-gray-500">Full</span>
-                  </div>
-                  <p class="text-xs text-gray-500 mt-1">Adjust the strength of curve smoothing</p>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Data Source</label>
+                <div id="globalLinearizationInfo" class="text-xs text-gray-600 mb-2 hidden">
+                  <span id="globalLinearizationFilename" class="font-medium"></span>
+                  <span id="globalLinearizationDetails" class="text-gray-500"></span>
                 </div>
+                <div class="inline-flex items-center gap-2">
+                  <input type="file" id="linearizationFile" accept=".cube,.txt" class="hidden">
+                  <button id="globalLinearizationBtn" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded border border-gray-300 transition-colors" data-tooltip="Load global linearization">load file</button>
+                  <label class="slider-toggle" title="Enable/disable global linearization">
+                    <input type="checkbox" id="globalLinearizationToggle" disabled>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">accepts .cube or .txt (Color Muse) files</p>
               </div>
             </div>
           </div>
+          
+          <!-- Interpolation Method -->
+          <div class="bg-white border border-gray-200 rounded-xl p-3">
+            <h3 class="text-lg font-semibold mb-2">Interpolation Method</h3>
+            
+            <div class="space-y-3">
+              <!-- Smoothing Method -->
+              <div>
+                <select id="curveSmoothingMethod" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" disabled>
+                  <option value="cubic">Cubic Spline</option>
+                  <option value="catmull">Catmull-Rom</option>
+                  <option value="pchip" selected>PCHIP (monotonic)</option>
+                  <option value="linear">Linear (none)</option>
+                </select>
+                <p id="interpolationDescription" class="text-xs text-gray-500 mt-1">Monotonic interpolation preserves data trends</p>
+                
+                <!-- Catmull-Rom Tension Control -->
+                <div class="mt-2" id="catmullTensionContainer" style="display: none;">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Curve Tension</label>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500">Tight</span>
+                    <input type="range" id="catmullTension" min="0" max="100" value="50" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" disabled>
+                    <span class="text-xs text-gray-500">Loose</span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">Adjust how curvy the interpolation becomes</p>
+                </div>
+                
+              </div>
+            </div>
+          </div>
+          
         </div>
       </div>
 
-      <!-- Status Display -->
-      <div class="mb-6">
-        <div class="bg-gray-50 rounded-lg border border-gray-200 p-3 text-center min-h-[2.5rem] flex items-center justify-center">
-          <span id="status" class="text-sm text-gray-600 font-medium transition-opacity duration-500 ease-in-out">&nbsp;</span>
-        </div>
-      </div>
 
       <!-- Apply-to-all controls -->
       <div class="grid md:grid-cols-3 gap-4 items-end">
@@ -165,8 +307,13 @@
         <table class="w-full text-sm border border-gray-200 rounded-xl overflow-hidden">
           <thead class="bg-gray-50 text-gray-700">
             <tr>
-              <th class="text-center px-3 py-2"></th>
+              <th class="text-center px-3 py-2">
+                <button id="disableAllBtn" class="px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded border border-red-300 transition-colors" title="Disable all channels (set all to 0)">
+                  Disable All
+                </button>
+              </th>
               <th class="text-left px-3 py-2">Channel</th>
+              <th class="text-left px-3 py-2">Per-Channel</th>
               <th class="text-left px-3 py-2">Percent (0–100)</th>
               <th class="text-left px-3 py-2">End (0–64,000)</th>
             </tr>
@@ -176,16 +323,34 @@
       </div>
 
       <!-- Actions -->
-      <div class="mt-6 space-y-3">
+      <div class="mt-6">
         <div class="flex items-center gap-2">
-          <label for="filenameInput" class="text-sm font-medium text-gray-700">Filename:</label>
-          <input id="filenameInput" type="text" placeholder="P900_K33_C33_M33..." class="w-[36rem] rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
-          <span class="text-sm text-gray-500">.quad</span>
-        </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <button id="downloadBtn" class="inline-flex items-center justify-center rounded-lg px-5 py-3 font-medium shadow-sm bg-black text-white hover:bg-black/90">
+          <button id="downloadBtn" class="inline-flex items-center justify-center rounded-lg px-5 py-2 font-medium shadow-sm bg-black text-white hover:bg-black/90">
             ↓ Download .quad
           </button>
+          <label for="filenameInput" class="text-sm font-medium text-gray-700">Filename:</label>
+          <input id="filenameInput" type="text" placeholder="P900_K33_C33_M33..." class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
+          <span class="text-sm text-gray-500">.quad</span>
+        </div>
+      </div>
+
+      <!-- Configuration Notes -->
+      <div class="mt-6">
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-semibold">📝 Configuration Notes</h3>
+            <button id="notesToggle" class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded border transition-colors" title="Expand/collapse notes">
+              <svg id="notesChevron" class="w-5 h-5 transform transition-transform duration-200" style="transform: rotate(180deg)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <div id="notesContent">
+            <div>
+              <textarea id="userNotes" placeholder="Add notes to be added as comments to the generated .quad file" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 resize-none" rows="4"></textarea>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -242,10 +407,20 @@
       inkChart: document.getElementById('inkChart'),
       filenameInput: document.getElementById('filenameInput'),
       linearizationFile: document.getElementById('linearizationFile'),
-      applyLinearization: document.getElementById('applyLinearization'),
+      globalLinearizationBtn: document.getElementById('globalLinearizationBtn'),
+      globalLinearizationToggle: document.getElementById('globalLinearizationToggle'),
       curveSmoothingMethod: document.getElementById('curveSmoothingMethod'),
-      smoothingIntensity: document.getElementById('smoothingIntensity'),
-      smoothingIntensityContainer: document.getElementById('smoothingIntensityContainer'),
+      catmullTension: document.getElementById('catmullTension'),
+      catmullTensionContainer: document.getElementById('catmullTensionContainer'),
+      userNotes: document.getElementById('userNotes'),
+      notesToggle: document.getElementById('notesToggle'),
+      notesContent: document.getElementById('notesContent'),
+      notesChevron: document.getElementById('notesChevron'),
+      disableAllBtn: document.getElementById('disableAllBtn'),
+      interpolationDescription: document.getElementById('interpolationDescription'),
+      globalLinearizationInfo: document.getElementById('globalLinearizationInfo'),
+      globalLinearizationFilename: document.getElementById('globalLinearizationFilename'),
+      globalLinearizationDetails: document.getElementById('globalLinearizationDetails'),
     };
 
     // Input validation utilities
@@ -470,14 +645,28 @@
       // X-axis labels (0% to 100%)
       for (let i = 0; i <= 10; i++) {
         const x = leftPadding + (i * chartWidth / 10);
-        ctx.fillText(`${i * 10}`, x, height - padding + 20);
+        const value = i * 10;
+        // Make 0 and 100 bold
+        if (value === 0 || value === 100) {
+          ctx.font = 'bold 12px system-ui';
+        } else {
+          ctx.font = '12px system-ui';
+        }
+        ctx.fillText(`${value}`, x, height - padding + 20);
       }
       
       // Y-axis labels (0% to 100%)
       ctx.textAlign = 'right';
       for (let i = 0; i <= 10; i++) {
         const y = height - padding - (i * chartHeight / 10);
-        ctx.fillText(`${i * 10}`, leftPadding - 10, y + 4);
+        const value = i * 10;
+        // Make 0 and 100 bold
+        if (value === 0 || value === 100) {
+          ctx.font = 'bold 12px system-ui';
+        } else {
+          ctx.font = '12px system-ui';
+        }
+        ctx.fillText(`${value}`, leftPadding - 10, y + 4);
       }
       
       // Axis titles
@@ -504,7 +693,7 @@
         const inkColor = INK_COLORS[channelName] || '#000000';
         
         // Generate the 256 values
-        const values = make256(endVal, true); // Apply linearization if enabled
+        const values = make256(endVal, channelName, true); // Apply linearization if enabled
         const maxValue = TOTAL; // 64000
         
         ctx.strokeStyle = inkColor;
@@ -635,6 +824,47 @@
     // Linearization data storage
     let linearizationData = null;
     let linearizationApplied = false;
+    
+    // Check if any linearization is available (global or per-channel)
+    function hasAnyLinearization() {
+      return (linearizationData && linearizationApplied) || 
+             Object.keys(perChannelLinearization).length > 0;
+    }
+    
+    // Update interpolation description based on selected method
+    function updateInterpolationDescription() {
+      const method = elements.curveSmoothingMethod.value;
+      const descriptions = {
+        'cubic': 'Smooth curves with natural transitions',
+        'catmull': 'Catmull-Rom splines - passes through control points like GIMP',
+        'pchip': 'Monotonic interpolation preserves data trends', 
+        'linear': 'Direct point-to-point connections'
+      };
+      elements.interpolationDescription.textContent = descriptions[method];
+    }
+    
+    // Update interpolation controls based on linearization availability
+    function updateInterpolationControls() {
+      const hasLinearization = hasAnyLinearization();
+      elements.curveSmoothingMethod.disabled = !hasLinearization;
+      elements.catmullTension.disabled = !hasLinearization;
+      
+      // Show/hide tension control for Catmull-Rom
+      const method = elements.curveSmoothingMethod.value;
+      const showTension = hasLinearization && method === 'catmull';
+      elements.catmullTensionContainer.style.display = showTension ? 'block' : 'none';
+      
+      // Update description
+      updateInterpolationDescription();
+    }
+    
+    // Per-channel linearization storage
+    let perChannelLinearization = {};
+    let perChannelEnabled = {};
+    let perChannelFilenames = {};
+    
+    // Channel previous values storage (for restore after enable)
+    let channelPreviousValues = {};
 
     /**
      * Parse a .cube file string as a 1D LUT.
@@ -703,7 +933,179 @@
         throw new Error("No 1D samples found in .cube text.");
       }
 
-      return { domainMin, domainMax, samples };
+      // Create inverse mapping: swap input and output relationship
+      // Cube shows where each input position maps to
+      // We need where each output value should come from
+      const inverseSamples = new Array(samples.length);
+      
+      // For each original sample, find where it should be placed in inverse
+      for (let i = 0; i < samples.length; i++) {
+        const inputPos = i / (samples.length - 1); // 0 to 1
+        const outputVal = samples[i]; // where this input maps to
+        
+        // Find the closest index for this output value
+        const outputIndex = Math.round(outputVal * (samples.length - 1));
+        const clampedIndex = Math.max(0, Math.min(samples.length - 1, outputIndex));
+        
+        // At output position, store what input created it
+        inverseSamples[clampedIndex] = inputPos;
+      }
+      
+      // Fill any gaps with linear interpolation
+      for (let i = 0; i < inverseSamples.length; i++) {
+        if (inverseSamples[i] === undefined) {
+          // Find nearest defined values
+          let prev = i - 1, next = i + 1;
+          while (prev >= 0 && inverseSamples[prev] === undefined) prev--;
+          while (next < inverseSamples.length && inverseSamples[next] === undefined) next++;
+          
+          if (prev >= 0 && next < inverseSamples.length) {
+            // Interpolate between prev and next
+            const t = (i - prev) / (next - prev);
+            inverseSamples[i] = inverseSamples[prev] + t * (inverseSamples[next] - inverseSamples[prev]);
+          } else if (prev >= 0) {
+            inverseSamples[i] = inverseSamples[prev];
+          } else if (next < inverseSamples.length) {
+            inverseSamples[i] = inverseSamples[next];
+          } else {
+            inverseSamples[i] = i / (inverseSamples.length - 1); // fallback to linear
+          }
+        }
+      }
+      
+      return { domainMin, domainMax, samples: inverseSamples };
+    }
+
+    /**
+     * Parse a Color Muse data file (tab-separated format)
+     * Expected format:
+     * GRAY	LAB_L	LAB_A	LAB_B
+     * 0	97.50	0.20	-0.50
+     * 5	93.40	0.30	-0.70
+     * ...
+     * Returns { domainMin: 0, domainMax: 1, samples } where samples are normalized 0..1
+     */
+    function parseColorMuseData(fileContent, filename) {
+      const lines = fileContent.split(/\r?\n/);
+      const dataPoints = [];
+      let headerFound = false;
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // Skip empty lines
+        if (!trimmed) continue;
+        
+        // Check for Color Muse header
+        if (trimmed.includes('GRAY') && trimmed.includes('LAB_L')) {
+          headerFound = true;
+          continue;
+        }
+        
+        // Skip other comment lines
+        if (trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
+        
+        // Parse data lines (tab-separated: GRAY LAB_L LAB_A LAB_B)
+        const parts = trimmed.split(/\s+/);
+        if (parts.length >= 2) {
+          const grayPercent = parseFloat(parts[0]);
+          const labL = parseFloat(parts[1]);
+          
+          // Validate the parsed values
+          if (!isNaN(grayPercent) && !isNaN(labL) && 
+              grayPercent >= 0 && grayPercent <= 100 && 
+              labL >= 0 && labL <= 100) {
+            dataPoints.push({ input: grayPercent, lab: labL });
+          }
+        }
+      }
+      
+      if (dataPoints.length < 2) {
+        throw new Error("Not enough valid Color Muse data points found. Expected format: GRAY\\tLAB_L\\tLAB_A\\tLAB_B");
+      }
+      
+      // Sort by gray percentage
+      dataPoints.sort((a, b) => a.input - b.input);
+      
+      // For linearization correction, we need to create an inverse curve
+      // The measured data shows: input% -> actual LAB L* 
+      // We want: desired LAB L* -> corrected input%
+      
+      // First, convert LAB L* to expected density (invert L* since high L* = light)
+      const measuredPoints = dataPoints.map(point => ({
+        input: point.input,
+        density: (100 - point.lab) / 100  // Convert L* to density (0=light, 1=dark)
+      }));
+      
+      // Create ideal linear response (what we want)
+      const idealPoints = dataPoints.map(point => ({
+        input: point.input,
+        density: point.input / 100  // Linear: 0% input = 0 density, 100% input = 1 density
+      }));
+      
+      // Create correction samples by interpolating the inverse relationship
+      // We want to find: for each ideal density, what input% actually produces that density?
+      const samples = idealPoints.map(ideal => {
+        // Find the input% that produces the ideal density in our measurements
+        const targetDensity = ideal.density;
+        
+        // Linear interpolation to find what input% gives us this density
+        for (let i = 0; i < measuredPoints.length - 1; i++) {
+          const p1 = measuredPoints[i];
+          const p2 = measuredPoints[i + 1];
+          
+          if (targetDensity >= p1.density && targetDensity <= p2.density) {
+            // Interpolate between p1 and p2
+            const t = (targetDensity - p1.density) / (p2.density - p1.density);
+            const correctedInput = p1.input + t * (p2.input - p1.input);
+            return correctedInput / 100;  // Normalize to 0-1
+          }
+        }
+        
+        // Handle edge cases
+        if (targetDensity <= measuredPoints[0].density) {
+          return measuredPoints[0].input / 100;
+        }
+        if (targetDensity >= measuredPoints[measuredPoints.length - 1].density) {
+          return measuredPoints[measuredPoints.length - 1].input / 100;
+        }
+        
+        return ideal.input / 100;  // Fallback to linear
+      });
+      
+      // Create normalized input domain (0-1 corresponding to 0%-100%)
+      const domainMin = 0.0;
+      const domainMax = 1.0;
+      
+      return {
+        domainMin,
+        domainMax, 
+        samples,
+        originalData: dataPoints, // Keep original for reference
+        format: 'Color Muse'
+      };
+    }
+
+
+    /**
+     * Detect file type and parse appropriately
+     * For text files, pass the file content as string
+     */
+    async function parseLinearizationFile(fileContentOrFile, filename) {
+      const extension = filename.toLowerCase().split('.').pop();
+      
+      if (extension === 'cube') {
+        return parseCube1D(fileContentOrFile);
+      } else if (extension === 'txt') {
+        // Check if it's Color Muse format by looking for the header
+        if (fileContentOrFile.includes('GRAY') && fileContentOrFile.includes('LAB_L')) {
+          return parseColorMuseData(fileContentOrFile, filename);
+        } else {
+          throw new Error('TXT file format not recognized. Expected Color Muse format with GRAY and LAB_L columns.');
+        }
+      } else {
+        throw new Error(`Unsupported file format: ${extension}. Use .cube or .txt files.`);
+      }
     }
 
     /**
@@ -712,13 +1114,13 @@
      * @param {number[]} y - output values at each point
      * @returns {function} interpolation function that takes a value and returns interpolated result
      */
-    function createCubicSpline(x, y, intensity = 0.5) {
+    function createCubicSpline(x, y) {
       const n = x.length;
       if (n < 2) return (t) => y[0] || 0;
       
-      // Calculate second derivatives using natural spline conditions
+      // Use clamped cubic spline with estimated end derivatives for more curvature
       const h = new Array(n - 1);
-      const alpha = new Array(n - 1);
+      const alpha = new Array(n);
       const l = new Array(n);
       const mu = new Array(n);
       const z = new Array(n);
@@ -726,19 +1128,27 @@
       const b = new Array(n);
       const d = new Array(n);
       
-      // Step 1: Calculate h and alpha
+      // Step 1: Calculate h
       for (let i = 0; i < n - 1; i++) {
         h[i] = x[i + 1] - x[i];
       }
+      
+      // Step 2: Set up alpha with clamped boundary conditions
+      // Estimate end derivatives to allow more curvature
+      const firstDerivative = (y[1] - y[0]) / h[0];
+      const lastDerivative = (y[n-1] - y[n-2]) / h[n-2];
+      
+      alpha[0] = 3 * ((y[1] - y[0]) / h[0] - firstDerivative);
+      alpha[n-1] = 3 * (lastDerivative - (y[n-1] - y[n-2]) / h[n-2]);
       
       for (let i = 1; i < n - 1; i++) {
         alpha[i] = (3 / h[i]) * (y[i + 1] - y[i]) - (3 / h[i - 1]) * (y[i] - y[i - 1]);
       }
       
-      // Step 2: Solve tridiagonal system
-      l[0] = 1;
-      mu[0] = 0;
-      z[0] = 0;
+      // Step 3: Solve tridiagonal system with clamped conditions
+      l[0] = 2 * h[0];
+      mu[0] = 0.5;
+      z[0] = alpha[0] / l[0];
       
       for (let i = 1; i < n - 1; i++) {
         l[i] = 2 * (x[i + 1] - x[i - 1]) - h[i - 1] * mu[i - 1];
@@ -746,11 +1156,11 @@
         z[i] = (alpha[i] - h[i - 1] * z[i - 1]) / l[i];
       }
       
-      l[n - 1] = 1;
-      z[n - 1] = 0;
-      c[n - 1] = 0;
+      l[n - 1] = h[n - 2] * (2 - mu[n - 2]);
+      z[n - 1] = (alpha[n - 1] - h[n - 2] * z[n - 2]) / l[n - 1];
+      c[n - 1] = z[n - 1];
       
-      // Step 3: Back substitution
+      // Step 4: Back substitution
       for (let j = n - 2; j >= 0; j--) {
         c[j] = z[j] - mu[j] * c[j + 1];
         b[j] = (y[j + 1] - y[j]) / h[j] - h[j] * (c[j + 1] + 2 * c[j]) / 3;
@@ -766,13 +1176,9 @@
         let i = 0;
         while (i < n - 1 && x[i + 1] < t) i++;
         
-        // Evaluate cubic polynomial
+        // Evaluate cubic polynomial - clamped cubic spline interpolation
         const dt = t - x[i];
-        const interpolated = y[i] + b[i] * dt + c[i] * dt * dt + d[i] * dt * dt * dt;
-        
-        // Blend between linear and interpolated based on intensity
-        const linear = y[i] + (y[i + 1] - y[i]) * (dt / (x[i + 1] - x[i]));
-        return linear + intensity * (interpolated - linear);
+        return y[i] + b[i] * dt + c[i] * dt * dt + d[i] * dt * dt * dt;
       };
     }
 
@@ -782,7 +1188,7 @@
      * @param {number[]} y - output values at each point
      * @returns {function} interpolation function that takes a value and returns interpolated result
      */
-    function createCatmullRomSpline(x, y, intensity = 0.5) {
+    function createCatmullRomSpline(x, y, tension = 0.5) {
       const n = x.length;
       if (n < 2) return (t) => y[0] || 0;
       
@@ -805,17 +1211,17 @@
         const t2 = t_norm * t_norm;
         const t3 = t2 * t_norm;
         
-        // Catmull-Rom basis functions
-        const q0 = -0.5 * t3 + t2 - 0.5 * t_norm;
-        const q1 = 1.5 * t3 - 2.5 * t2 + 1;
-        const q2 = -1.5 * t3 + 2 * t2 + 0.5 * t_norm;
-        const q3 = 0.5 * t3 - 0.5 * t2;
+        // Parameterized Catmull-Rom basis functions with tension control
+        // tension = 0.0: very tight (close to linear)
+        // tension = 0.5: standard Catmull-Rom
+        // tension = 1.0: very loose/curvy
+        const q0 = -tension * t3 + 2 * tension * t2 - tension * t_norm;
+        const q1 = (2 - tension) * t3 + (tension - 3) * t2 + 1;
+        const q2 = (tension - 2) * t3 + (3 - 2 * tension) * t2 + tension * t_norm;
+        const q3 = tension * t3 - tension * t2;
         
-        const interpolated = p0 * q0 + p1 * q1 + p2 * q2 + p3 * q3;
-        
-        // Blend between linear and interpolated based on intensity
-        const linear = p1 + (p2 - p1) * t_norm;
-        return linear + intensity * (interpolated - linear);
+        // Catmull-Rom interpolation with adjustable tension
+        return p0 * q0 + p1 * q1 + p2 * q2 + p3 * q3;
       };
     }
 
@@ -975,7 +1381,7 @@
      * @param {string} interpolationType - 'cubic', 'catmull', or 'linear'
      * @returns {number[]} adjusted integer outputs with preserved endpoints
      */
-    function apply1DLUT(values, lut, domainMin = 0, domainMax = 1, maxValue = 64000, interpolationType = 'cubic', intensity = 0.5) {
+    function apply1DLUT(values, lut, domainMin = 0, domainMax = 1, maxValue = 64000, interpolationType = 'cubic') {
       const K = lut.length;
       if (K < 2) return values; // Not enough points for interpolation
       
@@ -992,8 +1398,12 @@
       let interpolationFunction;
       
       if (interpolationType === 'cubic') {
-        // Cubic spline interpolation for smoothest curves
-        interpolationFunction = createCubicSpline(lutX, lut, intensity);
+        // Cubic spline interpolation for smoothest curves - pure interpolation
+        interpolationFunction = createCubicSpline(lutX, lut);
+      } else if (interpolationType === 'catmull') {
+        // Catmull-Rom spline interpolation - passes through control points like GIMP
+        const tension = elements.catmullTension.value / 100; // Convert 0-100 to 0-1
+        interpolationFunction = createCatmullRomSpline(lutX, lut, tension);
       } else if (interpolationType === 'pchip') {
         // PCHIP interpolation for monotonic, shape-preserving curves
         interpolationFunction = createPCHIPSpline(lutX, lut);
@@ -1011,7 +1421,7 @@
       }
       
       return values.map((v, index) => {
-        // Apply LUT curve to all values, including endpoints
+        // FORWARD APPLICATION: Use input value to look up LUT output directly
         const t = (v / maxValue) * (domainMax - domainMin) + domainMin;
         const lutValue = interpolationFunction(t);
         
@@ -1023,21 +1433,26 @@
     const debouncedPreviewUpdate = debounce(updatePreview, 300);
 
     // Optimized 256 value generation with optional linearization
-    function make256(endValue, applyLinearization = false) {
+    function make256(endValue, channelName, applyLinearization = false) {
       if (endValue === 0) return new Array(N).fill(0);
       
-      const arr = new Array(N);
+      let arr = new Array(N);
       const step = endValue / DENOM;
       
       for (let i = 0; i < N; i++) {
         arr[i] = Math.round(i * step);
       }
       
-      // Apply linearization based on smoothing method selection
+      const interpolationType = elements.curveSmoothingMethod.value;
+      
+      // Step 1: Apply per-channel linearization if available
+      if (channelName && perChannelLinearization[channelName] && perChannelEnabled[channelName]) {
+        arr = apply1DLUT(arr, perChannelLinearization[channelName].samples, perChannelLinearization[channelName].domainMin, perChannelLinearization[channelName].domainMax, endValue, interpolationType);
+      }
+      
+      // Step 2: Apply global linearization if enabled
       if (applyLinearization && linearizationData && linearizationApplied) {
-        const interpolationType = elements.curveSmoothingMethod.value;
-        const intensity = elements.smoothingIntensity.value / 100; // Convert 0-100 to 0-1
-        return apply1DLUT(arr, linearizationData.samples, linearizationData.domainMin, linearizationData.domainMax, endValue, interpolationType, intensity);
+        arr = apply1DLUT(arr, linearizationData.samples, linearizationData.domainMin, linearizationData.domainMax, endValue, interpolationType);
       }
       
       return arr;
@@ -1076,16 +1491,24 @@
       tr.className = "border-t border-gray-200";
       tr.innerHTML = `
         <td class="px-3 py-2 text-center">
-          <button class="disable-btn px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded border border-red-300 transition-colors" title="Disable channel (set to 0)">
-            Disable
-          </button>
+          <input type="checkbox" class="channel-enable-checkbox w-4 h-4" title="Enable/disable channel" checked>
         </td>
         <td class="px-3 py-2 font-medium">
           <span class="inline-flex items-center gap-2">
             <span class="inline-block w-3.5 h-3.5 rounded-sm border border-black/10" style="background-color: ${INK_COLORS[name] || '#000'}"></span>
-            <span>${name}</span>
+            <span class="w-8">${name}</span>
             <span class="text-xs text-gray-500 invisible" data-disabled>(disabled)</span>
           </span>
+        </td>
+        <td class="px-3 py-2">
+          <div class="inline-flex items-center gap-2">
+            <input type="file" id="perChannel_${name}" accept=".cube" class="hidden per-channel-file">
+            <button class="per-channel-btn px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded border border-gray-300 transition-colors" data-channel="${name}" data-tooltip="Load per-channel linearization">load file</button>
+            <label class="slider-toggle" title="Enable/disable per-channel linearization">
+              <input type="checkbox" class="per-channel-toggle" data-channel="${name}" disabled>
+              <span class="slider"></span>
+            </label>
+          </div>
         </td>
         <td class="px-3 py-2">
           <input type="number" step="1" min="0" max="100" value="${randomPercent}" class="percent-input w-28 rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -1102,58 +1525,123 @@
       const percentInput = tr.querySelector('.percent-input');
       const endInput = tr.querySelector('.end-input');
       const disabledTag = tr.querySelector('[data-disabled]');
-      const disableBtn = tr.querySelector('.disable-btn');
+      const enableCheckbox = tr.querySelector('.channel-enable-checkbox');
+      const perChannelBtn = tr.querySelector('.per-channel-btn');
+      const perChannelFile = tr.querySelector('.per-channel-file');
+      const perChannelToggle = tr.querySelector('.per-channel-toggle');
+      const channelName = tr.dataset.channel;
 
       function refreshDisplay() {
         const endVal = InputValidator.clampEnd(endInput.value);
         endInput.value = String(endVal);
-        disabledTag.classList.toggle('invisible', endVal !== 0);
         
-        // Update channel label opacity
+        const isUserDisabled = tr.hasAttribute('data-user-disabled');
+        const isAtZero = endVal === 0;
+        
+        // Show disabled label if channel is at 0 (either user-disabled or set to 0%)
+        disabledTag.classList.toggle('invisible', !isAtZero);
+        
+        // Update channel label opacity and row compactness
         const channelLabel = tr.querySelector('td:nth-child(2) span');
-        if (endVal === 0) {
+        const allCells = tr.querySelectorAll('td');
+        const linearizationCell = tr.querySelector('td:nth-child(3)');
+        const percentCell = tr.querySelector('td:nth-child(4)');
+        const endCell = tr.querySelector('td:nth-child(5)');
+        
+        if (isAtZero) {
           channelLabel.style.opacity = '0.33';
+          // Make row more compact when disabled
+          allCells.forEach(cell => {
+            cell.className = cell.className.replace('py-2', 'py-1');
+          });
+          // Hide linearization controls when disabled
+          linearizationCell.style.visibility = 'hidden';
+          // Reduce input sizes when disabled
+          percentCell.style.opacity = '0.5';
+          endCell.style.opacity = '0.5';
         } else {
           channelLabel.style.opacity = '1';
+          // Restore normal padding when enabled
+          allCells.forEach(cell => {
+            cell.className = cell.className.replace('py-1', 'py-2');
+          });
+          // Show linearization controls when enabled
+          linearizationCell.style.visibility = 'visible';
+          // Restore input opacity when enabled
+          percentCell.style.opacity = '1';
+          endCell.style.opacity = '1';
         }
         
-        // Update button appearance and text
-        if (endVal === 0) {
-          disableBtn.className = 'disable-btn px-2 py-1 text-xs bg-green-100 text-green-700 hover:bg-green-200 rounded border border-green-300 transition-colors';
-          disableBtn.textContent = 'Enable';
-          disableBtn.title = 'Enable channel (restore to 33%)';
-        } else {
-          disableBtn.className = 'disable-btn px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded border border-red-300 transition-colors';
-          disableBtn.textContent = 'Disable';
-          disableBtn.title = 'Disable channel (set to 0)';
-        }
+        // Update checkbox state based on channel status
+        enableCheckbox.checked = !isAtZero;
       }
+      
+      // Store refreshDisplay function on the tr element for access from apply functions
+      tr.refreshDisplayFn = refreshDisplay;
 
-      // Disable/Enable button functionality
-      disableBtn.addEventListener('click', () => {
+      // Channel enable/disable checkbox functionality
+      const handleCheckboxChange = () => {
         const currentEndVal = InputValidator.clampEnd(endInput.value);
+        const currentPercentVal = InputValidator.clampPercent(percentInput.value);
         
-        if (currentEndVal === 0) {
-          // Enable: restore to 33%
-          percentInput.value = '33';
-          endInput.value = String(InputValidator.computeEndFromPercent(33));
-          showStatus(`Enabled ${tr.dataset.channel || 'channel'}`);
+        if (enableCheckbox.checked) {
+          // Enable: restore previous values or default to 33%
+          const channelName = tr.dataset.channel;
+          const previousValues = channelPreviousValues[channelName];
+          
+          if (previousValues && previousValues.percent > 0) {
+            // Restore previous values
+            percentInput.value = previousValues.percent.toString();
+            endInput.value = previousValues.endValue.toString();
+            showStatus(`Enabled ${channelName} (restored to ${previousValues.percent}%)`);
+          } else {
+            // Default to 33% if no previous value stored
+            percentInput.value = '33';
+            endInput.value = String(InputValidator.computeEndFromPercent(33));
+            showStatus(`Enabled ${channelName} (set to default 33%)`);
+          }
+          
+          tr.removeAttribute('data-user-disabled'); // Mark as not disabled by user
         } else {
-          // Disable: set to 0
+          // Disable: store current values first, then set to 0
+          const channelName = tr.dataset.channel;
+          channelPreviousValues[channelName] = {
+            percent: currentPercentVal,
+            endValue: currentEndVal
+          };
+          
           percentInput.value = '0';
           endInput.value = '0';
-          showStatus(`Disabled ${tr.dataset.channel || 'channel'}`);
+          tr.setAttribute('data-user-disabled', 'true'); // Mark as disabled by user
+          showStatus(`Disabled ${channelName} (saved ${currentPercentVal}% for restore)`);
         }
         
         refreshDisplay();
         debouncedPreviewUpdate();
-      });
+      };
+      
+      enableCheckbox.addEventListener('change', handleCheckboxChange);
 
       // Use debounced updates to prevent excessive recalculations
       percentInput.addEventListener('input', () => {
         const p = InputValidator.validateInput(percentInput, InputValidator.clampPercent);
         const endVal = InputValidator.computeEndFromPercent(p);
         endInput.value = String(endVal);
+        
+        // If user manually changes from 0 to non-0, clear disabled state
+        if (endVal > 0 && tr.hasAttribute('data-user-disabled')) {
+          tr.removeAttribute('data-user-disabled');
+        }
+        
+        // Update stored previous values with current manual change (if not disabled)
+        if (endVal > 0 && !tr.hasAttribute('data-user-disabled')) {
+          const channelName = tr.dataset.channel;
+          channelPreviousValues[channelName] = {
+            percent: p,
+            endValue: endVal
+          };
+        }
+        
         refreshDisplay();
         debouncedPreviewUpdate();
       });
@@ -1162,10 +1650,96 @@
         const e = InputValidator.validateInput(endInput, InputValidator.clampEnd);
         const p = InputValidator.computePercentFromEnd(e);
         percentInput.value = p.toFixed(1);
+        
+        // If user manually changes from 0 to non-0, clear disabled state
+        if (e > 0 && tr.hasAttribute('data-user-disabled')) {
+          tr.removeAttribute('data-user-disabled');
+        }
+        
+        // Update stored previous values with current manual change (if not disabled)
+        if (e > 0 && !tr.hasAttribute('data-user-disabled')) {
+          const channelName = tr.dataset.channel;
+          channelPreviousValues[channelName] = {
+            percent: p,
+            endValue: e
+          };
+        }
+        
         refreshDisplay();
         debouncedPreviewUpdate();
       });
 
+      // Per-channel linearization button
+      perChannelBtn.addEventListener('click', () => {
+        perChannelFile.click();
+      });
+      
+      // Per-channel file upload
+      perChannelFile.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+          // Per-channel only supports pre-made curves (.cube)
+          const extension = file.name.toLowerCase().split('.').pop();
+          
+          if (extension === 'txt') {
+            throw new Error('TXT files (Color Muse) are not supported for per-channel linearization. Use only .cube files with pre-calculated corrections.');
+          }
+          
+          const fileInput = await file.text();
+          const parsed = await parseLinearizationFile(fileInput, file.name);
+          perChannelLinearization[channelName] = parsed;
+          perChannelEnabled[channelName] = true;
+          perChannelFilenames[channelName] = file.name;
+          
+          // Enable and check toggle
+          perChannelToggle.disabled = false;
+          perChannelToggle.checked = true;
+          
+          // Update button tooltip with filename
+          perChannelBtn.setAttribute('data-tooltip', `Loaded: ${file.name} (${parsed.samples.length} points)`);
+          
+          // Update interpolation controls since we now have linearization data
+          updateInterpolationControls();
+          
+          showStatus(`Loaded per-channel linearization for ${channelName}: ${parsed.samples.length} points`);
+          debouncedPreviewUpdate();
+        } catch (error) {
+          console.error('Per-channel cube file error:', error);
+          showStatus(`Error loading ${channelName} linearization: ${error.message}`);
+          
+          // Reset state on error
+          delete perChannelLinearization[channelName];
+          delete perChannelFilenames[channelName];
+          perChannelEnabled[channelName] = false;
+          perChannelToggle.disabled = true;
+          perChannelToggle.checked = false;
+          
+          // Reset button tooltip
+          perChannelBtn.setAttribute('data-tooltip', 'Load per-channel linearization');
+          
+          // Update interpolation controls since linearization may no longer be available
+          updateInterpolationControls();
+        }
+      });
+      
+      // Per-channel toggle slider
+      perChannelToggle.addEventListener('change', (e) => {
+        if (perChannelLinearization[channelName]) {
+          perChannelEnabled[channelName] = e.target.checked;
+          if (perChannelEnabled[channelName]) {
+            showStatus(`Enabled per-channel linearization for ${channelName}`);
+          } else {
+            showStatus(`Disabled per-channel linearization for ${channelName}`);
+          }
+          debouncedPreviewUpdate();
+        }
+      });
+      
+      // Initialize per-channel state
+      perChannelEnabled[channelName] = false;
+      
       // Initial sync
       const initialP = InputValidator.clampPercent(percentInput.value);
       percentInput.value = initialP.toString();
@@ -1192,7 +1766,7 @@
         // Setup event listeners after DOM update
         Array.from(elements.rows.children).forEach(setupChannelRow);
 
-        elements.channelInfo.textContent = "Channels: " + p.channels.join(", ");
+        elements.channelInfo.innerHTML = "Channels: " + p.channels.map(ch => `<strong>${ch}</strong>`).join(", ");
         elements.printerDescription.innerHTML = "";
         
         // Use requestAnimationFrame for smooth UI update
@@ -1233,15 +1807,67 @@
       const lines = [
         "## QuadToneRIP " + p.channels.join(","),
         "# Printer: " + p.name,
-        "# quadGEN v1.0 by David Marsh",
-        ...buildLimitsSummary()
+        "# quadGEN v1.1 by David Marsh"
       ];
+      
+      // Add user notes if provided
+      const userNotes = elements.userNotes.value.trim();
+      if (userNotes) {
+        lines.push("#");
+        // Split notes by lines and add # prefix to each line
+        userNotes.split('\n').forEach(line => {
+          lines.push("# " + line.trim());
+        });
+      }
+      
+      // Add linearization information
+      const hasLinearization = (linearizationData && linearizationApplied) || Object.keys(perChannelLinearization).length > 0;
+      if (hasLinearization) {
+        lines.push("#");
+        lines.push("# Linearization Applied:");
+        
+        // Global linearization
+        if (linearizationData && linearizationApplied) {
+          const globalFilename = linearizationData.filename || "unknown file";
+          lines.push(`# - Global: ${globalFilename} (${linearizationData.samples.length} points, affects all channels)`);
+        }
+        
+        // Per-channel linearization
+        const perChannelList = [];
+        Object.keys(perChannelLinearization).forEach(channelName => {
+          if (perChannelEnabled[channelName]) {
+            const filename = perChannelFilenames[channelName] || "unknown file";
+            const points = perChannelLinearization[channelName].samples.length;
+            perChannelList.push(`${channelName}: ${filename} (${points} points)`);
+          }
+        });
+        
+        if (perChannelList.length > 0) {
+          lines.push("# - Per-channel:");
+          perChannelList.forEach(item => {
+            lines.push(`#   ${item}`);
+          });
+        }
+        
+        // Interpolation method
+        const method = elements.curveSmoothingMethod.value;
+        const methodNames = {
+          'cubic': 'Cubic Spline',
+          'pchip': 'PCHIP (monotonic)',
+          'linear': 'Linear (none)'
+        };
+        lines.push(`# - Interpolation: ${methodNames[method]}`);
+        
+        // Cubic splines now use pure interpolation (no intensity control)
+      }
+      
+      lines.push(...buildLimitsSummary());
 
       // Build channel blocks efficiently
       p.channels.forEach((ch, idx) => {
         const row = elements.rows.children[idx];
         const e = InputValidator.clampEnd(row.querySelector('.end-input').value);
-        const arr = make256(e, true); // Apply linearization if enabled
+        const arr = make256(e, ch, true); // Apply linearization if enabled
         lines.push("# " + ch + " curve");
         lines.push(...arr.map(String));
       });
@@ -1256,14 +1882,22 @@
         const endVal = InputValidator.computeEndFromPercent(val);
         
         Array.from(elements.rows.children).forEach(tr => {
+          // Skip channels that were intentionally disabled by the user
+          if (tr.hasAttribute('data-user-disabled')) {
+            return;
+          }
+          
           const percentInput = tr.querySelector('.percent-input');
           const endInput = tr.querySelector('.end-input');
           percentInput.value = val.toString();
           endInput.value = String(endVal);
           
-          // Trigger display update
-          const disabledTag = tr.querySelector('[data-disabled]');
-          disabledTag.classList.toggle('invisible', endVal !== 0);
+          // Trigger proper display update using the row's refreshDisplay function
+          // We need to manually call refreshDisplay for each row
+          const refreshDisplay = tr.refreshDisplayFn;
+          if (refreshDisplay) {
+            refreshDisplay();
+          }
         });
         
         updatePreview();
@@ -1280,14 +1914,21 @@
         const percentVal = InputValidator.computePercentFromEnd(val);
         
         Array.from(elements.rows.children).forEach(tr => {
+          // Skip channels that were intentionally disabled by the user
+          if (tr.hasAttribute('data-user-disabled')) {
+            return;
+          }
+          
           const percentInput = tr.querySelector('.percent-input');
           const endInput = tr.querySelector('.end-input');
           endInput.value = String(val);
           percentInput.value = percentVal.toFixed(1);
           
-          // Trigger display update
-          const disabledTag = tr.querySelector('[data-disabled]');
-          disabledTag.classList.toggle('invisible', val !== 0);
+          // Trigger proper display update using the row's refreshDisplay function
+          const refreshDisplay = tr.refreshDisplayFn;
+          if (refreshDisplay) {
+            refreshDisplay();
+          }
         });
         
         updatePreview();
@@ -1403,31 +2044,39 @@
     });
 
     // Linearization event listeners
+    
+    // Global linearization button click
+    elements.globalLinearizationBtn.addEventListener('click', () => {
+      elements.linearizationFile.click();
+    });
 
     elements.linearizationFile.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
       
       try {
-        const content = await file.text();
-        const parsed = parseCube1D(content);
+        // Read file content as text
+        const extension = file.name.toLowerCase().split('.').pop();
+        const fileInput = await file.text();
+        
+        const parsed = await parseLinearizationFile(fileInput, file.name);
+        parsed.filename = file.name; // Store filename for documentation
         linearizationData = parsed;
         linearizationApplied = true; // Auto-apply when file is loaded
         
-        // Set button to disable state since linearization is now applied
-        elements.applyLinearization.disabled = false;
-        elements.applyLinearization.className = 'w-full rounded-lg px-4 py-2 bg-red-600 text-white hover:bg-red-700';
-        elements.applyLinearization.textContent = 'Disable Linearization';
+        // Update button tooltip and enable toggle
+        elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: ${file.name} (${parsed.samples.length} points)`);
+        elements.globalLinearizationToggle.disabled = false;
+        elements.globalLinearizationToggle.checked = true;
         
-        // Enable smoothing dropdown since linearization is active
-        elements.curveSmoothingMethod.disabled = false;
-        elements.smoothingIntensity.disabled = false;
+        // Show file info below Data Source label
+        elements.globalLinearizationFilename.textContent = file.name;
+        const formatInfo = parsed.format ? ` (${parsed.format})` : '';
+        elements.globalLinearizationDetails.textContent = ` - ${parsed.samples.length} points${formatInfo}`;
+        elements.globalLinearizationInfo.classList.remove('hidden');
         
-        // Show intensity slider if appropriate method is selected
-        const method = elements.curveSmoothingMethod.value;
-        if (method !== 'linear' && method !== 'pchip') {
-          elements.smoothingIntensityContainer.style.display = 'block';
-        }
+        // Update interpolation controls
+        updateInterpolationControls();
         
         showStatus(`Loaded and applied ${parsed.samples.length} data points from ${file.name}`);
         debouncedPreviewUpdate(); // Update preview to show the applied linearization
@@ -1436,42 +2085,33 @@
         showStatus(`Error loading file: ${error.message}`);
         linearizationData = null;
         linearizationApplied = false;
-        elements.applyLinearization.disabled = true;
-        elements.applyLinearization.className = 'w-full rounded-lg px-4 py-2 bg-gray-300 text-gray-500 cursor-not-allowed';
-        elements.applyLinearization.textContent = 'Apply Linearization';
-        elements.curveSmoothingMethod.disabled = true; // Disable dropdown on error
-        elements.smoothingIntensity.disabled = true;
-        elements.smoothingIntensityContainer.style.display = 'none';
+        
+        // Reset button tooltip and disable toggle
+        elements.globalLinearizationBtn.setAttribute('data-tooltip', 'Load global linearization');
+        elements.globalLinearizationToggle.disabled = true;
+        elements.globalLinearizationToggle.checked = false;
+        
+        // Hide file info
+        elements.globalLinearizationInfo.classList.add('hidden');
+        
+        // Update interpolation controls
+        updateInterpolationControls();
       }
     });
 
-    elements.applyLinearization.addEventListener('click', () => {
-      if (!linearizationData) return; // No data loaded
-      
-      if (linearizationApplied) {
-        // Currently applied - disable it
-        linearizationApplied = false;
-        elements.applyLinearization.textContent = 'Apply Linearization';
-        elements.applyLinearization.className = 'w-full rounded-lg px-4 py-2 bg-black text-white hover:bg-black/90';
-        elements.curveSmoothingMethod.disabled = true; // Disable dropdown when linearization is off
-        elements.smoothingIntensity.disabled = true;
-        elements.smoothingIntensityContainer.style.display = 'none';
-        showStatus('Linearization disabled - using linear curves');
-        debouncedPreviewUpdate();
-      } else {
-        // Currently disabled - apply it
-        linearizationApplied = true;
-        elements.applyLinearization.textContent = 'Disable Linearization';
-        elements.applyLinearization.className = 'w-full rounded-lg px-4 py-2 bg-red-600 text-white hover:bg-red-700';
-        elements.curveSmoothingMethod.disabled = false; // Enable dropdown when linearization is on
-        elements.smoothingIntensity.disabled = false;
-        
-        // Show intensity slider if appropriate method is selected
-        const method = elements.curveSmoothingMethod.value;
-        if (method !== 'linear' && method !== 'pchip') {
-          elements.smoothingIntensityContainer.style.display = 'block';
+    // Global linearization toggle
+    elements.globalLinearizationToggle.addEventListener('change', (e) => {
+      if (linearizationData) {
+        linearizationApplied = e.target.checked;
+        if (linearizationApplied) {
+          showStatus('Global linearization enabled');
+        } else {
+          showStatus('Global linearization disabled');
         }
-        showStatus('Linearization applied to preview and output');
+        
+        // Update interpolation controls
+        updateInterpolationControls();
+        
         debouncedPreviewUpdate();
       }
     });
@@ -1480,16 +2120,13 @@
     elements.curveSmoothingMethod.addEventListener('change', (e) => {
       const method = e.target.value;
       
-      // Show/hide intensity slider based on method
-      if (method === 'linear' || method === 'pchip') {
-        elements.smoothingIntensityContainer.style.display = 'none';
-      } else {
-        elements.smoothingIntensityContainer.style.display = 'block';
-      }
+      // Update interpolation controls (including intensity slider visibility and description)
+      updateInterpolationControls();
       
-      if (linearizationData && linearizationApplied) {
+      if (hasAnyLinearization()) {
         const methodNames = {
           'cubic': 'Cubic Spline',
+          'catmull': 'Catmull-Rom',
           'pchip': 'PCHIP (monotonic)',
           'linear': 'Linear (none)'
         };
@@ -1498,12 +2135,70 @@
       }
     });
     
-    // Smoothing intensity slider
-    elements.smoothingIntensity.addEventListener('input', (e) => {
-      if (linearizationData && linearizationApplied) {
-        const intensity = Math.round(e.target.value);
-        showStatus(`Smoothing intensity: ${intensity}%`);
-        debouncedPreviewUpdate(); // Update preview with new intensity setting
+    // Catmull-Rom tension slider
+    elements.catmullTension.addEventListener('input', (e) => {
+      if (hasAnyLinearization() && elements.curveSmoothingMethod.value === 'catmull') {
+        const tension = Math.round(e.target.value);
+        showStatus(`Catmull-Rom tension: ${tension}%`);
+        debouncedPreviewUpdate(); // Update preview with new tension setting
+      }
+    });
+    
+    // Notes toggle functionality
+    elements.notesToggle.addEventListener('click', () => {
+      const isHidden = elements.notesContent.classList.contains('hidden');
+      
+      if (isHidden) {
+        // Expand
+        elements.notesContent.classList.remove('hidden');
+        elements.notesChevron.style.transform = 'rotate(180deg)';
+      } else {
+        // Collapse
+        elements.notesContent.classList.add('hidden');
+        elements.notesChevron.style.transform = 'rotate(0deg)';
+      }
+    });
+    
+    // Disable all channels functionality
+    elements.disableAllBtn.addEventListener('click', () => {
+      try {
+        let disabledCount = 0;
+        
+        Array.from(elements.rows.children).forEach(tr => {
+          const percentInput = tr.querySelector('.percent-input');
+          const endInput = tr.querySelector('.end-input');
+          const channelName = tr.dataset.channel;
+          
+          // Store current values before disabling (if not already 0)
+          const currentEndVal = InputValidator.clampEnd(endInput.value);
+          const currentPercentVal = InputValidator.clampPercent(percentInput.value);
+          
+          if (currentEndVal > 0) {
+            channelPreviousValues[channelName] = {
+              percent: currentPercentVal,
+              endValue: currentEndVal
+            };
+          }
+          
+          // Set to 0 and mark as user-disabled
+          percentInput.value = '0';
+          endInput.value = '0';
+          tr.setAttribute('data-user-disabled', 'true');
+          
+          // Use proper state management
+          const refreshDisplay = tr.refreshDisplayFn;
+          if (refreshDisplay) {
+            refreshDisplay();
+          }
+          
+          disabledCount++;
+        });
+        
+        updatePreview();
+        showStatus(`Disabled all ${disabledCount} channels`);
+      } catch (error) {
+        console.error('Error disabling all channels:', error);
+        showStatus("Error disabling channels");
       }
     });
     
