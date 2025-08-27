@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>quadGEN v1.1</title>
-  <meta name="description" content="quadGEN - Generate Epson P900/P800 QuadToneRIP .quad files with 256-step ramps per channel." />
+  <title>quadGEN v1.2</title>
+  <meta name="description" content="quadGEN - Generate Epson P700-P900/P800 QuadToneRIP .quad files with 256-step ramps per channel." />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* Always show number input arrows */
@@ -172,7 +172,7 @@
             <div>
               <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">
                 quadGEN
-                <span class="text-gray-400 text-lg">v1.1</span>
+                <span class="text-gray-400 text-lg">v1.2</span>
               </h1>
               <p class="text-gray-400 text-sm -mt-1">by David Marsh</p>
             </div>
@@ -181,9 +181,8 @@
             <div class="flex items-center gap-2 bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 ml-auto">
               <label for="printerSelect" class="text-sm font-medium text-gray-700">Printer:</label>
               <select id="printerSelect" class="text-sm rounded border border-gray-300 px-2 py-1">
-                <option value="P700">P700</option>
                 <option value="P800">P800</option>
-                <option value="P900" selected>P900</option>
+                <option value="P700P900" selected>P700-P900</option>
               </select>
               <p id="channelInfo" class="text-xs text-gray-600 ml-1"></p>
             </div>
@@ -191,8 +190,12 @@
           
           <!-- Status Display -->
           <div class="lg:col-span-1">
-            <div class="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-center">
+            <div class="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-center flex items-center justify-between">
+              <span></span>
               <span id="status" class="text-xs text-gray-600 font-medium transition-opacity duration-500 ease-in-out">&nbsp;</span>
+              <button id="infoBtn" class="text-xs text-gray-400 hover:text-gray-600 border border-gray-300 rounded px-2 py-1 transition-colors" title="Version info">
+                Info
+              </button>
             </div>
           </div>
         </div>
@@ -260,7 +263,7 @@
                   <option value="pchip" selected>PCHIP (monotonic)</option>
                   <option value="linear">Linear (none)</option>
                 </select>
-                <p id="interpolationDescription" class="text-xs text-gray-500 mt-1">Monotonic interpolation preserves data trends</p>
+                <p id="interpolationDescription" class="text-xs text-gray-500 mt-3">Monotonic interpolation preserves data trends</p>
                 
                 <!-- Catmull-Rom Tension Control -->
                 <div class="mt-2" id="catmullTensionContainer" style="display: none;">
@@ -280,6 +283,18 @@
         </div>
       </div>
 
+      <!-- Load Existing .quad File -->
+      <div class="mt-6">
+        <div class="bg-white border border-gray-200 rounded-xl p-2">
+          <div class="flex items-center gap-3">
+            <input type="file" id="quadFile" accept=".quad" class="hidden">
+            <button id="loadQuadBtn" class="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded border border-blue-300 transition-colors">
+              📂 Load .quad file
+            </button>
+            <span id="quadFileInfo" class="text-xs text-gray-500 hidden">No file loaded</span>
+          </div>
+        </div>
+      </div>
 
       <!-- Apply-to-all controls -->
       <div class="grid md:grid-cols-3 gap-4 items-end">
@@ -364,6 +379,30 @@
         </div>
       </div>
     </section>
+    
+    <!-- Info Popup -->
+    <div id="infoPopup" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl max-w-md w-full p-6 relative">
+        <button id="closeInfoBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+        
+        <h2 class="text-xl font-bold mb-4">quadGEN v1.2</h2>
+        
+        <div class="text-sm text-gray-700 space-y-2">
+          <p class="font-medium">New in v1.2:</p>
+          <ul class="list-disc list-inside space-y-1 ml-2">
+            <li>Complete .quad file loading with curve preservation</li>
+            <li>Layered processing system (base curves + linearization)</li>
+            <li>Enhanced UI with compact controls and better UX</li>
+            <li>Robust file validation and error handling</li>
+            <li>Streamlined printer options (P700-P900 merged)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script>
@@ -372,9 +411,8 @@
     const DENOM = N - 1;
 
     const PRINTERS = {
-      P700: { name: "Epson P700", channels: ["K","C","M","Y","LC","LM","LK","LLK","V","MK"] },
       P800: { name: "Epson P800", channels: ["K","C","M","Y","LC","LM","LK","LLK"] },
-      P900: { name: "Epson P900", channels: ["K","C","M","Y","LC","LM","LK","LLK","V","MK"] }
+      P700P900: { name: "Epson P700-P900", channels: ["K","C","M","Y","LC","LM","LK","LLK","V","MK"] }
     };
 
     const INK_COLORS = {
@@ -414,9 +452,15 @@
       catmullTensionContainer: document.getElementById('catmullTensionContainer'),
       userNotes: document.getElementById('userNotes'),
       notesToggle: document.getElementById('notesToggle'),
+      quadFile: document.getElementById('quadFile'),
+      loadQuadBtn: document.getElementById('loadQuadBtn'),
+      quadFileInfo: document.getElementById('quadFileInfo'),
       notesContent: document.getElementById('notesContent'),
       notesChevron: document.getElementById('notesChevron'),
       disableAllBtn: document.getElementById('disableAllBtn'),
+      infoBtn: document.getElementById('infoBtn'),
+      infoPopup: document.getElementById('infoPopup'),
+      closeInfoBtn: document.getElementById('closeInfoBtn'),
       interpolationDescription: document.getElementById('interpolationDescription'),
       globalLinearizationInfo: document.getElementById('globalLinearizationInfo'),
       globalLinearizationFilename: document.getElementById('globalLinearizationFilename'),
@@ -783,7 +827,9 @@
     // Generate filename based on current settings
     function generateFilename() {
       const p = PRINTERS[elements.printerSelect.value];
-      let parts = [p.name.replace(/\s+/g, '')]; // Start with printer name
+      // Extract just the printer model (remove "Epson " prefix)
+      const printerModel = p.name.replace(/^Epson\s+/, '').replace(/\s+/g, '');
+      let parts = [printerModel]; // Start with printer model
       
       // Add active channels with their percentages
       Array.from(elements.rows.children).forEach((tr) => {
@@ -824,23 +870,45 @@
     // Linearization data storage
     let linearizationData = null;
     let linearizationApplied = false;
+    let loadedQuadData = null; // Stores complete curve data from loaded .quad files
     
-    // Check if any linearization is available (global or per-channel)
+    // Clear loaded quad data
+    function clearLoadedQuadData() {
+      loadedQuadData = null;
+      if (elements.quadFileInfo) {
+        elements.quadFileInfo.classList.add('hidden');
+      }
+      // Update interpolation controls since loaded data is no longer available
+      updateInterpolationControls();
+    }
+    
+    // Check if any linearization is available that would benefit from interpolation
     function hasAnyLinearization() {
       return (linearizationData && linearizationApplied) || 
              Object.keys(perChannelLinearization).length > 0;
+      // Note: Loaded .quad data alone doesn't need interpolation since it already has 256 points
     }
     
     // Update interpolation description based on selected method
     function updateInterpolationDescription() {
       const method = elements.curveSmoothingMethod.value;
-      const descriptions = {
-        'cubic': 'Smooth curves with natural transitions',
-        'catmull': 'Catmull-Rom splines - passes through control points like GIMP',
-        'pchip': 'Monotonic interpolation preserves data trends', 
-        'linear': 'Direct point-to-point connections'
-      };
-      elements.interpolationDescription.textContent = descriptions[method];
+      const hasLinearization = hasAnyLinearization();
+      const hasLoadedQuad = loadedQuadData && loadedQuadData.curves;
+      
+      if (!hasLinearization && hasLoadedQuad) {
+        // Show explanation when disabled due to loaded .quad file
+        elements.interpolationDescription.textContent = 'Disabled: Loaded .quad file already contains processed curves';
+        elements.interpolationDescription.className = 'text-xs text-gray-500 italic mt-3';
+        elements.interpolationDescription.style.display = 'block';
+      } else if (!hasLinearization) {
+        // Show explanation when disabled due to no linearization
+        elements.interpolationDescription.textContent = 'Disabled: No linearization data loaded';
+        elements.interpolationDescription.className = 'text-xs text-gray-500 italic mt-3';
+        elements.interpolationDescription.style.display = 'block';
+      } else {
+        // Hide description when enabled (controls are self-explanatory when active)
+        elements.interpolationDescription.style.display = 'none';
+      }
     }
     
     // Update interpolation controls based on linearization availability
@@ -848,6 +916,13 @@
       const hasLinearization = hasAnyLinearization();
       elements.curveSmoothingMethod.disabled = !hasLinearization;
       elements.catmullTension.disabled = !hasLinearization;
+      
+      // Update visual styling for disabled state
+      if (!hasLinearization) {
+        elements.curveSmoothingMethod.className = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400 bg-gray-100 cursor-not-allowed';
+      } else {
+        elements.curveSmoothingMethod.className = 'w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400';
+      }
       
       // Show/hide tension control for Catmull-Rom
       const method = elements.curveSmoothingMethod.value;
@@ -1436,21 +1511,39 @@
     function make256(endValue, channelName, applyLinearization = false) {
       if (endValue === 0) return new Array(N).fill(0);
       
-      let arr = new Array(N);
-      const step = endValue / DENOM;
+      let arr;
       
-      for (let i = 0; i < N; i++) {
-        arr[i] = Math.round(i * step);
+      // Step 1: Start with base curve (loaded data or linear ramp)
+      if (loadedQuadData && loadedQuadData.curves && loadedQuadData.curves[channelName]) {
+        // Use loaded curve data as the starting point
+        const loadedCurve = loadedQuadData.curves[channelName];
+        const originalEndValue = loadedCurve[255]; // Original final value
+        
+        if (originalEndValue === 0) {
+          return new Array(N).fill(0); // Handle edge case
+        }
+        
+        // Scale the loaded curve to the new end value
+        const scaleFactor = endValue / originalEndValue;
+        arr = loadedCurve.map(value => Math.round(value * scaleFactor));
+      } else {
+        // Generate linear ramp as base
+        arr = new Array(N);
+        const step = endValue / DENOM;
+        
+        for (let i = 0; i < N; i++) {
+          arr[i] = Math.round(i * step);
+        }
       }
       
       const interpolationType = elements.curveSmoothingMethod.value;
       
-      // Step 1: Apply per-channel linearization if available
+      // Step 2: Apply per-channel linearization on top of base curve
       if (channelName && perChannelLinearization[channelName] && perChannelEnabled[channelName]) {
         arr = apply1DLUT(arr, perChannelLinearization[channelName].samples, perChannelLinearization[channelName].domainMin, perChannelLinearization[channelName].domainMax, endValue, interpolationType);
       }
       
-      // Step 2: Apply global linearization if enabled
+      // Step 3: Apply global linearization on top of everything
       if (applyLinearization && linearizationData && linearizationApplied) {
         arr = apply1DLUT(arr, linearizationData.samples, linearizationData.domainMin, linearizationData.domainMax, endValue, interpolationType);
       }
@@ -1750,6 +1843,11 @@
     // Optimized setPrinter with DocumentFragment
     function setPrinter(key) {
       try {
+        // Clear loaded quad data when switching printers (unless we're switching due to a quad load)
+        if (!loadedQuadData || loadedQuadData.switchingPrinter !== true) {
+          clearLoadedQuadData();
+        }
+        
         const p = PRINTERS[key];
         const fragment = document.createDocumentFragment();
         
@@ -1807,7 +1905,7 @@
       const lines = [
         "## QuadToneRIP " + p.channels.join(","),
         "# Printer: " + p.name,
-        "# quadGEN v1.1 by David Marsh"
+        "# quadGEN v1.2 by David Marsh"
       ];
       
       // Add user notes if provided
@@ -1882,8 +1980,9 @@
         const endVal = InputValidator.computeEndFromPercent(val);
         
         Array.from(elements.rows.children).forEach(tr => {
-          // Skip channels that were intentionally disabled by the user
-          if (tr.hasAttribute('data-user-disabled')) {
+          // Skip channels that are disabled (check both checkbox state and user-disabled attribute)
+          const enableCheckbox = tr.querySelector('.channel-enable-checkbox');
+          if (tr.hasAttribute('data-user-disabled') || (enableCheckbox && !enableCheckbox.checked)) {
             return;
           }
           
@@ -1914,8 +2013,9 @@
         const percentVal = InputValidator.computePercentFromEnd(val);
         
         Array.from(elements.rows.children).forEach(tr => {
-          // Skip channels that were intentionally disabled by the user
-          if (tr.hasAttribute('data-user-disabled')) {
+          // Skip channels that are disabled (check both checkbox state and user-disabled attribute)
+          const enableCheckbox = tr.querySelector('.channel-enable-checkbox');
+          if (tr.hasAttribute('data-user-disabled') || (enableCheckbox && !enableCheckbox.checked)) {
             return;
           }
           
@@ -2202,9 +2302,242 @@
       }
     });
     
+    // Load .quad file functionality
+    function parseQuadFile(content) {
+      const lines = content.split('\n').map(line => line.trim());
+      
+      // Look for the QuadToneRIP header line to extract channel names
+      let channels = [];
+      let dataStartIndex = -1;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Look for QuadToneRIP header: ## QuadToneRIP K,C,M,Y,LC,LM,LK,LLK
+        if (line.startsWith('## QuadToneRIP ')) {
+          const channelPart = line.substring('## QuadToneRIP '.length);
+          channels = channelPart.split(',').map(ch => ch.trim());
+          continue;
+        }
+        
+        // Find where numeric data starts (first line that starts with a digit)
+        if (dataStartIndex === -1 && line && line.match(/^\d/)) {
+          dataStartIndex = i;
+          break;
+        }
+      }
+      
+      if (channels.length === 0) {
+        throw new Error('Could not find QuadToneRIP header with channel names in .quad file');
+      }
+      
+      if (dataStartIndex === -1) {
+        throw new Error('Could not find numeric data in .quad file');
+      }
+      
+      // Parse the actual numeric data portion
+      // Skip to where numeric data starts and collect all numeric lines
+      const numericLines = [];
+      let invalidDataLines = [];
+      
+      for (let i = dataStartIndex; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line) {
+          if (/^\d+$/.test(line)) {
+            const value = parseInt(line, 10);
+            
+            // Validate reasonable value range for QuadToneRIP (0-65535)
+            if (value < 0 || value > 65535) {
+              throw new Error(`Invalid data value ${value} at line ${i + 1}. QuadToneRIP values must be 0-65535.`);
+            }
+            
+            numericLines.push(value);
+          } else if (!line.startsWith('#')) {
+            // Track non-numeric, non-comment lines as potentially problematic
+            invalidDataLines.push(`Line ${i + 1}: "${line}"`);
+            if (invalidDataLines.length > 10) break; // Don't flood with errors
+          }
+        }
+      }
+      
+      // Warn about mixed content if found
+      if (invalidDataLines.length > 0) {
+        const sampleLines = invalidDataLines.slice(0, 3).join(', ');
+        console.warn(`Found ${invalidDataLines.length} non-numeric lines in data section: ${sampleLines}`);
+      }
+      
+      // Each channel should have exactly 256 data points
+      const expectedDataPoints = channels.length * 256;
+      if (numericLines.length < expectedDataPoints) {
+        throw new Error(`Insufficient data: found ${numericLines.length} values, expected ${expectedDataPoints} (${channels.length} channels × 256 points each)`);
+      }
+      
+      // Extract all 256 data points for each channel
+      const channelCurves = {};
+      const values = []; // Final values for UI display
+      
+      for (let channelIdx = 0; channelIdx < channels.length; channelIdx++) {
+        const channelName = channels[channelIdx];
+        const channelStartIdx = channelIdx * 256;
+        const channelEndIdx = channelStartIdx + 255; // 0-indexed, so 255 is the 256th value
+        
+        if (channelEndIdx >= numericLines.length) {
+          throw new Error(`Not enough data for channel ${channelName}: need point ${channelEndIdx + 1}, have ${numericLines.length}`);
+        }
+        
+        // Extract all 256 points for this channel
+        const curveData = numericLines.slice(channelStartIdx, channelStartIdx + 256);
+        channelCurves[channelName] = curveData;
+        
+        // Store the final value for UI display (percentage calculation)
+        values.push(curveData[255]);
+      }
+      
+      return { channels, values, curves: channelCurves };
+    }
+    
+    function findMatchingPrinter(channels) {
+      for (const [printerId, config] of Object.entries(PRINTERS)) {
+        if (config.channels.length === channels.length && 
+            config.channels.every((ch, i) => ch === channels[i])) {
+          return printerId;
+        }
+      }
+      return null;
+    }
+    
+    // Load .quad file button click handler
+    elements.loadQuadBtn.addEventListener('click', () => {
+      elements.quadFile.click();
+    });
+    
+    // Load .quad file change handler
+    elements.quadFile.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      try {
+        // Check file type
+        if (!file.name.toLowerCase().endsWith('.quad')) {
+          throw new Error(`Unsupported file type. Expected .quad file, got: ${file.name}`);
+        }
+        
+        // Check file size (reasonable limits)
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          throw new Error(`File too large: ${(file.size / (1024*1024)).toFixed(1)}MB. Maximum supported size is 10MB.`);
+        }
+        
+        if (file.size < 100) { // Minimum reasonable size
+          throw new Error(`File too small: ${file.size} bytes. This doesn't appear to be a valid .quad file.`);
+        }
+        
+        const content = await file.text();
+        
+        // Check for reasonable file structure
+        if (!content.includes('QuadToneRIP')) {
+          throw new Error('File does not appear to be a valid .quad file (missing QuadToneRIP header).');
+        }
+        
+        // Check for reasonable data content
+        const numericLines = content.split('\n').filter(line => line.trim() && /^\d+$/.test(line.trim()));
+        if (numericLines.length < 256) {
+          throw new Error(`File appears corrupted or incomplete. Found only ${numericLines.length} data points, expected at least 256.`);
+        }
+        
+        const parsed = parseQuadFile(content);
+        
+        // Store the complete curve data for use in generation
+        loadedQuadData = {
+          filename: file.name,
+          curves: parsed.curves,
+          channels: parsed.channels
+        };
+        
+        // Find matching printer
+        const matchingPrinter = findMatchingPrinter(parsed.channels);
+        if (!matchingPrinter) {
+          const channelList = parsed.channels.join(', ');
+          throw new Error(`No supported printer matches channels: ${channelList}. Supported printers: P800 (K,C,M,Y,LC,LM,LK,LLK), P700-P900 (K,C,M,Y,LC,LM,LK,LLK,V,MK)`);
+        }
+        
+        // Switch to matching printer (mark that we're switching due to quad load)
+        if (loadedQuadData) loadedQuadData.switchingPrinter = true;
+        elements.printerSelect.value = matchingPrinter;
+        setPrinter(matchingPrinter);
+        if (loadedQuadData) delete loadedQuadData.switchingPrinter;
+        
+        // Wait a moment for the channel table to rebuild
+        setTimeout(() => {
+          // Set the channel values
+          const rows = Array.from(elements.rows.children);
+          parsed.values.forEach((value, index) => {
+            if (index < rows.length) {
+              const row = rows[index];
+              const endInput = row.querySelector('.end-input');
+              const percentInput = row.querySelector('.percent-input');
+              
+              if (endInput && percentInput) {
+                endInput.value = value.toString();
+                const percent = InputValidator.computePercentFromEnd(value);
+                percentInput.value = percent.toString();
+                
+                // Refresh the row display
+                const refreshFn = row.refreshDisplayFn;
+                if (refreshFn) refreshFn();
+              }
+            }
+          });
+          
+          updatePreview();
+          
+          // Show file info
+          elements.quadFileInfo.textContent = `${file.name} - ${PRINTERS[matchingPrinter].name}`;
+          elements.quadFileInfo.classList.remove('hidden');
+          
+          // Set the filename input to copy of the loaded file (remove .quad extension)
+          const baseName = file.name.replace(/\.quad$/i, '');
+          elements.filenameInput.value = `${baseName}_copy`;
+          // Mark as user-edited so it won't be auto-generated over
+          elements.filenameInput.dataset.userEdited = 'true';
+          
+          showStatus(`Loaded ${file.name} - switched to ${PRINTERS[matchingPrinter].name}`);
+        }, 50);
+        
+      } catch (error) {
+        console.error('Error loading .quad file:', error);
+        showStatus(`Error loading .quad file: ${error.message}`);
+      }
+      
+      // Clear the file input
+      e.target.value = '';
+    });
+    
+    // Info popup functionality
+    elements.infoBtn.addEventListener('click', () => {
+      elements.infoPopup.classList.remove('hidden');
+    });
+    
+    elements.closeInfoBtn.addEventListener('click', () => {
+      elements.infoPopup.classList.add('hidden');
+    });
+    
+    // Close popup when clicking outside
+    elements.infoPopup.addEventListener('click', (e) => {
+      if (e.target === elements.infoPopup) {
+        elements.infoPopup.classList.add('hidden');
+      }
+    });
+    
+    // Close popup with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !elements.infoPopup.classList.contains('hidden')) {
+        elements.infoPopup.classList.add('hidden');
+      }
+    });
+    
     // Initial setup with error handling
     try {
-      setPrinter('P900');
+      setPrinter('P700P900');
     } catch (error) {
       console.error('Initialization error:', error);
       showStatus("Initialization error. Please refresh the page.");
