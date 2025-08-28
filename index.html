@@ -180,16 +180,32 @@ COLOR MUSE DATA (.txt files) & MANUAL L* ENTRY:
 
 CUBE FILES (.cube files):
 1. Parse 1D LUT samples directly from file
-2. Use samples WITHOUT any coordinate transformation
-3. Return original samples as-is
+2. Apply DUAL TRANSFORMATION to match printing coordinate system:
+   - Horizontal flip: Reverses coordinate positions to match ink vs RGB relationship
+   - Vertical flip: Inverts values to match printing intensity expectations
+3. Both transformations needed to match industry standard application (like Photoshop)
 
-WHY DIFFERENT TREATMENTS ARE NECESSARY:
+WHY DUAL TRANSFORMATION IS NECESSARY FOR ALL METHODS:
+- All linearization methods now use consistent dual flip transformation
+- .cube files: Need coordinate system conversion from RGB space to printing ink space
 - Color Muse data: Raw measurement data requiring coordinate system interpretation
-- .cube files: Pre-processed correction curves already in correct coordinate system
-- Industry tools use different coordinate system than mathematical intuition for measurement data
-- Without transformation (Color Muse): crossing point at ~35% (incorrect)
-- With dual transformation (Color Muse): crossing point at ~65% (matches industry standard)
-- Direct use (.cube files): produces correct industry-standard behavior
+- Manual L* data: Laboratory measurement data requiring same coordinate interpretation
+- Industry tools use different coordinate system than mathematical intuition
+- Without transformation: crossing point at ~35% (incorrect)
+- With dual transformation: crossing point at ~65% (matches industry standard)
+
+CUBE FILE COORDINATE SYSTEM UNDERSTANDING:
+- .cube RGB coordinate system: index 0 = white (RGB 255), index end = black (RGB 0)  
+- Printing ink coordinate system: 0% ink = white paper, 100% ink = full black
+- Horizontal flip: Maps .cube end values to 0% ink (white), .cube start values to 100% ink (black)
+- Vertical flip: Inverts .cube values so reduction of RGB whites becomes ink limits
+- Example: test-half.cube limiting RGB to 50% → 0% ink gets 50% limit, 100% ink gets 100% limit
+
+VALIDATION WITH TEST FILES:
+- test-linear.cube: Produces straight diagonal line (no effect)
+- test-half.cube: Starts at 50% limit (0% ink), rises to 100% limit (100% ink)  
+- test-gamma.cube: Produces characteristic gamma curve crossing around 60%
+- Matches Photoshop behavior where RGB 255 → RGB 127 limits white areas to 50%
 
 KEY LESSONS LEARNED:
 1. Relationship interpretation matters more than mathematical sophistication
@@ -1371,9 +1387,20 @@ ARCHITECTURAL NOTES:
         throw new Error("No 1D samples found in .cube text.");
       }
 
-      // Try using .cube samples directly without any transformation
-      // .cube files might have a different coordinate system than Color Muse data
-      return { domainMin, domainMax, samples };
+      // Apply both horizontal and vertical flips to match printing coordinate system
+      // First: horizontal flip (reverse coordinate positions)
+      const horizontallyFlipped = samples.map((sample, i) => {
+        const inputPos = i / (samples.length - 1); // Current input position (0-1)
+        const flippedInputPos = 1.0 - inputPos; // Horizontal flip
+        const flippedInputIndex = Math.round(flippedInputPos * (samples.length - 1)); // Convert back to index
+        const clampedIndex = Math.max(0, Math.min(samples.length - 1, flippedInputIndex));
+        return samples[clampedIndex];
+      });
+      
+      // Second: vertical flip (invert values so 0.0 becomes 1.0, 0.5 becomes 0.5, etc.)
+      const flippedSamples = horizontallyFlipped.map(sample => 1.0 - sample);
+      
+      return { domainMin, domainMax, samples: flippedSamples };
     }
 
     /**
@@ -1932,15 +1959,27 @@ ARCHITECTURAL NOTES:
     }
 
     // Extract channel row creation
-    function createChannelRow(name) {
-      const randomPercent = getRandomInkLimit(name);
-      const randomEndValue = InputValidator.computeEndFromPercent(randomPercent);
+    function createChannelRow(name, printerKey) {
+      // Set default values based on printer and channel
+      let defaultPercent = 0; // Default to disabled
+      let channelEnabled = false; // Default to disabled
+      
+      // Enable only specific channels with 100%
+      if (printerKey === 'P800' && name === 'K') {
+        defaultPercent = 100;
+        channelEnabled = true;
+      } else if (printerKey === 'P700P900' && name === 'MK') {
+        defaultPercent = 100;
+        channelEnabled = true;
+      }
+      
+      const defaultEndValue = InputValidator.computeEndFromPercent(defaultPercent);
       
       const tr = document.createElement('tr');
       tr.className = "border-t border-gray-200";
       tr.innerHTML = `
         <td class="px-3 py-2 text-center">
-          <input type="checkbox" class="channel-enable-checkbox w-4 h-4" title="Enable/disable channel" checked>
+          <input type="checkbox" class="channel-enable-checkbox w-4 h-4" title="Enable/disable channel" ${channelEnabled ? 'checked' : ''}>
         </td>
         <td class="px-3 py-2 font-medium">
           <span class="inline-flex items-center gap-2">
@@ -1960,10 +1999,10 @@ ARCHITECTURAL NOTES:
           </div>
         </td>
         <td class="px-3 py-2">
-          <input type="number" step="1" min="0" max="100" value="${randomPercent}" class="percent-input w-28 rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="number" step="1" min="0" max="100" value="${defaultPercent}" class="percent-input w-28 rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </td>
         <td class="px-3 py-2">
-          <input type="number" step="1" min="0" max="64000" value="${randomEndValue}" class="end-input w-28 rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="number" step="1" min="0" max="64000" value="${defaultEndValue}" class="end-input w-28 rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </td>
       `;
       
@@ -2208,7 +2247,7 @@ ARCHITECTURAL NOTES:
         const fragment = document.createDocumentFragment();
         
         p.channels.forEach(ch => {
-          const tr = createChannelRow(ch);
+          const tr = createChannelRow(ch, key);
           tr.dataset.channel = ch; // Add channel name to dataset
           fragment.appendChild(tr);
         });
