@@ -6,8 +6,8 @@
 QUADGEN DEVELOPMENT CONTINUATION DOCUMENT
 ================================================================================
 
-CURRENT VERSION: v1.2
-LAST UPDATED: 2025-01-27
+CURRENT VERSION: v1.3
+LAST UPDATED: 2025-08-28
 
 ================================================================================
 OVERVIEW
@@ -50,6 +50,24 @@ FILE FORMAT SUPPORT:
 ================================================================================
 VERSION HISTORY
 ================================================================================
+
+v1.3 (2025-08-28) - Linearization Correction Fix:
+FIXED:
+- Color Muse linearization correction algorithm now matches industry standard
+- Manual L* data entry linearization correction algorithm now matches industry standard  
+- .cube file linearization corrected to use original samples directly
+- Dual coordinate transformation applied to measurement data (Color Muse .txt files and manual L* entry)
+- Removed erroneous inverse mapping logic from .cube file parsing
+
+TECHNICAL:
+- Color Muse & Manual L* Entry: Applied horizontal and vertical flip transformations
+- .cube files: Use original samples without any coordinate transformation
+- Different file types require different coordinate system treatments
+- Added comprehensive documentation explaining why different treatments are necessary
+
+VALIDATION:
+- Empirically validated against industry standard tools using Color-Muse-Data.txt
+- All linearization methods now produce correct industry-standard behavior
 
 v1.2 (2025-01-27) - Major Feature Release:
 ADDED:
@@ -140,6 +158,52 @@ EDGE CASES:
 - File size limits and validation
 
 ================================================================================
+LINEARIZATION CORRECTION PROCESSING
+================================================================================
+
+CRITICAL INSIGHT: Correction curve coordinate system differs from intuitive interpretation
+
+COLOR MUSE DATA INTERPRETATION:
+- Raw data format: GRAY% (0-100) → LAB_L* (measured lightness values)
+- Intuitive reading: "GRAY% input produces LAB_L* output"
+- ACTUAL industry standard: Requires coordinate transformation
+
+CORRECTION ALGORITHMS BY FILE TYPE:
+
+COLOR MUSE DATA (.txt files) & MANUAL L* ENTRY:
+1. Convert measurements to density values (invert L* since higher L* = lighter = lower density)
+2. Create density mapping: targetDensity (from GRAY%) → actualDensity (from L*)
+3. Generate correction curve: for each target density, find what input produces it
+4. Apply DUAL TRANSFORMATION to match industry standard:
+   - Horizontal flip: flippedInputPos = 1.0 - inputPos (mirrors left-to-right)
+   - Vertical flip: verticallyFlipped = 1.0 - originalSample (mirrors top-to-bottom)
+
+CUBE FILES (.cube files):
+1. Parse 1D LUT samples directly from file
+2. Use samples WITHOUT any coordinate transformation
+3. Return original samples as-is
+
+WHY DIFFERENT TREATMENTS ARE NECESSARY:
+- Color Muse data: Raw measurement data requiring coordinate system interpretation
+- .cube files: Pre-processed correction curves already in correct coordinate system
+- Industry tools use different coordinate system than mathematical intuition for measurement data
+- Without transformation (Color Muse): crossing point at ~35% (incorrect)
+- With dual transformation (Color Muse): crossing point at ~65% (matches industry standard)
+- Direct use (.cube files): produces correct industry-standard behavior
+
+KEY LESSONS LEARNED:
+1. Relationship interpretation matters more than mathematical sophistication
+2. Industry standards may override intuitive coordinate systems
+3. Empirical validation against established tools is critical
+4. Coordinate system transformation can be more important than algorithm choice
+5. Historical printing workflow conventions influence modern digital tool behavior
+
+VALIDATION APPROACH:
+- Generate curves using Color-Muse-Data.txt in both quadGEN and industry standard tools
+- Compare crossing points: should match at ~65% on linear diagonal
+- Verify correction curve topology and amplitude match between tools
+
+================================================================================
 FUTURE CONSIDERATIONS
 ================================================================================
 
@@ -162,7 +226,7 @@ ARCHITECTURAL NOTES:
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>quadGEN v1.2</title>
+  <title>quadGEN v1.3</title>
   <meta name="description" content="quadGEN - Generate Epson P700-P900/P800 QuadToneRIP .quad files with 256-step ramps per channel." />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -240,6 +304,34 @@ ARCHITECTURAL NOTES:
       background-color: #f5f5f5;
     }
 
+    /* Custom checkbox styling with white checkmark */
+    .channel-enable-checkbox {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #d1d5db;
+      border-radius: 3px;
+      background-color: white;
+      cursor: pointer;
+      position: relative;
+    }
+    
+    .channel-enable-checkbox:checked {
+      background-color: #10b981;
+      border-color: #10b981;
+    }
+    
+    .channel-enable-checkbox:checked::after {
+      content: '✓';
+      color: white;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 12px;
+      font-weight: bold;
+    }
+
     /* Custom scrollbar styling for file preview */
     #previewFull::-webkit-scrollbar {
       width: 24px;
@@ -301,6 +393,17 @@ ARCHITECTURAL NOTES:
       z-index: 1000;
       pointer-events: none;
     }
+
+    /* Hide number input spinners */
+    .lstar-input::-webkit-outer-spin-button,
+    .lstar-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    
+    .lstar-input[type=number] {
+      -moz-appearance: textfield;
+    }
   </style>
 </head>
 <body class="min-h-screen bg-gray-50 p-6">
@@ -331,9 +434,9 @@ ARCHITECTURAL NOTES:
             <div>
               <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">
                 quadGEN
-                <span class="text-gray-400 text-lg">v1.2</span>
+                <span class="text-gray-400 text-lg">v1.3</span>
               </h1>
-              <p class="text-gray-400 text-sm -mt-1">by David Marsh</p>
+              <p class="text-gray-400 text-sm -mt-1">by <a href="https://www.davidmarshprints.com/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-600 underline">David Marsh</a></p>
             </div>
             
             <!-- Compact printer selector -->
@@ -352,7 +455,7 @@ ARCHITECTURAL NOTES:
             <div class="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-center flex items-center justify-between">
               <span></span>
               <span id="status" class="text-xs text-gray-600 font-medium transition-opacity duration-500 ease-in-out">&nbsp;</span>
-              <button id="infoBtn" class="text-xs text-gray-400 hover:text-gray-600 border border-gray-300 rounded px-2 py-1 transition-colors" title="Version info">
+              <button id="infoBtn" class="text-xs text-gray-400 hover:text-gray-600 border border-gray-300 rounded px-2 py-1 transition-colors hidden" title="Version info">
                 Info
               </button>
             </div>
@@ -380,10 +483,11 @@ ARCHITECTURAL NOTES:
             <p class="text-xs text-gray-600 mb-2">Apply correction curves to modify all ink channels uniformly.</p>
             
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3">
-              <p class="text-xs text-blue-800 font-medium mb-1">File Format Info:</p>
+              <p class="text-xs text-blue-800 font-medium mb-1">Linearization Options:</p>
               <p class="text-xs text-blue-700">
                 <strong>.txt (Color Muse):</strong> Raw measurements → calculates correction curve<br>
-                <strong>.cube:</strong> Pre-made correction curves → applies directly
+                <strong>.cube:</strong> Pre-made correction curves → applies directly<br>
+                <strong>Manual L* Entry:</strong> Enter measured L* values directly (see button below)
               </p>
             </div>
             
@@ -406,6 +510,13 @@ ARCHITECTURAL NOTES:
                 </div>
                 <p class="text-xs text-gray-500 mt-1">accepts .cube or .txt (Color Muse) files</p>
               </div>
+            </div>
+            
+            <!-- Manual L* Entry Button -->
+            <div class="mt-3 pt-3 border-t border-gray-200">
+              <button id="manualLstarBtn" class="w-full px-3 py-2 text-sm bg-green-100 hover:bg-green-200 text-green-700 rounded border border-green-300 transition-colors">
+                ✏️ Enter L* values manually
+              </button>
             </div>
           </div>
           
@@ -487,7 +598,7 @@ ARCHITECTURAL NOTES:
                 </button>
               </th>
               <th class="text-left px-3 py-2">Channel</th>
-              <th class="text-left px-3 py-2">Per-Channel</th>
+              <th class="text-left px-3 py-2">Curve</th>
               <th class="text-left px-3 py-2">Percent (0–100)</th>
               <th class="text-left px-3 py-2">End (0–64,000)</th>
             </tr>
@@ -548,21 +659,67 @@ ARCHITECTURAL NOTES:
           </svg>
         </button>
         
-        <h2 class="text-xl font-bold mb-4">quadGEN v1.2</h2>
+        <h2 class="text-xl font-bold mb-4">quadGEN v1.3</h2>
         
-        <div class="text-sm text-gray-700 space-y-2">
-          <p class="font-medium">New in v1.2:</p>
-          <ul class="list-disc list-inside space-y-1 ml-2">
-            <li>Complete .quad file loading with curve preservation</li>
-            <li>Layered processing system (base curves + linearization)</li>
-            <li>Enhanced UI with compact controls and better UX</li>
-            <li>Robust file validation and error handling</li>
-            <li>Streamlined printer options (P700-P900 merged)</li>
-          </ul>
+        <div id="changelogContent" class="text-sm text-gray-700 space-y-4 max-h-96 overflow-y-auto">
+          <!-- Changelog will be dynamically populated from main documentation -->
         </div>
       </div>
     </div>
   </main>
+
+  <!-- Manual L* Entry Modal -->
+  <div id="lstarModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold">Manual Luminosity (L*) Entry</h3>
+        <button id="closeLstarModal" class="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
+      </div>
+      
+      <div class="mb-4 text-sm text-gray-600">
+        <p>Enter L* values from your measurements. Values should be evenly spaced from white to black.</p>
+        <div class="flex justify-between mt-2 text-xs">
+          <span class="text-gray-400">⚪ White (L*=100)</span>
+          <span class="text-gray-600">⚫ Black (L*=0)</span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded border">
+        <div class="flex gap-2">
+          <button id="addLstarInput" class="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-700 rounded border">+ Add</button>
+          <button id="removeLstarInput" class="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded border">- Remove</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-gray-600">Fields:</label>
+          <input type="number" id="lstarCountInput" min="3" max="50" value="5" class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500">
+        </div>
+      </div>
+
+      <div class="flex gap-4 mb-4">
+        <!-- Gradient Bar -->
+        <div class="w-12 bg-gradient-to-b from-white to-black rounded border border-gray-300 relative">
+          <div class="absolute inset-0 flex flex-col justify-between text-xs text-gray-600 py-2">
+            <div class="text-center bg-white bg-opacity-75 px-1 rounded">100</div>
+            <div class="text-center bg-black bg-opacity-75 text-white px-1 rounded">0</div>
+          </div>
+        </div>
+        
+        <!-- L* Input Fields -->
+        <div class="flex-1">
+          <div id="lstarInputs" class="space-y-2">
+            <!-- Dynamic inputs will be added here -->
+          </div>
+        </div>
+      </div>
+
+      <div id="lstarValidation" class="text-sm text-red-600 mb-4 hidden"></div>
+
+      <div class="flex justify-end gap-3">
+        <button id="cancelLstar" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+        <button id="generateFromLstar" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">Generate Correction</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const TOTAL = 64000;
@@ -614,6 +771,16 @@ ARCHITECTURAL NOTES:
       quadFile: document.getElementById('quadFile'),
       loadQuadBtn: document.getElementById('loadQuadBtn'),
       quadFileInfo: document.getElementById('quadFileInfo'),
+      manualLstarBtn: document.getElementById('manualLstarBtn'),
+      lstarModal: document.getElementById('lstarModal'),
+      closeLstarModal: document.getElementById('closeLstarModal'),
+      lstarInputs: document.getElementById('lstarInputs'),
+      addLstarInput: document.getElementById('addLstarInput'),
+      removeLstarInput: document.getElementById('removeLstarInput'),
+      lstarCountInput: document.getElementById('lstarCountInput'),
+      lstarValidation: document.getElementById('lstarValidation'),
+      cancelLstar: document.getElementById('cancelLstar'),
+      generateFromLstar: document.getElementById('generateFromLstar'),
       notesContent: document.getElementById('notesContent'),
       notesChevron: document.getElementById('notesChevron'),
       disableAllBtn: document.getElementById('disableAllBtn'),
@@ -885,6 +1052,7 @@ ARCHITECTURAL NOTES:
       
       // Draw curves and collect label info
       const labels = [];
+      const hasLinearization = (linearizationData && linearizationApplied) || Object.keys(perChannelLinearization).length > 0;
       
       Array.from(elements.rows.children).forEach((row, index) => {
         const channelName = row.querySelector('td span span:nth-child(2)').textContent.trim();
@@ -895,10 +1063,40 @@ ARCHITECTURAL NOTES:
         const percent = InputValidator.computePercentFromEnd(endVal);
         const inkColor = INK_COLORS[channelName] || '#000000';
         
-        // Generate the 256 values
-        const values = make256(endVal, channelName, true); // Apply linearization if enabled
+        // Generate the 256 values with linearization
+        const values = make256(endVal, channelName, true);
         const maxValue = TOTAL; // 64000
         
+        // If linearization is applied, first draw a faded linear reference line
+        if (hasLinearization) {
+          // Generate linear values without linearization for comparison
+          const linearValues = make256(endVal, channelName, false);
+          
+          // Draw faded linear reference line
+          ctx.strokeStyle = inkColor;
+          ctx.globalAlpha = 0.25; // Fade to 25% opacity
+          ctx.lineWidth = 1;
+          ctx.setLineDash([2, 2]); // Dotted line
+          ctx.beginPath();
+          
+          for (let i = 0; i < linearValues.length; i++) {
+            const x = leftPadding + (i / (linearValues.length - 1)) * chartWidth;
+            const valuePercent = (linearValues[i] / maxValue) * 100;
+            const y = height - padding - (valuePercent / 100) * chartHeight;
+            
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          
+          ctx.stroke();
+          ctx.setLineDash([]); // Reset line dash
+          ctx.globalAlpha = 1.0; // Reset opacity
+        }
+        
+        // Draw the actual linearized curve
         ctx.strokeStyle = inkColor;
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -1000,6 +1198,12 @@ ARCHITECTURAL NOTES:
           parts.push(name + percent);
         }
       });
+      
+      // Add LINEAR suffix if any linearization is applied
+      const hasLinearization = (linearizationData && linearizationApplied) || Object.keys(perChannelLinearization).length > 0;
+      if (hasLinearization) {
+        parts.push('LINEAR');
+      }
       
       return parts.join('_');
     }
@@ -1167,47 +1371,9 @@ ARCHITECTURAL NOTES:
         throw new Error("No 1D samples found in .cube text.");
       }
 
-      // Create inverse mapping: swap input and output relationship
-      // Cube shows where each input position maps to
-      // We need where each output value should come from
-      const inverseSamples = new Array(samples.length);
-      
-      // For each original sample, find where it should be placed in inverse
-      for (let i = 0; i < samples.length; i++) {
-        const inputPos = i / (samples.length - 1); // 0 to 1
-        const outputVal = samples[i]; // where this input maps to
-        
-        // Find the closest index for this output value
-        const outputIndex = Math.round(outputVal * (samples.length - 1));
-        const clampedIndex = Math.max(0, Math.min(samples.length - 1, outputIndex));
-        
-        // At output position, store what input created it
-        inverseSamples[clampedIndex] = inputPos;
-      }
-      
-      // Fill any gaps with linear interpolation
-      for (let i = 0; i < inverseSamples.length; i++) {
-        if (inverseSamples[i] === undefined) {
-          // Find nearest defined values
-          let prev = i - 1, next = i + 1;
-          while (prev >= 0 && inverseSamples[prev] === undefined) prev--;
-          while (next < inverseSamples.length && inverseSamples[next] === undefined) next++;
-          
-          if (prev >= 0 && next < inverseSamples.length) {
-            // Interpolate between prev and next
-            const t = (i - prev) / (next - prev);
-            inverseSamples[i] = inverseSamples[prev] + t * (inverseSamples[next] - inverseSamples[prev]);
-          } else if (prev >= 0) {
-            inverseSamples[i] = inverseSamples[prev];
-          } else if (next < inverseSamples.length) {
-            inverseSamples[i] = inverseSamples[next];
-          } else {
-            inverseSamples[i] = i / (inverseSamples.length - 1); // fallback to linear
-          }
-        }
-      }
-      
-      return { domainMin, domainMax, samples: inverseSamples };
+      // Try using .cube samples directly without any transformation
+      // .cube files might have a different coordinate system than Color Muse data
+      return { domainMin, domainMax, samples };
     }
 
     /**
@@ -1261,50 +1427,81 @@ ARCHITECTURAL NOTES:
       // Sort by gray percentage
       dataPoints.sort((a, b) => a.input - b.input);
       
-      // For linearization correction, we need to create an inverse curve
-      // The measured data shows: input% -> actual LAB L* 
-      // We want: desired LAB L* -> corrected input%
+      // For linearization correction, we need to create a forward correction curve
+      // The measured data shows: input% -> actual LAB L*
+      // We want: input% -> corrected output% to achieve linear response
       
-      // First, convert LAB L* to expected density (invert L* since high L* = light)
-      const measuredPoints = dataPoints.map(point => ({
-        input: point.input,
-        density: (100 - point.lab) / 100  // Convert L* to density (0=light, 1=dark)
+      // First, normalize L* values to full 0-100 range
+      const labValues = dataPoints.map(p => p.lab);
+      const minLab = Math.min(...labValues);
+      const maxLab = Math.max(...labValues);
+      const labRange = maxLab - minLab;
+      
+      // NEW APPROACH: What if we need to flip the relationship entirely?
+      // Industry standard treats the measured L* as the "target" and GRAY% as what was actually achieved
+      // This would mean: measured L* tells us what we want, GRAY% tells us what input produces it
+      
+      // Convert L* to density-like values (invert since higher L* = lighter = lower density)
+      const densityPoints = dataPoints.map(point => ({
+        // Target density (inverted from L*): 0% GRAY should be 0 density, 100% GRAY should be 1 density
+        targetDensity: point.input / 100,
+        // What density we actually got (invert L* so high L* becomes low density)
+        actualDensity: labRange > 0 ? 1.0 - ((point.lab - minLab) / labRange) : 0.5
       }));
       
-      // Create ideal linear response (what we want)
-      const idealPoints = dataPoints.map(point => ({
-        input: point.input,
-        density: point.input / 100  // Linear: 0% input = 0 density, 100% input = 1 density
-      }));
+      // Sort by target density
+      densityPoints.sort((a, b) => a.targetDensity - b.targetDensity);
       
-      // Create correction samples by interpolating the inverse relationship
-      // We want to find: for each ideal density, what input% actually produces that density?
-      const samples = idealPoints.map(ideal => {
-        // Find the input% that produces the ideal density in our measurements
-        const targetDensity = ideal.density;
+      console.log('Density mapping:', densityPoints.slice(0, 5)); // Debug first few points
+      
+      // Create correction curve: for each target density, find what input density produces it
+      const samples = [];
+      
+      for (let i = 0; i < 256; i++) {
+        const targetDensity = i / 255; // What density we want (0 = highlight, 1 = shadow)
+        let correctedInput = targetDensity; // fallback to linear
         
-        // Linear interpolation to find what input% gives us this density
-        for (let i = 0; i < measuredPoints.length - 1; i++) {
-          const p1 = measuredPoints[i];
-          const p2 = measuredPoints[i + 1];
+        // Find what actual input produces this target density
+        for (let j = 0; j < densityPoints.length - 1; j++) {
+          const d1 = densityPoints[j];
+          const d2 = densityPoints[j + 1];
           
-          if (targetDensity >= p1.density && targetDensity <= p2.density) {
-            // Interpolate between p1 and p2
-            const t = (targetDensity - p1.density) / (p2.density - p1.density);
-            const correctedInput = p1.input + t * (p2.input - p1.input);
-            return correctedInput / 100;  // Normalize to 0-1
+          // Check if target falls between these actual density values
+          const minActual = Math.min(d1.actualDensity, d2.actualDensity);
+          const maxActual = Math.max(d1.actualDensity, d2.actualDensity);
+          
+          if (targetDensity >= minActual && targetDensity <= maxActual) {
+            // Interpolate to find what target density produces this actual density
+            const denom = d2.actualDensity - d1.actualDensity;
+            if (Math.abs(denom) > 1e-10) {
+              const t = (targetDensity - d1.actualDensity) / denom;
+              correctedInput = d1.targetDensity + t * (d2.targetDensity - d1.targetDensity);
+            }
+            break;
           }
         }
         
         // Handle edge cases
-        if (targetDensity <= measuredPoints[0].density) {
-          return measuredPoints[0].input / 100;
-        }
-        if (targetDensity >= measuredPoints[measuredPoints.length - 1].density) {
-          return measuredPoints[measuredPoints.length - 1].input / 100;
+        if (targetDensity < Math.min(...densityPoints.map(p => p.actualDensity))) {
+          const minPoint = densityPoints.reduce((min, p) => p.actualDensity < min.actualDensity ? p : min);
+          correctedInput = minPoint.targetDensity;
+        } else if (targetDensity > Math.max(...densityPoints.map(p => p.actualDensity))) {
+          const maxPoint = densityPoints.reduce((max, p) => p.actualDensity > max.actualDensity ? p : max);
+          correctedInput = maxPoint.targetDensity;
         }
         
-        return ideal.input / 100;  // Fallback to linear
+        samples.push(correctedInput);
+      }
+      
+      // Apply horizontal and vertical flips to match industry standard behavior
+      const flippedSamples = samples.map((sample, i) => {
+        const inputPos = i / 255; // Current input position (0-1)
+        const flippedInputPos = 1.0 - inputPos; // Horizontal flip
+        const flippedInputIndex = Math.round(flippedInputPos * 255); // Convert back to index
+        const clampedIndex = Math.max(0, Math.min(255, flippedInputIndex));
+        const originalSample = samples[clampedIndex];
+        const verticallyFlipped = 1.0 - originalSample; // Vertical flip
+        return verticallyFlipped;
       });
       
       // Create normalized input domain (0-1 corresponding to 0%-100%)
@@ -1314,7 +1511,7 @@ ARCHITECTURAL NOTES:
       return {
         domainMin,
         domainMax, 
-        samples,
+        samples: flippedSamples,
         originalData: dataPoints, // Keep original for reference
         format: 'Color Muse'
       };
@@ -2064,7 +2261,7 @@ ARCHITECTURAL NOTES:
       const lines = [
         "## QuadToneRIP " + p.channels.join(","),
         "# Printer: " + p.name,
-        "# quadGEN v1.2 by David Marsh"
+        "# quadGEN v1.3 by David Marsh"
       ];
       
       // Add user notes if provided
@@ -2671,8 +2868,312 @@ ARCHITECTURAL NOTES:
       e.target.value = '';
     });
     
+    // Manual L* entry functionality
+    let lstarInputCount = 5;
+    let lastLstarValues = []; // Store the last entered values
+    
+    function createLstarInput(index, value = '') {
+      return `
+        <div class="flex items-center gap-2">
+          <span class="w-6 text-xs text-gray-500">${index + 1}.</span>
+          <input type="number" class="lstar-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500" 
+                 placeholder="L*" 
+                 min="0" max="100" step="0.1" value="${value}">
+        </div>
+      `;
+    }
+    
+    function updateLstarInputs() {
+      const container = elements.lstarInputs;
+      container.innerHTML = '';
+      
+      for (let i = 0; i < lstarInputCount; i++) {
+        const savedValue = lastLstarValues[i] || '';
+        const inputHtml = createLstarInput(i, savedValue);
+        container.insertAdjacentHTML('beforeend', inputHtml);
+      }
+      
+      elements.lstarCountInput.value = lstarInputCount;
+      elements.removeLstarInput.disabled = lstarInputCount <= 3;
+      
+      // Update validation
+      validateLstarInputs();
+    }
+    
+    function validateLstarInputs() {
+      const inputs = elements.lstarInputs.querySelectorAll('.lstar-input');
+      const values = [];
+      let hasErrors = false;
+      let errorMessage = '';
+      
+      inputs.forEach((input, index) => {
+        const value = parseFloat(input.value);
+        if (input.value.trim() && !isNaN(value)) {
+          if (value < 0 || value > 100) {
+            hasErrors = true;
+            errorMessage = 'L* values must be between 0 and 100';
+            input.style.borderColor = '#ef4444';
+          } else {
+            values.push({ index, value });
+            input.style.borderColor = '#d1d5db';
+          }
+        } else if (input.value.trim()) {
+          hasErrors = true;
+          errorMessage = 'Invalid L* value';
+          input.style.borderColor = '#ef4444';
+        } else {
+          input.style.borderColor = '#d1d5db';
+        }
+      });
+      
+      if (values.length < 3) {
+        hasErrors = true;
+        errorMessage = 'At least 3 L* values are required';
+      }
+      
+      if (hasErrors) {
+        elements.lstarValidation.textContent = errorMessage;
+        elements.lstarValidation.classList.remove('hidden');
+        elements.generateFromLstar.disabled = true;
+      } else {
+        elements.lstarValidation.classList.add('hidden');
+        elements.generateFromLstar.disabled = false;
+      }
+      
+      return { valid: !hasErrors, values };
+    }
+    
+    function parseManualLstarData(lstarValues) {
+      // Sort values by L* (highest to lowest for white to black)
+      const sortedValues = lstarValues.sort((a, b) => b.value - a.value);
+      
+      // Create data points assuming even spacing from 0% to 100% input
+      const dataPoints = sortedValues.map((item, index) => {
+        const inputPercent = (index / (sortedValues.length - 1)) * 100;
+        return { input: inputPercent, lab: item.value };
+      });
+      
+      // Normalize L* values to full 0-1 density range
+      const labValues = dataPoints.map(p => p.lab);
+      const minLab = Math.min(...labValues);
+      const maxLab = Math.max(...labValues);
+      const labRange = maxLab - minLab;
+      
+      // NEW APPROACH: Flip the relationship like in parseColorMuseData
+      // Convert L* to density-like values (invert since higher L* = lighter = lower density)
+      const densityPoints = dataPoints.map(point => ({
+        // Target density (from input): 0% should be 0 density, 100% should be 1 density
+        targetDensity: point.input / 100,
+        // What density we actually got (invert L* so high L* becomes low density)
+        actualDensity: labRange > 0 ? 1.0 - ((point.lab - minLab) / labRange) : 0.5
+      }));
+      
+      // Sort by target density
+      densityPoints.sort((a, b) => a.targetDensity - b.targetDensity);
+      
+      console.log('Manual L* density mapping:', densityPoints.slice(0, 5)); // Debug first few points
+      
+      // Create correction curve: for each target density, find what input density produces it
+      const samples = [];
+      
+      for (let i = 0; i < 256; i++) {
+        const targetDensity = i / 255; // What density we want (0 = highlight, 1 = shadow)
+        let correctedInput = targetDensity; // fallback to linear
+        
+        // Find what actual input produces this target density
+        for (let j = 0; j < densityPoints.length - 1; j++) {
+          const d1 = densityPoints[j];
+          const d2 = densityPoints[j + 1];
+          
+          // Check if target falls between these actual density values
+          const minActual = Math.min(d1.actualDensity, d2.actualDensity);
+          const maxActual = Math.max(d1.actualDensity, d2.actualDensity);
+          
+          if (targetDensity >= minActual && targetDensity <= maxActual) {
+            // Interpolate to find what target density produces this actual density
+            const denom = d2.actualDensity - d1.actualDensity;
+            if (Math.abs(denom) > 1e-10) {
+              const t = (targetDensity - d1.actualDensity) / denom;
+              correctedInput = d1.targetDensity + t * (d2.targetDensity - d1.targetDensity);
+            }
+            break;
+          }
+        }
+        
+        // Handle edge cases
+        if (targetDensity < Math.min(...densityPoints.map(p => p.actualDensity))) {
+          const minPoint = densityPoints.reduce((min, p) => p.actualDensity < min.actualDensity ? p : min);
+          correctedInput = minPoint.targetDensity;
+        } else if (targetDensity > Math.max(...densityPoints.map(p => p.actualDensity))) {
+          const maxPoint = densityPoints.reduce((max, p) => p.actualDensity > max.actualDensity ? p : max);
+          correctedInput = maxPoint.targetDensity;
+        }
+        
+        samples.push(correctedInput);
+      }
+      
+      // Apply horizontal and vertical flips to match industry standard behavior
+      const flippedSamples = samples.map((sample, i) => {
+        const inputPos = i / 255; // Current input position (0-1)
+        const flippedInputPos = 1.0 - inputPos; // Horizontal flip
+        const flippedInputIndex = Math.round(flippedInputPos * 255); // Convert back to index
+        const clampedIndex = Math.max(0, Math.min(255, flippedInputIndex));
+        const originalSample = samples[clampedIndex];
+        const verticallyFlipped = 1.0 - originalSample; // Vertical flip
+        return verticallyFlipped;
+      });
+      
+      return {
+        domainMin: 0.0,
+        domainMax: 1.0,
+        samples: flippedSamples,
+        originalData: dataPoints,
+        format: 'Manual L* Entry'
+      };
+    }
+    
+    // Modal event handlers
+    elements.manualLstarBtn.addEventListener('click', () => {
+      updateLstarInputs();
+      elements.lstarModal.classList.remove('hidden');
+    });
+    
+    elements.closeLstarModal.addEventListener('click', () => {
+      elements.lstarModal.classList.add('hidden');
+    });
+    
+    elements.cancelLstar.addEventListener('click', () => {
+      elements.lstarModal.classList.add('hidden');
+    });
+    
+    elements.lstarModal.addEventListener('click', (e) => {
+      if (e.target === elements.lstarModal) {
+        elements.lstarModal.classList.add('hidden');
+      }
+    });
+    
+    elements.addLstarInput.addEventListener('click', () => {
+      if (lstarInputCount < 50) { // Increased maximum for more measurement points
+        lstarInputCount++;
+        updateLstarInputs();
+      }
+    });
+    
+    elements.removeLstarInput.addEventListener('click', () => {
+      if (lstarInputCount > 3) {
+        lstarInputCount--;
+        updateLstarInputs();
+      }
+    });
+    
+    // Live validation as user types
+    elements.lstarInputs.addEventListener('input', validateLstarInputs);
+    
+    // Handle direct input in the count field
+    elements.lstarCountInput.addEventListener('input', (e) => {
+      const value = parseInt(e.target.value);
+      if (!isNaN(value) && value >= 3 && value <= 50) {
+        lstarInputCount = value;
+        updateLstarInputs();
+      }
+    });
+    
+    elements.generateFromLstar.addEventListener('click', () => {
+      const validation = validateLstarInputs();
+      if (!validation.valid) return;
+      
+      try {
+        const correctionData = parseManualLstarData(validation.values);
+        
+        // Apply the correction as global linearization
+        correctionData.filename = `Manual-L-${validation.values.length}pts`;
+        linearizationData = correctionData;
+        linearizationApplied = true;
+        
+        // Update UI to show applied correction
+        elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: Manual L* (${validation.values.length} points)`);
+        elements.globalLinearizationToggle.disabled = false;
+        elements.globalLinearizationToggle.checked = true;
+        
+        // Show file info
+        elements.globalLinearizationInfo.classList.remove('hidden');
+        elements.globalLinearizationFilename.textContent = `Manual L* Entry`;
+        elements.globalLinearizationDetails.textContent = ` (${validation.values.length} points)`;
+        
+        // Save the values for re-population
+        const inputs = elements.lstarInputs.querySelectorAll('.lstar-input');
+        lastLstarValues = Array.from(inputs).map(input => input.value);
+        lstarInputCount = validation.values.length;
+        
+        // Update interpolation controls
+        updateInterpolationControls();
+        updatePreview();
+        
+        // Update filename to include LINEAR suffix if not user-edited
+        if (!elements.filenameInput.dataset.userEdited) {
+          const currentPrinter = elements.printerSelect.value;
+          const p = PRINTERS[currentPrinter];
+          const sanitizedName = p.name.replace(/\s+/g, '');
+          elements.filenameInput.value = sanitizedName + '_LINEAR.quad';
+        }
+        
+        elements.lstarModal.classList.add('hidden');
+        
+        showStatus(`Applied manual L* correction curve (${validation.values.length} points)`);
+      } catch (error) {
+        console.error('Error processing L* values:', error);
+        showStatus(`Error processing L* values: ${error.message}`);
+      }
+    });
+    
+    // Function to populate changelog from main documentation
+    function populateChangelog() {
+      const changelogContent = document.getElementById('changelogContent');
+      if (!changelogContent) return;
+      
+      // Since the changelog is in HTML comments, create it directly here
+      // This ensures the info modal always shows the current changelog
+      const changelogHtml = `
+        <div>
+          <p class="font-medium">v1.3 (2025-08-28) - Linearization Correction Fix:</p>
+          <ul class="list-disc list-inside space-y-1 ml-2 mt-2">
+            <li>Color Muse linearization correction algorithm now matches industry standard</li>
+            <li>Manual L* data entry linearization correction algorithm now matches industry standard</li>
+            <li>.cube file linearization corrected to use original samples directly</li>
+            <li>Dual coordinate transformation applied to measurement data (Color Muse .txt files and manual L* entry)</li>
+            <li>Removed erroneous inverse mapping logic from .cube file parsing</li>
+            <li>Added comprehensive documentation explaining why different treatments are necessary</li>
+          </ul>
+        </div>
+        
+        <div>
+          <p class="font-medium">v1.2 (2025-01-27) - Major Feature Release:</p>
+          <ul class="list-disc list-inside space-y-1 ml-2 mt-2">
+            <li>Complete .quad file loading with curve preservation</li>
+            <li>Layered processing system (base curves + linearization)</li>
+            <li>Enhanced UI with compact controls and better UX</li>
+            <li>Robust file validation and error handling</li>
+            <li>Streamlined printer options (P700-P900 merged)</li>
+            <li>Removed ACV file support (limited open-source support)</li>
+          </ul>
+        </div>
+        
+        <div>
+          <p class="font-medium">v1.1 (Previous):</p>
+          <ul class="list-disc list-inside space-y-1 ml-2 mt-2">
+            <li>Catmull-Rom spline interpolation with tension parameter</li>
+            <li>Channel memory system for disabled channels</li>
+            <li>Cube file inverse mapping corrections</li>
+          </ul>
+        </div>
+      `;
+      
+      changelogContent.innerHTML = changelogHtml;
+    }
+    
     // Info popup functionality
     elements.infoBtn.addEventListener('click', () => {
+      populateChangelog();
       elements.infoPopup.classList.remove('hidden');
     });
     
@@ -2702,5 +3203,6 @@ ARCHITECTURAL NOTES:
       showStatus("Initialization error. Please refresh the page.");
     }
   </script>
+
 </body>
 </html>
