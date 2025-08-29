@@ -6,7 +6,7 @@
 QUADGEN TECHNICAL SPECIFICATION
 ================================================================================
 
-VERSION: v1.4.1
+VERSION: v1.5
 REVISION DATE: 2025-08-29
 
 ================================================================================
@@ -57,15 +57,17 @@ FILE FORMAT SPECIFICATIONS:
 - 1DLUT (.cube): 1D LUT linearization correction data
 - 3DLUT (.cube): 3D LUT with neutral axis extraction for linearization
 - LAB data (.txt): Color Muse measurement datasets for linearization
-- .acv: Discontinued in v1.2 (insufficient open-source compatibility)
+- .acv: Adobe Photoshop curve files (binary format, cubic spline interpolation of RGB composite curve)
 
 LINEARIZATION DATA PROCESSING:
 - Global LAB data: Applied uniformly to all ink channels via single correction curve
 - Per-channel LAB data: Individual correction curves per ink channel for precise control
 - 3D LUT processing: Neutral axis extraction (R=G=B diagonal) via trilinear interpolation
 - LAB coordinate transformation: Dual transformation applied to measurement data
-- File processing: parseLinearizationFile() routes files through appropriate parsers
+- ACV curve processing: Binary format parsing with cubic spline interpolation of control points
+- File processing: parseLinearizationFile() routes files through appropriate parsers (text/binary detection)
 - 3D LUT extraction: Samples 256 points along neutral axis, ignores color information
+- ACV curve extraction: Uses RGB composite curve (first curve) with smooth interpolation between control points
 - Data validation: Format detection and comprehensive error handling
 - Coordinate systems: All formats normalized to quadGEN's printing coordinate system
 
@@ -73,11 +75,29 @@ LINEARIZATION DATA PROCESSING:
 VERSION HISTORY
 ================================================================================
 
-v1.4.1 (2025-08-29) - Smoothing Algorithm Refinements:
+NOTE: Version history is now centralized in the VERSION_HISTORY JavaScript object.
+To update changelog content, modify the VERSION_HISTORY data structure in the JavaScript code.
+Both internal documentation and About dialog are generated from this single source.
+
+v1.5 (2025-08-29) - Adobe Photoshop .acv Curve File Support:
+ADDED:
+- Adobe Photoshop .acv file format support: Complete binary format parser for curve presets
+- Cubic spline interpolation: Smooth curve generation matching Photoshop's behavior between control points  
+- ACV format detection: Automatic binary vs text file handling in parseLinearizationFile()
+- RGB composite curve extraction: Uses first curve from multi-curve .acv files for linearization
+- Binary data parsing: DataView-based parser supporting Adobe's int16 big-endian format specification
+- File input support: .acv files accepted in both global and per-channel linearization inputs
+- UI integration: Updated tooltips and file format descriptions to include .acv curve file support
+IMPROVED:
+- File format documentation: Comprehensive .acv technical specifications in internal documentation
+- Linearization workflow: Seamless integration with existing .cube and .txt file processing pipeline
+
+v1.4.1 (2025-08-29) - Smoothing Algorithm Refinements & .quad File Improvements:
 ADDED:
 - Smoothing Splines algorithm: Mathematical curve smoothing with automatic lambda parameter selection
 - Visual curve comparison: Original curve overlay (gray dashed line) shows smoothing effects on all channels
 - Visvalingam-Whyatt algorithm: Area-based curve simplification (implemented but hidden from UI)
+- Accurate .quad file maximum detection: Uses actual curve maximum instead of endpoint value
 REFINED:
 - Streamlined algorithm selection: Removed Ramer-Douglas-Peucker due to inconsistent results
 - Simplified interpolation options: Hidden Cubic Spline and Catmull-Rom from UI to reduce complexity
@@ -86,6 +106,7 @@ REFINED:
 IMPROVED:
 - Curve visualization: Original vs smoothed comparison works with multiple channels simultaneously
 - Algorithm focus: Concentrated on reliable, predictable smoothing methods for production use
+- .quad file scaling: Proper scaling based on actual maximum value for non-monotonic curves
 
 v1.4 (2025-08-29) - 3D LUT Support & Per-Channel LAB Data:
 ADDED:
@@ -148,15 +169,17 @@ CHANGED:
 - Apply-to-all functions respect disabled channel checkboxes
 - Enhanced scrollbar styling for file preview (24px, bright white, 60px min)
 
+RESTORED:
+- ACV file support (Photoshop curve files) - full binary format parsing for RGB composite curves
 REMOVED:
-- ACV file support (Photoshop curve files)
 - Smoothing intensity controls (pure interpolation preferred)
 
 TECHNICAL:
 - Loaded .quad data stored in loadedQuadData global variable
-- make256() function checks for loaded curves before generating linear ramps
+- make256() function uses Math.max() to find actual curve maximum for proper scaling
 - hasAnyLinearization() determines when interpolation controls are relevant
 - updateInterpolationControls() manages UI state and visual feedback
+- Non-monotonic curve detection: Automatic maximum value identification across all input levels
 
 v1.1 (Previous):
 - Catmull-Rom spline interpolation with tension parameter
@@ -176,7 +199,8 @@ IMPLEMENTATION SPECIFICATIONS
 
 CURVE DATA PROCESSING:
 - Linear ramp generation: Mathematical progression 0→endValue across 256 steps
-- Loaded curve scaling: Proportional adjustment upon ink limit modification
+- Loaded curve scaling: Proportional adjustment based on actual maximum value (not endpoint)
+- Non-monotonic curve support: Proper handling of curves where maximum occurs before 100% input
 - Linearization application: Lookup table transformation methodology
 - Value constraints: 0-65535 range compliance (QuadToneRIP specification)
 
@@ -683,6 +707,7 @@ ARCHITECTURAL NOTES:
               <p class="text-xs text-gray-600">
                 <strong>LAB data (.txt):</strong> Raw measurements → calculates correction curve<br>
                 <strong>LUT (.cube):</strong> Pre-made correction curves → applies directly<br>
+                <strong>Photoshop curves (.acv):</strong> Curve presets → smooth spline interpolation<br>
                 <strong>Manual L* Entry:</strong> Enter measured L* values directly (see button below)
               </p>
             </div>
@@ -697,14 +722,14 @@ ARCHITECTURAL NOTES:
                   <span id="globalLinearizationDetails" class="text-gray-500"></span>
                 </div>
                 <div class="inline-flex items-center gap-2">
-                  <input type="file" id="linearizationFile" accept=".cube,.txt" class="hidden">
-                  <button id="globalLinearizationBtn" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-tooltip="Load LUT.cube or LABdata.txt files">load file</button>
+                  <input type="file" id="linearizationFile" accept=".cube,.txt,.acv" class="hidden">
+                  <button id="globalLinearizationBtn" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-tooltip="Load LUT.cube, LABdata.txt, or .acv curve files">load file</button>
                   <label class="slider-toggle" title="Enable/disable global linearization">
                     <input type="checkbox" id="globalLinearizationToggle" disabled>
                     <span class="slider"></span>
                   </label>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">accepts LUT (.cube) or LAB data (.txt) files</p>
+                <p class="text-xs text-gray-500 mt-1">accepts LUT (.cube), LAB data (.txt), or Photoshop curves (.acv) files</p>
               </div>
             </div>
             
@@ -906,7 +931,106 @@ ARCHITECTURAL NOTES:
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'v1.4.1';
+    const APP_VERSION = 'v1.5';
+    
+    // Centralized version history - update in one place
+    const VERSION_HISTORY = {
+      'v1.5': {
+        date: '2025-08-29',
+        title: 'Adobe Photoshop .acv Curve File Support',
+        sections: {
+          ADDED: [
+            'Adobe Photoshop .acv file format support: Complete binary format parser for curve presets',
+            'Cubic spline interpolation: Smooth curve generation matching Photoshop\'s behavior between control points',
+            'ACV format detection: Automatic binary vs text file handling in parseLinearizationFile()',
+            'RGB composite curve extraction: Uses first curve from multi-curve .acv files for linearization',
+            'Binary data parsing: DataView-based parser supporting Adobe\'s int16 big-endian format specification',
+            'File input support: .acv files accepted in both global and per-channel linearization inputs',
+            'UI integration: Updated tooltips and file format descriptions to include .acv curve file support'
+          ],
+          IMPROVED: [
+            'File format documentation: Comprehensive .acv technical specifications in internal documentation',
+            'Linearization workflow: Seamless integration with existing .cube and .txt file processing pipeline'
+          ]
+        },
+        aboutDialog: [
+          { label: 'ACV File Format', desc: 'Complete binary format parser for Adobe Photoshop curve presets' },
+          { label: 'Cubic Spline Interpolation', desc: 'Smooth curve generation matching Photoshop\'s behavior between control points' },
+          { label: 'RGB Composite Curves', desc: 'Automatic extraction of first curve from multi-curve .acv files' },
+          { label: 'Binary Data Handling', desc: 'DataView-based parser supporting Adobe\'s int16 big-endian format specification' },
+          { label: 'Seamless Integration', desc: '.acv files work in both global and per-channel linearization workflows' },
+          { label: 'UI Updates', desc: 'Updated tooltips and file format descriptions for .acv curve file support' }
+        ]
+      },
+      'v1.4.1': {
+        date: '2025-08-29',
+        title: 'Smoothing Algorithm Refinements & .quad File Improvements',
+        sections: {
+          ADDED: [
+            'Smoothing Splines algorithm: Mathematical curve smoothing with automatic lambda parameter selection',
+            'Visual curve comparison: Original curve overlay (gray dashed line) shows smoothing effects on all channels',
+            'Visvalingam-Whyatt algorithm: Area-based curve simplification (implemented but hidden from UI)',
+            'Accurate .quad file maximum detection: Uses actual curve maximum instead of endpoint value'
+          ],
+          REFINED: [
+            'Streamlined algorithm selection: Removed Ramer-Douglas-Peucker due to inconsistent results',
+            'Simplified interpolation options: Hidden Cubic Spline and Catmull-Rom from UI to reduce complexity',
+            'Default algorithm changed: Uniform Sampling now default with Smoothing Splines as advanced option',
+            'UI cleanup: Removed monotonicity preservation option (PCHIP handles this appropriately)'
+          ],
+          IMPROVED: [
+            'Curve visualization: Original vs smoothed comparison works with multiple channels simultaneously',
+            'Algorithm focus: Concentrated on reliable, predictable smoothing methods for production use',
+            '.quad file scaling: Proper scaling based on actual maximum value for non-monotonic curves'
+          ]
+        },
+        aboutDialog: [
+          { label: 'Smoothing Splines', desc: 'Added mathematical smoothing algorithm with automatic parameter selection' },
+          { label: 'Visual Curve Comparison', desc: 'Original curve overlay shows before/after smoothing effects on all channels' },
+          { label: 'Accurate .quad File Handling', desc: 'Proper detection and scaling of ink limits based on actual curve maximum' },
+          { label: 'Non-Monotonic Curve Support', desc: 'Correctly handles curves where peak ink density occurs before 100% input' },
+          { label: 'Streamlined Algorithm Selection', desc: 'Focused on Uniform Sampling and Smoothing Splines for reliable results' },
+          { label: 'Improved Interpolation Defaults', desc: 'PCHIP monotonic interpolation as primary method with Linear fallback' }
+        ]
+      }
+    };
+    
+    // Functions to generate version history content
+    function generateInternalVersionHistory() {
+      let content = '';
+      for (const [version, data] of Object.entries(VERSION_HISTORY)) {
+        content += `${version} (${data.date}) - ${data.title}:\n`;
+        
+        for (const [sectionName, items] of Object.entries(data.sections)) {
+          content += `${sectionName}:\n`;
+          for (const item of items) {
+            content += `- ${item}\n`;
+          }
+        }
+        content += '\n';
+      }
+      return content;
+    }
+    
+    function generateAboutDialogVersionHistory() {
+      let content = '';
+      for (const [version, data] of Object.entries(VERSION_HISTORY)) {
+        content += `
+          <div class="mb-4">
+            <p class="font-medium">${version} - ${data.title}:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">`;
+        
+        for (const item of data.aboutDialog) {
+          content += `
+              <li><strong>${item.label}:</strong> ${item.desc}</li>`;
+        }
+        
+        content += `
+            </ul>
+          </div>`;
+      }
+      return content;
+    }
     
     const TOTAL = 64000;
     const N = 256;
@@ -1546,12 +1670,10 @@ DOMAIN_MAX 1.0 1.0 1.0
       const hasLoadedQuad = loadedQuadData && loadedQuadData.curves;
       
       if (!hasLinearization && hasLoadedQuad) {
-        // Show explanation when disabled due to loaded .quad file
-        elements.interpolationDescription.textContent = 'Disabled: Loaded .quad file already contains processed curves';
-        elements.interpolationDescription.className = 'text-xs text-gray-500 italic mt-3';
-        elements.interpolationDescription.style.display = 'block';
+        // Don't show any message when .quad is loaded - disabled state is self-explanatory
+        elements.interpolationDescription.style.display = 'none';
       } else if (!hasLinearization) {
-        // Show explanation when disabled due to no linearization
+        // Show explanation when disabled due to no data at all
         elements.interpolationDescription.textContent = 'Disabled: no data loaded';
         elements.interpolationDescription.className = 'text-xs text-gray-500 italic mt-3';
         elements.interpolationDescription.style.display = 'block';
@@ -2053,10 +2175,78 @@ DOMAIN_MAX 1.0 1.0 1.0
       };
     }
 
+    /**
+     * Parse Adobe Photoshop .acv (curve) files
+     * Binary format: version(int16), totalCurves(int16), then for each curve: pointCount(int16), point pairs(int16,int16)
+     * Returns { domainMin: 0, domainMax: 1, samples } where samples are normalized 0..1
+     */
+    function parseACVFile(arrayBuffer) {
+      const dataView = new DataView(arrayBuffer);
+      let offset = 0;
+
+      // Read version (2 bytes, big-endian)
+      const version = dataView.getInt16(offset, false);
+      offset += 2;
+
+      // Read total curves count (2 bytes, big-endian)
+      const totalCurves = dataView.getInt16(offset, false);
+      offset += 2;
+
+      if (totalCurves === 0) {
+        throw new Error('ACV file contains no curves');
+      }
+
+      // Parse first curve (RGB composite curve)
+      const pointCount = dataView.getInt16(offset, false);
+      offset += 2;
+
+      if (pointCount === 0) {
+        throw new Error('ACV file RGB curve contains no points');
+      }
+
+      const curvePoints = [];
+      for (let i = 0; i < pointCount; i++) {
+        // Read output value (y-coordinate) - this is the correction value
+        const output = dataView.getInt16(offset, false);
+        offset += 2;
+        // Read input value (x-coordinate) - this is the original value
+        const input = dataView.getInt16(offset, false);
+        offset += 2;
+
+        curvePoints.push({
+          input: input / 255,    // Normalize to 0-1
+          output: output / 255   // Normalize to 0-1
+        });
+      }
+
+      // Sort by input value to ensure proper curve order
+      curvePoints.sort((a, b) => a.input - b.input);
+
+      // Use cubic spline interpolation like Photoshop for smooth curves
+      const xValues = curvePoints.map(p => p.input);
+      const yValues = curvePoints.map(p => p.output);
+      
+      // Create cubic spline interpolator
+      const splineInterpolator = createCubicSpline(xValues, yValues);
+      
+      // Convert to the format expected by quadGEN (256 samples)
+      const samples = new Array(256);
+      for (let i = 0; i < 256; i++) {
+        const inputValue = i / 255;
+        samples[i] = Math.max(0, Math.min(1, splineInterpolator(inputValue)));
+      }
+
+      return {
+        domainMin: 0,
+        domainMax: 1,
+        samples: samples
+      };
+    }
 
     /**
      * Detect file type and parse appropriately
      * For text files, pass the file content as string
+     * For binary files (.acv), pass the ArrayBuffer
      */
     async function parseLinearizationFile(fileContentOrFile, filename) {
       const extension = filename.toLowerCase().split('.').pop();
@@ -2070,8 +2260,14 @@ DOMAIN_MAX 1.0 1.0 1.0
         } else {
           throw new Error('TXT file format not recognized. Expected Color Muse format with GRAY and LAB_L columns.');
         }
+      } else if (extension === 'acv') {
+        // .acv files are binary, so fileContentOrFile should be an ArrayBuffer
+        if (!(fileContentOrFile instanceof ArrayBuffer)) {
+          throw new Error('ACV files must be read as binary data');
+        }
+        return parseACVFile(fileContentOrFile);
       } else {
-        throw new Error(`Unsupported file format: ${extension}. Use .cube or .txt files.`);
+        throw new Error(`Unsupported file format: ${extension}. Use .cube, .txt, or .acv files.`);
       }
     }
 
@@ -2986,14 +3182,14 @@ DOMAIN_MAX 1.0 1.0 1.0
       if (loadedQuadData && loadedQuadData.curves && loadedQuadData.curves[channelName]) {
         // Use loaded curve data as the starting point
         const loadedCurve = loadedQuadData.curves[channelName];
-        const originalEndValue = loadedCurve[255]; // Original final value
+        const originalMaxValue = Math.max(...loadedCurve); // Find actual maximum value
         
-        if (originalEndValue === 0) {
+        if (originalMaxValue === 0) {
           return new Array(N).fill(0); // Handle edge case
         }
         
-        // Scale the loaded curve to the new end value
-        const scaleFactor = endValue / originalEndValue;
+        // Scale the loaded curve based on the actual maximum value
+        const scaleFactor = endValue / originalMaxValue;
         arr = loadedCurve.map(value => Math.round(value * scaleFactor));
       } else {
         // Generate linear ramp as base
@@ -3077,8 +3273,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         </td>
         <td class="px-1 py-2">
           <div class="inline-flex items-center gap-2">
-            <input type="file" id="perChannel_${name}" accept=".cube,.txt" class="hidden per-channel-file">
-            <button class="per-channel-btn px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-channel="${name}" data-tooltip="Load LUT.cube or LABdata.txt files">load file</button>
+            <input type="file" id="perChannel_${name}" accept=".cube,.txt,.acv" class="hidden per-channel-file">
+            <button class="per-channel-btn px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-channel="${name}" data-tooltip="Load LUT.cube, LABdata.txt, or .acv curve files">load file</button>
             <label class="slider-toggle" title="Enable/disable per-channel linearization">
               <input type="checkbox" class="per-channel-toggle" data-channel="${name}" disabled>
               <span class="slider"></span>
@@ -3257,8 +3453,14 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (!file) return;
         
         try {
-          // Per-channel supports both pre-made curves (.cube) and LAB data (.txt)
-          const fileInput = await file.text();
+          // Per-channel supports curves (.cube), LAB data (.txt), and Photoshop curves (.acv)
+          const extension = file.name.toLowerCase().split('.').pop();
+          let fileInput;
+          if (extension === 'acv') {
+            fileInput = await file.arrayBuffer();
+          } else {
+            fileInput = await file.text();
+          }
           const parsed = await parseLinearizationFile(fileInput, file.name);
           perChannelLinearization[channelName] = parsed;
           perChannelEnabled[channelName] = true;
@@ -3293,7 +3495,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           perChannelToggle.checked = false;
           
           // Reset button tooltip
-          perChannelBtn.setAttribute('data-tooltip', 'Load LUT.cube or LABdata.txt files');
+          perChannelBtn.setAttribute('data-tooltip', 'Load LUT.cube, LABdata.txt, or .acv curve files');
           
           // Update interpolation controls since linearization may no longer be available
           updateInterpolationControls();
@@ -3690,9 +3892,14 @@ DOMAIN_MAX 1.0 1.0 1.0
       if (!file) return;
       
       try {
-        // Read file content as text
+        // Read file content based on file type
         const extension = file.name.toLowerCase().split('.').pop();
-        const fileInput = await file.text();
+        let fileInput;
+        if (extension === 'acv') {
+          fileInput = await file.arrayBuffer();
+        } else {
+          fileInput = await file.text();
+        }
         
         const parsed = await parseLinearizationFile(fileInput, file.name);
         parsed.filename = file.name; // Store filename for documentation
@@ -3730,7 +3937,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         updateFilename();
         
         // Reset button tooltip and disable toggle
-        elements.globalLinearizationBtn.setAttribute('data-tooltip', 'Load LUT.cube or LABdata.txt files');
+        elements.globalLinearizationBtn.setAttribute('data-tooltip', 'Load LUT.cube, LABdata.txt, or .acv curve files');
         elements.globalLinearizationToggle.disabled = true;
         elements.globalLinearizationToggle.checked = false;
         
@@ -4463,68 +4670,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         <div>
           <p class="font-medium text-lg mb-3">Version History:</p>
-          
-          <div class="mb-4">
-            <p class="font-medium">v1.4.1 - Smoothing Algorithm Refinements:</p>
-            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">
-              <li><strong>Smoothing Splines:</strong> Added mathematical smoothing algorithm with automatic parameter selection</li>
-              <li><strong>Visual Curve Comparison:</strong> Original curve overlay shows before/after smoothing effects on all channels</li>
-              <li><strong>Streamlined Algorithm Selection:</strong> Focused on Uniform Sampling and Smoothing Splines for reliable results</li>
-              <li><strong>Hidden Advanced Options:</strong> Removed Cubic Spline and Catmull-Rom interpolation from UI to reduce complexity</li>
-              <li><strong>Improved Interpolation Defaults:</strong> PCHIP monotonic interpolation as primary method with Linear fallback</li>
-            </ul>
-          </div>
-          
-          <div class="mb-4">
-            <p class="font-medium">v1.4 - Enhanced Curve Processing & UI:</p>
-            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">
-              <li><strong>Fixed Linear Interpolation:</strong> Now properly handles non-evenly spaced control points from LAB data</li>
-              <li><strong>Enhanced LAB Data Processing:</strong> Smoothing works correctly, interpolation methods active immediately</li>
-              <li><strong>Default Algorithm:</strong> Ramer-Douglas-Peucker now default for shape-preserving curve simplification</li>
-              <li><strong>Built-in Sample Data:</strong> Download LAB measurement and Gamma 2.2 curve samples directly</li>
-              <li><strong>Improved UI Layout:</strong> Compact two-column design with consistent styling throughout</li>
-              <li><strong>Better Data Handling:</strong> Curve simplification works on original measurements, not interpolated curves</li>
-            </ul>
-          </div>
-          
-          <div class="mb-4">
-            <p class="font-medium">v1.3 - Linearization Correction & Smoothing Features:</p>
-            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">
-              <li><strong>Algorithm Corrections:</strong> Color Muse and manual L* data entry linearization now match industry standards</li>
-              <li><strong>Cube File Processing:</strong> Linearization corrected to use original samples directly</li>
-              <li><strong>Data Transformation:</strong> Dual coordinate transformation applied to measurement data</li>
-              <li><strong>Parser Improvements:</strong> Removed erroneous inverse mapping logic from .cube file parsing</li>
-              <li><strong>Documentation:</strong> Added comprehensive explanations for different data treatments</li>
-              <li><strong>Data Point Reduction:</strong> Multiple algorithms for reducing measurement points while preserving curve shape</li>
-              <li><strong>Uniform Sampling:</strong> Even distribution point reduction maintaining start/end points</li>
-              <li><strong>Ramer-Douglas-Peucker Algorithm:</strong> Shape-preserving curve simplification using perpendicular distance tolerance</li>
-              <li><strong>Method Selection Interface:</strong> Real-time algorithm switching with immediate preview updates</li>
-              <li><strong>Multi-Interpolation Support:</strong> Smoothed data works with Linear, Cubic, Catmull-Rom, and PCHIP interpolation methods</li>
-              <li><strong>Coordinate System Integrity:</strong> Smoothing maintains proper coordinate transformations for all data types</li>
-              <li><strong>Built-in Sample Data:</strong> Color Muse measurement sample and Gamma 2.2 curve sample for testing and learning</li>
-            </ul>
-          </div>
-          
-          <div class="mb-4">
-            <p class="font-medium">v1.2 - Major Feature Release:</p>
-            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">
-              <li><strong>File Loading:</strong> Complete .quad file loading with curve preservation</li>
-              <li><strong>Processing System:</strong> Layered processing system (base curves + linearization)</li>
-              <li><strong>UI Enhancements:</strong> Enhanced interface with compact controls and better UX</li>
-              <li><strong>Validation:</strong> Robust file validation and error handling</li>
-              <li><strong>Printer Options:</strong> Streamlined printer options (P700-P900 merged)</li>
-              <li><strong>Format Support:</strong> Removed ACV file support (limited open-source support)</li>
-            </ul>
-          </div>
-          
-          <div>
-            <p class="font-medium">v1.1 - Previous Release:</p>
-            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">
-              <li><strong>Interpolation:</strong> Catmull-Rom spline interpolation with tension parameter</li>
-              <li><strong>Channel Memory:</strong> Channel memory system for disabled channels</li>
-              <li><strong>File Processing:</strong> Cube file inverse mapping corrections</li>
-            </ul>
-          </div>
+          ${generateAboutDialogVersionHistory()}
         </div>
       `;
       
