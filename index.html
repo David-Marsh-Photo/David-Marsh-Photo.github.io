@@ -6,7 +6,7 @@
 QUADGEN TECHNICAL SPECIFICATION
 ================================================================================
 
-VERSION: v1.4
+VERSION: v1.4.1
 REVISION DATE: 2025-08-29
 
 ================================================================================
@@ -55,26 +55,45 @@ CHANNEL MANAGEMENT SYSTEM:
 FILE FORMAT SPECIFICATIONS:
 - .quad: 256-point curve datasets (bidirectional input/output)
 - 1DLUT (.cube): 1D LUT linearization correction data
+- 3DLUT (.cube): 3D LUT with neutral axis extraction for linearization
 - LAB data (.txt): Color Muse measurement datasets for linearization
 - .acv: Discontinued in v1.2 (insufficient open-source compatibility)
 
 LINEARIZATION DATA PROCESSING:
 - Global LAB data: Applied uniformly to all ink channels via single correction curve
 - Per-channel LAB data: Individual correction curves per ink channel for precise control
+- 3D LUT processing: Neutral axis extraction (R=G=B diagonal) via trilinear interpolation
 - LAB coordinate transformation: Dual transformation applied to measurement data
-- File processing: parseLinearizationFile() routes .txt files through parseColorMuseData()
-- Data validation: Color Muse format detection via GRAY and LAB_L column headers
-- Error handling: Comprehensive validation with descriptive error messages
+- File processing: parseLinearizationFile() routes files through appropriate parsers
+- 3D LUT extraction: Samples 256 points along neutral axis, ignores color information
+- Data validation: Format detection and comprehensive error handling
+- Coordinate systems: All formats normalized to quadGEN's printing coordinate system
 
 ================================================================================
 VERSION HISTORY
 ================================================================================
 
-v1.4 (2025-08-29) - Per-Channel LAB Data & Enhanced Processing:
+v1.4.1 (2025-08-29) - Smoothing Algorithm Refinements:
 ADDED:
+- Smoothing Splines algorithm: Mathematical curve smoothing with automatic lambda parameter selection
+- Visual curve comparison: Original curve overlay (gray dashed line) shows smoothing effects on all channels
+- Visvalingam-Whyatt algorithm: Area-based curve simplification (implemented but hidden from UI)
+REFINED:
+- Streamlined algorithm selection: Removed Ramer-Douglas-Peucker due to inconsistent results
+- Simplified interpolation options: Hidden Cubic Spline and Catmull-Rom from UI to reduce complexity
+- Default algorithm changed: Uniform Sampling now default with Smoothing Splines as advanced option
+- UI cleanup: Removed monotonicity preservation option (PCHIP handles this appropriately)
+IMPROVED:
+- Curve visualization: Original vs smoothed comparison works with multiple channels simultaneously
+- Algorithm focus: Concentrated on reliable, predictable smoothing methods for production use
+
+v1.4 (2025-08-29) - 3D LUT Support & Per-Channel LAB Data:
+ADDED:
+- 3D LUT neutral axis extraction: Automatic processing of 3D .cube files via trilinear interpolation
 - Per-channel LAB data support: Individual Color Muse .txt file loading per ink channel
 - Dual format support: Per-channel linearization now accepts both .cube and .txt files
 - Individual channel precision: Apply LAB corrections to specific inks for fine-tuned control
+- 3D LUT format detection: Automatic routing between 1D and 3D LUT parsers
 FIXED:
 - Linear interpolation now properly handles non-evenly spaced control points
 - LAB data smoothing now works correctly with both Douglas-Peucker and Uniform methods
@@ -88,8 +107,10 @@ ENHANCED:
 - Sample data buttons now include download functionality for external use
 - Consistent dropdown styling applied across all UI elements
 TECHNICAL:
+- 3D LUT neutral axis extraction uses trilinear interpolation with coordinate system normalization
 - Per-channel LAB processing reuses proven parseLinearizationFile() architecture
 - Removed explicit .txt file blocking from per-channel linearization function
+- 3D LUT processing preserves existing 1D LUT pipeline without modifications
 - LAB data getSmoothingControlPoints always returns control points for interpolation
 - Linear interpolation uses interval search for non-evenly spaced lutX coordinates
 - Douglas-Peucker preserves geometric significance vs uniform sampling's even spacing
@@ -324,7 +345,7 @@ ARCHITECTURAL NOTES:
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>quadGEN v1.4</title>
+  <title id="pageTitle">quadGEN</title>
   <meta name="description" content="quadGEN - Generate Epson P700-P900/P800 QuadToneRIP .quad files with 256-step ramps per channel." />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -558,7 +579,7 @@ ARCHITECTURAL NOTES:
             <div>
               <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">
                 quadGEN
-                <span id="appVersion" class="text-gray-400 text-lg">v1.4</span>
+                <span id="appVersion" class="text-gray-400 text-lg"></span>
               </h1>
               <p class="text-gray-400 text-sm -mt-1">by <a href="https://www.davidmarshprints.com/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-600 underline">David Marsh</a></p>
             </div>
@@ -611,8 +632,6 @@ ARCHITECTURAL NOTES:
                 <h3 class="text-sm font-medium text-gray-700">Interpolation Method</h3>
                 <div>
                   <select id="curveSmoothingMethod" class="standard-dropdown" disabled>
-                    <option value="cubic">Cubic Spline</option>
-                    <option value="catmull">Catmull-Rom</option>
                     <option value="pchip" selected>PCHIP (monotonic)</option>
                     <option value="linear">Linear (none)</option>
                   </select>
@@ -636,8 +655,8 @@ ARCHITECTURAL NOTES:
                 <h3 class="text-sm font-medium text-gray-700">Data Point Smoothing: <span id="smoothingValue" class="text-xs text-gray-500">0%</span></h3>
                 <div>
                   <select id="simplificationMethod" class="standard-dropdown" disabled>
-                    <option value="uniform">Uniform Sampling</option>
-                    <option value="douglas-peucker" selected>Ramer-Douglas-Peucker</option>
+                    <option value="uniform" selected>Uniform Sampling</option>
+                    <option value="smoothing-splines">Smoothing Splines</option>
                   </select>
                 </div>
                 
@@ -663,7 +682,7 @@ ARCHITECTURAL NOTES:
               <p class="text-xs text-gray-700 font-medium mb-1">Linearization Options:</p>
               <p class="text-xs text-gray-600">
                 <strong>LAB data (.txt):</strong> Raw measurements → calculates correction curve<br>
-                <strong>1DLUT (.cube):</strong> Pre-made correction curves → applies directly<br>
+                <strong>LUT (.cube):</strong> Pre-made correction curves → applies directly<br>
                 <strong>Manual L* Entry:</strong> Enter measured L* values directly (see button below)
               </p>
             </div>
@@ -679,13 +698,13 @@ ARCHITECTURAL NOTES:
                 </div>
                 <div class="inline-flex items-center gap-2">
                   <input type="file" id="linearizationFile" accept=".cube,.txt" class="hidden">
-                  <button id="globalLinearizationBtn" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-tooltip="Load 1DLUT.cube or LABdata.txt files">load file</button>
+                  <button id="globalLinearizationBtn" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-tooltip="Load LUT.cube or LABdata.txt files">load file</button>
                   <label class="slider-toggle" title="Enable/disable global linearization">
                     <input type="checkbox" id="globalLinearizationToggle" disabled>
                     <span class="slider"></span>
                   </label>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">accepts 1DLUT (.cube) or LAB data (.txt) files</p>
+                <p class="text-xs text-gray-500 mt-1">accepts LUT (.cube) or LAB data (.txt) files</p>
               </div>
             </div>
             
@@ -708,7 +727,7 @@ ARCHITECTURAL NOTES:
                 </div>
                 <div class="flex-1">
                   <button id="loadSampleCube" class="w-full px-2 py-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 rounded transition-colors font-bold">
-                    Load sample 1DLUT.cube
+                    Load sample LUT.cube
                   </button>
                   <a id="downloadSampleCube" href="#" class="block text-center text-xs text-purple-600 hover:text-purple-800 mt-1">Download file</a>
                 </div>
@@ -814,7 +833,7 @@ ARCHITECTURAL NOTES:
           </svg>
         </button>
         
-        <h2 id="infoPopupTitle" class="text-xl font-bold mb-4">quadGEN v1.4</h2>
+        <h2 id="infoPopupTitle" class="text-xl font-bold mb-4">quadGEN</h2>
         
         <div id="changelogContent" class="text-sm text-gray-700 space-y-4 max-h-[70vh] overflow-y-auto">
           <!-- Changelog will be dynamically populated from main documentation -->
@@ -887,7 +906,7 @@ ARCHITECTURAL NOTES:
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'v1.4';
+    const APP_VERSION = 'v1.4.1';
     
     const TOTAL = 64000;
     const N = 256;
@@ -964,7 +983,20 @@ ARCHITECTURAL NOTES:
       globalLinearizationDetails: document.getElementById('globalLinearizationDetails'),
       loadSampleColorMuse: document.getElementById('loadSampleColorMuse'),
       loadSampleCube: document.getElementById('loadSampleCube'),
+      pageTitle: document.getElementById('pageTitle'),
+      appVersion: document.getElementById('appVersion'),
+      infoPopupTitle: document.getElementById('infoPopupTitle'),
     };
+
+    // Initialize dynamic version numbers
+    function initializeVersionNumbers() {
+      elements.pageTitle.textContent = `quadGEN ${APP_VERSION}`;
+      elements.appVersion.textContent = APP_VERSION;
+      elements.infoPopupTitle.textContent = `quadGEN ${APP_VERSION}`;
+    }
+
+    // Initialize version numbers when DOM is ready
+    initializeVersionNumbers();
 
     // Sample data constants
     const SAMPLE_DATA = {
@@ -991,7 +1023,7 @@ ARCHITECTURAL NOTES:
 95\t24.17\t0.00\t0.00
 100\t21.33\t0.00\t0.00`,
 
-      gammaCube: `# Test 1D LUT - Gamma 2.2 curve
+      gammaCube: `# Test LUT - Gamma 2.2 curve
 TITLE "Test Gamma 2.2"
 LUT_1D_SIZE 11
 DOMAIN_MIN 0.0 0.0 0.0
@@ -1194,6 +1226,10 @@ DOMAIN_MAX 1.0 1.0 1.0
       const chartWidth = width - leftPadding - rightPadding;
       const chartHeight = height - 2 * padding;
       
+      // Check conditions for showing original curve overlay
+      const smoothingPercent = parseFloat(elements.smoothingSlider.value) || 0;
+      const shouldShowOriginal = smoothingPercent > 0;
+      
       // Draw grid
       ctx.strokeStyle = '#e5e7eb';
       ctx.lineWidth = 1;
@@ -1300,6 +1336,38 @@ DOMAIN_MAX 1.0 1.0 1.0
           for (let i = 0; i < linearValues.length; i++) {
             const x = leftPadding + (i / (linearValues.length - 1)) * chartWidth;
             const valuePercent = (linearValues[i] / maxValue) * 100;
+            const y = height - padding - (valuePercent / 100) * chartHeight;
+            
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          
+          ctx.stroke();
+          ctx.setLineDash([]); // Reset line dash
+          ctx.globalAlpha = 1.0; // Reset opacity
+        }
+        
+        // Draw original curve (before smoothing) if conditions are met
+        if (shouldShowOriginal && hasLinearization) {
+          // Generate the original curve without smoothing by temporarily storing and overriding smoothing
+          const currentSmoothing = elements.smoothingSlider.value;
+          elements.smoothingSlider.value = '0';
+          const originalValues = make256(endVal, channelName, true);
+          elements.smoothingSlider.value = currentSmoothing; // Restore original smoothing
+          
+          // Draw original curve as gray dashed line
+          ctx.strokeStyle = '#9CA3AF'; // Gray-400
+          ctx.globalAlpha = 0.8;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 2]); // Dashed line
+          ctx.beginPath();
+          
+          for (let i = 0; i < originalValues.length; i++) {
+            const x = leftPadding + (i / (originalValues.length - 1)) * chartWidth;
+            const valuePercent = (originalValues[i] / maxValue) * 100;
             const y = height - padding - (valuePercent / 100) * chartHeight;
             
             if (i === 0) {
@@ -1536,7 +1604,7 @@ DOMAIN_MAX 1.0 1.0 1.0
     let channelPreviousValues = {};
 
     /**
-     * Parse a .cube file string as a 1D LUT.
+     * Parse a .cube file string as a 1D LUT or route to 3D LUT parser.
      * Returns { domainMin, domainMax, samples } where samples are floats (usually 0..1).
      */
     function parseCube1D(cubeText) {
@@ -1546,14 +1614,14 @@ DOMAIN_MAX 1.0 1.0 1.0
       let declaredSize = null;
       const samples = [];
 
-      // Check for 3D LUT indicators early
+      // Check for 3D LUT indicators early - route to appropriate parser
       for (const raw of lines) {
         const s = raw.trim();
         if (!s || s.startsWith("#") || /^TITLE/i.test(s)) continue;
         
-        // Detect 3D LUT file format
+        // Detect 3D LUT file format and route to 3D parser
         if (/^LUT_3D_SIZE/i.test(s)) {
-          throw new Error("3D LUT files are not supported. Please use a 1D LUT (.cube) file for linearization.");
+          return parseCube3D(cubeText);
         }
       }
 
@@ -1578,7 +1646,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           continue;
         }
 
-        // Numeric row: could be 1–3 floats. For 1D LUTs, many files still list RGB triplets.
+        // Numeric row: could be 1–3 floats. For LUTs, many files still list RGB triplets.
         const nums = s.split(/\s+/).map(Number);
         if (nums.every((v) => Number.isFinite(v)) && nums.length >= 1 && nums.length <= 3) {
           samples.push(nums[0]); // take the first channel for 1D
@@ -1587,9 +1655,8 @@ DOMAIN_MAX 1.0 1.0 1.0
 
       // After parsing, check if this looks like 3D LUT data
       if (samples.length > 100) {
-        // 3D LUTs typically have many more data points than 1D LUTs
-        // 1D LUTs usually have 16-256 points, 3D LUTs have thousands
-        throw new Error("This file contains too many data points for a 1D LUT. It appears to be a 3D LUT file which is not supported. Please use a 1D LUT file for ink linearization.");
+        // LUTs with very high point counts may indicate parsing issues
+        throw new Error("This file contains an unusually high number of data points. Please verify the file format and try again.");
       }
 
       if (declaredSize !== null && samples.length >= declaredSize) {
@@ -1616,6 +1683,150 @@ DOMAIN_MAX 1.0 1.0 1.0
       const flippedSamples = horizontallyFlipped.map(sample => 1.0 - sample);
       
       return { domainMin, domainMax, samples: flippedSamples };
+    }
+
+    /**
+     * Parse a 3D LUT (.cube) file and extract neutral axis for linearization.
+     * Returns { domainMin, domainMax, samples } where samples represent the neutral axis (R=G=B) response.
+     */
+    function parseCube3D(cubeText) {
+      const lines = cubeText.split(/\r?\n/);
+      let domainMin = 0.0;
+      let domainMax = 1.0;
+      let lutSize = null;
+      const lutData = [];
+
+      // Parse header information
+      for (const raw of lines) {
+        const s = raw.trim();
+        if (!s || s.startsWith("#") || /^TITLE/i.test(s)) continue;
+
+        if (/^LUT_3D_SIZE/i.test(s)) {
+          const m = s.match(/LUT_3D_SIZE\s+(\d+)/i);
+          if (m) lutSize = parseInt(m[1], 10);
+          continue;
+        }
+        if (/^DOMAIN_MIN/i.test(s)) {
+          const parts = s.split(/\s+/);
+          if (parts[1] !== undefined) domainMin = parseFloat(parts[1]);
+          continue;
+        }
+        if (/^DOMAIN_MAX/i.test(s)) {
+          const parts = s.split(/\s+/);
+          if (parts[1] !== undefined) domainMax = parseFloat(parts[1]);
+          continue;
+        }
+
+        // Parse RGB data lines
+        const parts = s.split(/\s+/);
+        if (parts.length === 3) {
+          const r = parseFloat(parts[0]);
+          const g = parseFloat(parts[1]);
+          const b = parseFloat(parts[2]);
+          if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+            lutData.push([r, g, b]);
+          }
+        }
+      }
+
+      if (!lutSize) {
+        throw new Error("3D LUT size not found. Expected LUT_3D_SIZE declaration.");
+      }
+
+      const expectedDataPoints = lutSize * lutSize * lutSize;
+      if (lutData.length !== expectedDataPoints) {
+        throw new Error(`3D LUT data mismatch. Expected ${expectedDataPoints} points, found ${lutData.length}.`);
+      }
+
+      // Extract neutral axis (diagonal where R=G=B)
+      const neutralAxisSamples = [];
+      const outputSteps = 256; // Generate 256 samples for consistency with other LUT processing
+
+      for (let i = 0; i < outputSteps; i++) {
+        const input = i / (outputSteps - 1); // 0 to 1
+        const neutralRGB = [input, input, input]; // R=G=B for neutral gray
+        
+        // Trilinear interpolation in 3D LUT
+        const outputRGB = trilinearInterpolate3D(neutralRGB, lutData, lutSize, domainMin, domainMax);
+        
+        // Convert RGB output to luminance (simple average for neutral axis)
+        const luminance = (outputRGB[0] + outputRGB[1] + outputRGB[2]) / 3;
+        neutralAxisSamples.push(luminance);
+      }
+
+      // Apply coordinate system transformations to match other LUT processing
+      const horizontallyFlipped = neutralAxisSamples.map((sample, i) => {
+        const inputPos = i / (neutralAxisSamples.length - 1);
+        const flippedInputPos = 1.0 - inputPos;
+        const flippedInputIndex = Math.round(flippedInputPos * (neutralAxisSamples.length - 1));
+        const clampedIndex = Math.max(0, Math.min(neutralAxisSamples.length - 1, flippedInputIndex));
+        return neutralAxisSamples[clampedIndex];
+      });
+      
+      const flippedSamples = horizontallyFlipped.map(sample => 1.0 - sample);
+      
+      return { 
+        domainMin, 
+        domainMax, 
+        samples: flippedSamples,
+        is3DLUT: true,
+        lutSize: lutSize,
+        originalDataPoints: expectedDataPoints
+      };
+    }
+
+    /**
+     * Trilinear interpolation for 3D LUT sampling
+     * @private
+     */
+    function trilinearInterpolate3D(inputRGB, lutData, lutSize, domainMin, domainMax) {
+      const [r, g, b] = inputRGB;
+      
+      // Normalize input to LUT coordinates (0 to lutSize-1)
+      const normalizedR = (r - domainMin) / (domainMax - domainMin);
+      const normalizedG = (g - domainMin) / (domainMax - domainMin);
+      const normalizedB = (b - domainMin) / (domainMax - domainMin);
+      
+      const lutR = Math.max(0, Math.min(lutSize - 1, normalizedR * (lutSize - 1)));
+      const lutG = Math.max(0, Math.min(lutSize - 1, normalizedG * (lutSize - 1)));
+      const lutB = Math.max(0, Math.min(lutSize - 1, normalizedB * (lutSize - 1)));
+      
+      // Get integer indices and fractional parts
+      const r0 = Math.floor(lutR), r1 = Math.min(lutSize - 1, r0 + 1);
+      const g0 = Math.floor(lutG), g1 = Math.min(lutSize - 1, g0 + 1);
+      const b0 = Math.floor(lutB), b1 = Math.min(lutSize - 1, b0 + 1);
+      
+      const fr = lutR - r0;
+      const fg = lutG - g0;
+      const fb = lutB - b0;
+      
+      // Get the 8 corner values from the LUT cube
+      const corners = [
+        lutData[r0 * lutSize * lutSize + g0 * lutSize + b0], // (r0,g0,b0)
+        lutData[r1 * lutSize * lutSize + g0 * lutSize + b0], // (r1,g0,b0)
+        lutData[r0 * lutSize * lutSize + g1 * lutSize + b0], // (r0,g1,b0)
+        lutData[r1 * lutSize * lutSize + g1 * lutSize + b0], // (r1,g1,b0)
+        lutData[r0 * lutSize * lutSize + g0 * lutSize + b1], // (r0,g0,b1)
+        lutData[r1 * lutSize * lutSize + g0 * lutSize + b1], // (r1,g0,b1)
+        lutData[r0 * lutSize * lutSize + g1 * lutSize + b1], // (r0,g1,b1)
+        lutData[r1 * lutSize * lutSize + g1 * lutSize + b1]  // (r1,g1,b1)
+      ];
+      
+      // Trilinear interpolation
+      const result = [0, 0, 0];
+      for (let c = 0; c < 3; c++) {
+        const c00 = corners[0][c] * (1 - fr) + corners[1][c] * fr;
+        const c01 = corners[2][c] * (1 - fr) + corners[3][c] * fr;
+        const c10 = corners[4][c] * (1 - fr) + corners[5][c] * fr;
+        const c11 = corners[6][c] * (1 - fr) + corners[7][c] * fr;
+        
+        const c0 = c00 * (1 - fg) + c01 * fg;
+        const c1 = c10 * (1 - fg) + c11 * fg;
+        
+        result[c] = c0 * (1 - fb) + c1 * fb;
+      }
+      
+      return result;
     }
 
     /**
@@ -2264,10 +2475,309 @@ DOMAIN_MAX 1.0 1.0 1.0
       },
 
       /**
+       * Smoothing splines data reduction with automatic lambda selection
+       * @param {number[]} samples - Original sample array
+       * @param {number} reductionPercent - Percentage of points to remove (0-90)
+       * @returns {number[]} Smoothed and reduced sample array
+       */
+      smoothingSplines: function(samples, reductionPercent) {
+        if (reductionPercent === 0 || samples.length <= 3) return samples;
+        
+        const n = samples.length;
+        const keepRatio = 1.0 - (reductionPercent / 100);
+        const targetCount = Math.max(3, Math.round(n * keepRatio));
+        
+        // Create input points (x values are indices normalized to 0-1)
+        const x = [];
+        const y = [];
+        for (let i = 0; i < n; i++) {
+          x.push(i / (n - 1));
+          y.push(samples[i]);
+        }
+        
+        // Calculate smoothing parameter lambda based on reduction percentage
+        // Higher reduction = more smoothing
+        const dataRange = Math.max(...y) - Math.min(...y);
+        const lambda = Math.pow(reductionPercent / 100, 2) * dataRange * 0.1;
+        
+        // Build smoothing spline system
+        const splineCoefficients = this._buildSmoothingSpline(x, y, lambda);
+        
+        // Sample the smooth spline at target points
+        const reducedSamples = [];
+        for (let i = 0; i < targetCount; i++) {
+          const t = i / (targetCount - 1);
+          const value = this._evaluateSmoothingSpline(splineCoefficients, x, y, t);
+          reducedSamples.push(value);
+        }
+        
+        return reducedSamples;
+      },
+
+      /**
+       * Build smoothing spline coefficients using penalized least squares
+       * @private
+       */
+      _buildSmoothingSpline: function(x, y, lambda) {
+        const n = x.length;
+        if (n < 4) return { x, y, c: new Array(n).fill(0) };
+        
+        // For simplicity, use natural cubic spline with roughness penalty
+        // This is a simplified implementation focused on data reduction
+        const h = [];
+        for (let i = 0; i < n - 1; i++) {
+          h[i] = x[i + 1] - x[i];
+        }
+        
+        // Build tridiagonal system for natural spline with smoothing
+        const A = new Array(n).fill(null).map(() => new Array(n).fill(0));
+        const b = new Array(n).fill(0);
+        
+        // Natural spline boundary conditions with smoothing penalty
+        A[0][0] = 1 + lambda;
+        A[n-1][n-1] = 1 + lambda;
+        b[0] = y[0];
+        b[n-1] = y[n-1];
+        
+        // Interior equations with roughness penalty
+        for (let i = 1; i < n - 1; i++) {
+          const hi_1 = h[i-1];
+          const hi = h[i];
+          
+          // Data fidelity term
+          A[i][i] = 1;
+          b[i] = y[i];
+          
+          // Add smoothing penalty (simplified second derivative penalty)
+          if (lambda > 0) {
+            A[i][i] += lambda * (2 / (hi_1 + hi));
+            if (i > 1) A[i][i-1] = -lambda / (hi_1 + hi);
+            if (i < n - 2) A[i][i+1] = -lambda / (hi_1 + hi);
+          }
+        }
+        
+        // Solve system using Gaussian elimination
+        const c = this._solveTridiagonal(A, b);
+        
+        return { x, y, c };
+      },
+
+      /**
+       * Evaluate smoothing spline at parameter t
+       * @private
+       */
+      _evaluateSmoothingSpline: function(spline, x, y, t) {
+        const { x: sx, y: sy, c } = spline;
+        const n = sx.length;
+        
+        // Clamp t to valid range
+        t = Math.max(0, Math.min(1, t));
+        
+        // Find interval
+        let i = 0;
+        while (i < n - 1 && sx[i + 1] < t) i++;
+        if (i >= n - 1) return sy[n - 1];
+        
+        // Linear interpolation with spline smoothing
+        const h = sx[i + 1] - sx[i];
+        const dt = t - sx[i];
+        const ratio = h > 0 ? dt / h : 0;
+        
+        // Hermite interpolation with smoothing coefficient
+        const y0 = sy[i];
+        const y1 = sy[i + 1];
+        const c0 = c[i];
+        const c1 = c[i + 1];
+        
+        // Cubic Hermite interpolation
+        const t2 = ratio * ratio;
+        const t3 = t2 * ratio;
+        
+        const h00 = 2*t3 - 3*t2 + 1;  // (1+2t)(1-t)^2
+        const h10 = t3 - 2*t2 + ratio; // t(1-t)^2
+        const h01 = -2*t3 + 3*t2;      // t^2(3-2t)
+        const h11 = t3 - t2;           // t^2(t-1)
+        
+        return h00 * y0 + h10 * h * c0 + h01 * y1 + h11 * h * c1;
+      },
+
+      /**
+       * Solve tridiagonal system using simplified Gaussian elimination
+       * @private
+       */
+      _solveTridiagonal: function(A, b) {
+        const n = A.length;
+        const x = new Array(n).fill(0);
+        
+        // Simple Gaussian elimination for small systems
+        // Forward elimination
+        for (let i = 0; i < n - 1; i++) {
+          for (let j = i + 1; j < n; j++) {
+            if (Math.abs(A[i][i]) < 1e-12) continue;
+            const factor = A[j][i] / A[i][i];
+            for (let k = i; k < n; k++) {
+              A[j][k] -= factor * A[i][k];
+            }
+            b[j] -= factor * b[i];
+          }
+        }
+        
+        // Back substitution
+        for (let i = n - 1; i >= 0; i--) {
+          x[i] = b[i];
+          for (let j = i + 1; j < n; j++) {
+            x[i] -= A[i][j] * x[j];
+          }
+          if (Math.abs(A[i][i]) > 1e-12) {
+            x[i] /= A[i][i];
+          }
+        }
+        
+        return x;
+      },
+
+      /**
+       * Visvalingam-Whyatt algorithm for area-based curve simplification
+       * @param {number[]} samples - Original sample array
+       * @param {number} reductionPercent - Percentage of points to remove (0-90)
+       * @returns {number[]} Reduced sample array
+       */
+      visvalingamWhyatt: function(samples, reductionPercent) {
+        if (reductionPercent === 0 || samples.length <= 3) return samples;
+        
+        // Convert samples to points with x,y coordinates
+        const points = samples.map((y, x) => ({x, y, originalIndex: x}));
+        
+        // Calculate target number of points to keep
+        const keepRatio = 1.0 - (reductionPercent / 100);
+        const targetCount = Math.max(3, Math.round(samples.length * keepRatio));
+        const pointsToRemove = points.length - targetCount;
+        
+        if (pointsToRemove <= 0) return samples;
+        
+        // Calculate initial areas for all interior points
+        const areas = new Array(points.length);
+        for (let i = 1; i < points.length - 1; i++) {
+          areas[i] = this._calculateTriangleArea(points[i-1], points[i], points[i+1]);
+        }
+        
+        // Create a list of removable points with their areas
+        const removablePoints = [];
+        for (let i = 1; i < points.length - 1; i++) {
+          removablePoints.push({index: i, area: areas[i]});
+        }
+        
+        // Remove points iteratively
+        let removedCount = 0;
+        const removed = new Set();
+        
+        while (removedCount < pointsToRemove && removablePoints.length > 0) {
+          // Find point with minimum area
+          let minAreaIndex = 0;
+          let minArea = Infinity;
+          
+          for (let i = 0; i < removablePoints.length; i++) {
+            const point = removablePoints[i];
+            if (!removed.has(point.index) && point.area < minArea) {
+              minArea = point.area;
+              minAreaIndex = i;
+            }
+          }
+          
+          if (minAreaIndex === -1) break;
+          
+          const pointToRemove = removablePoints[minAreaIndex];
+          removed.add(pointToRemove.index);
+          removedCount++;
+          
+          // Update areas for neighboring points
+          const leftNeighbor = this._findLeftNeighbor(pointToRemove.index, removed);
+          const rightNeighbor = this._findRightNeighbor(pointToRemove.index, removed, points.length);
+          
+          // Recalculate areas for affected neighbors
+          if (leftNeighbor !== -1 && leftNeighbor > 0) {
+            const leftLeftNeighbor = this._findLeftNeighbor(leftNeighbor, removed);
+            if (leftLeftNeighbor !== -1) {
+              const newArea = this._calculateTriangleArea(
+                points[leftLeftNeighbor], 
+                points[leftNeighbor], 
+                points[rightNeighbor]
+              );
+              // Update the area in removablePoints
+              for (let i = 0; i < removablePoints.length; i++) {
+                if (removablePoints[i].index === leftNeighbor) {
+                  removablePoints[i].area = newArea;
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (rightNeighbor !== -1 && rightNeighbor < points.length - 1) {
+            const rightRightNeighbor = this._findRightNeighbor(rightNeighbor, removed, points.length);
+            if (rightRightNeighbor !== -1) {
+              const newArea = this._calculateTriangleArea(
+                points[leftNeighbor], 
+                points[rightNeighbor], 
+                points[rightRightNeighbor]
+              );
+              // Update the area in removablePoints
+              for (let i = 0; i < removablePoints.length; i++) {
+                if (removablePoints[i].index === rightNeighbor) {
+                  removablePoints[i].area = newArea;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        
+        // Build result array with remaining points
+        const result = [];
+        for (let i = 0; i < points.length; i++) {
+          if (!removed.has(i)) {
+            result.push(points[i].y);
+          }
+        }
+        
+        return result;
+      },
+      
+      /**
+       * Calculate triangle area using the shoelace formula
+       * @private
+       */
+      _calculateTriangleArea: function(p1, p2, p3) {
+        return Math.abs((p1.x - p3.x) * (p2.y - p1.y) - (p1.x - p2.x) * (p3.y - p1.y)) / 2;
+      },
+      
+      /**
+       * Find the nearest left neighbor that hasn't been removed
+       * @private
+       */
+      _findLeftNeighbor: function(index, removed) {
+        for (let i = index - 1; i >= 0; i--) {
+          if (!removed.has(i)) return i;
+        }
+        return -1;
+      },
+      
+      /**
+       * Find the nearest right neighbor that hasn't been removed
+       * @private
+       */
+      _findRightNeighbor: function(index, removed, length) {
+        for (let i = index + 1; i < length; i++) {
+          if (!removed.has(i)) return i;
+        }
+        return -1;
+      },
+
+      /**
        * Apply smoothing reduction using current algorithm
        * @param {number[]} samples - Original sample array
        * @param {number} reductionPercent - Percentage of points to remove (0-90)
-       * @param {string} algorithm - 'uniform' or 'douglas-peucker'
+       * @param {string} algorithm - 'uniform', 'douglas-peucker', 'smoothing-splines', or 'visvalingam-whyatt'
        * @returns {number[]} Reduced sample array
        */
       applySmoothingReduction: function(samples, reductionPercent, algorithm = 'douglas-peucker') {
@@ -2276,6 +2786,10 @@ DOMAIN_MAX 1.0 1.0 1.0
         switch (algorithm) {
           case 'douglas-peucker':
             return this.douglasPeucker(samples, reductionPercent);
+          case 'smoothing-splines':
+            return this.smoothingSplines(samples, reductionPercent);
+          case 'visvalingam-whyatt':
+            return this.visvalingamWhyatt(samples, reductionPercent);
           case 'uniform':
           default:
             return this.uniformSampling(samples, reductionPercent);
@@ -2284,7 +2798,7 @@ DOMAIN_MAX 1.0 1.0 1.0
     };
 
     /**
-     * Apply a 1D LUT to a list of integers using linear, cubic spline, Catmull-Rom, Bezier, or PCHIP interpolation.
+     * Apply a LUT to a list of integers using linear, cubic spline, Catmull-Rom, Bezier, or PCHIP interpolation.
      * Preserves the endpoint values - always starts at 0 and ends at the original max value.
      * @param {number[]} values - input integers in [0..maxValue]
      * @param {number[]} lut - samples (floats), typically 0..1
@@ -2564,7 +3078,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         <td class="px-1 py-2">
           <div class="inline-flex items-center gap-2">
             <input type="file" id="perChannel_${name}" accept=".cube,.txt" class="hidden per-channel-file">
-            <button class="per-channel-btn px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-channel="${name}" data-tooltip="Load 1DLUT.cube or LABdata.txt files">load file</button>
+            <button class="per-channel-btn px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-channel="${name}" data-tooltip="Load LUT.cube or LABdata.txt files">load file</button>
             <label class="slider-toggle" title="Enable/disable per-channel linearization">
               <input type="checkbox" class="per-channel-toggle" data-channel="${name}" disabled>
               <span class="slider"></span>
@@ -2760,7 +3274,12 @@ DOMAIN_MAX 1.0 1.0 1.0
           // Update interpolation controls since we now have linearization data
           updateInterpolationControls();
           
-          showStatus(`Loaded per-channel linearization for ${channelName}: ${parsed.samples.length} points`);
+          // Show appropriate status message based on LUT type
+          if (parsed.is3DLUT) {
+            showStatus(`Loaded 3D LUT and extracted ${parsed.samples.length} neutral axis points for ${channelName} (${parsed.lutSize}³ grid)`);
+          } else {
+            showStatus(`Loaded per-channel linearization for ${channelName}: ${parsed.samples.length} points`);
+          }
           debouncedPreviewUpdate();
         } catch (error) {
           console.error('Per-channel linearization file error:', error);
@@ -2774,7 +3293,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           perChannelToggle.checked = false;
           
           // Reset button tooltip
-          perChannelBtn.setAttribute('data-tooltip', 'Load 1DLUT.cube or LABdata.txt files');
+          perChannelBtn.setAttribute('data-tooltip', 'Load LUT.cube or LABdata.txt files');
           
           // Update interpolation controls since linearization may no longer be available
           updateInterpolationControls();
@@ -3085,7 +3604,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           filename = 'LAB Sample Data';
         } else if (type === 'cube') {
           correctionData = parseCube1D(SAMPLE_DATA.gammaCube);
-          filename = '1DLUT Sample Data';
+          filename = 'LUT Sample Data';
         } else {
           throw new Error('Invalid sample data type');
         }
@@ -3194,7 +3713,12 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Update interpolation controls
         updateInterpolationControls();
         
-        showStatus(`Loaded and applied ${parsed.samples.length} data points from ${file.name}`);
+        // Show appropriate status message based on LUT type
+        if (parsed.is3DLUT) {
+          showStatus(`Loaded 3D LUT and extracted ${parsed.samples.length} neutral axis points from ${file.name} (${parsed.lutSize}³ grid)`);
+        } else {
+          showStatus(`Loaded and applied ${parsed.samples.length} data points from ${file.name}`);
+        }
         debouncedPreviewUpdate(); // Update preview to show the applied linearization
       } catch (error) {
         console.error('Cube file parsing error:', error);
@@ -3206,7 +3730,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         updateFilename();
         
         // Reset button tooltip and disable toggle
-        elements.globalLinearizationBtn.setAttribute('data-tooltip', 'Load 1DLUT.cube or LABdata.txt files');
+        elements.globalLinearizationBtn.setAttribute('data-tooltip', 'Load LUT.cube or LABdata.txt files');
         elements.globalLinearizationToggle.disabled = true;
         elements.globalLinearizationToggle.checked = false;
         
@@ -3290,11 +3814,12 @@ DOMAIN_MAX 1.0 1.0 1.0
     elements.simplificationMethod.addEventListener('change', (e) => {
       if (hasAnyLinearization()) {
         const method = e.target.value;
-        const methodName = method === 'douglas-peucker' ? 'Ramer-Douglas-Peucker' : 'Uniform Sampling';
+        const methodName = method === 'smoothing-splines' ? 'Smoothing Splines' : 'Uniform Sampling';
         showStatus(`Simplification method: ${methodName}`);
         debouncedPreviewUpdate(); // Update preview with new method
       }
     });
+    
     
     // Notes toggle functionality
     elements.notesToggle.addEventListener('click', () => {
@@ -3341,7 +3866,7 @@ DOMAIN_MAX 1.0 1.0 1.0
     
     document.getElementById('downloadSampleCube').addEventListener('click', (e) => {
       e.preventDefault();
-      downloadFile(SAMPLE_DATA.gammaCube, '1DLUT_sample.cube', 'text/plain');
+      downloadFile(SAMPLE_DATA.gammaCube, 'LUT_sample.cube', 'text/plain');
     });
     
     // Function to check if all channels are disabled
@@ -3927,8 +4452,8 @@ DOMAIN_MAX 1.0 1.0 1.0
           <ol class="list-decimal list-inside space-y-1 ml-2 mb-4 text-sm">
             <li>Create a .quad file that specifies what ink or inks to use and their ink limit amounts</li>
             <li>Print a test target using that .quad file specifying initial ink limits</li>
-            <li>Measure resulting print tonal result values with a Color Muse device (or other measurement device) OR generate a 1DLUT (.cube) file using the EDN system at http://www.easydigitalnegatives.com/</li>
-            <li>Import data into quadGEN (LAB data (.txt) file, manual L* entry, 1DLUT (.cube), or try built-in sample data) and apply it to your initial ink limit setting</li>
+            <li>Measure resulting print tonal result values with a Color Muse device (or other measurement device) OR generate a LUT (.cube) file using the EDN system at http://www.easydigitalnegatives.com/</li>
+            <li>Import data into quadGEN (LAB data (.txt) file, manual L* entry, LUT (.cube), or try built-in sample data) and apply it to your initial ink limit setting</li>
             <li>Preview results in the curve graph and verify tonal shape</li>
             <li><em>Optional:</em> Adjust channel limits (enable/disable inks, apply uniform percentages if needed)</li>
             <li>Export the corrected .quad file and load it back into QuadToneRIP</li>
@@ -3938,6 +4463,17 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         <div>
           <p class="font-medium text-lg mb-3">Version History:</p>
+          
+          <div class="mb-4">
+            <p class="font-medium">v1.4.1 - Smoothing Algorithm Refinements:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">
+              <li><strong>Smoothing Splines:</strong> Added mathematical smoothing algorithm with automatic parameter selection</li>
+              <li><strong>Visual Curve Comparison:</strong> Original curve overlay shows before/after smoothing effects on all channels</li>
+              <li><strong>Streamlined Algorithm Selection:</strong> Focused on Uniform Sampling and Smoothing Splines for reliable results</li>
+              <li><strong>Hidden Advanced Options:</strong> Removed Cubic Spline and Catmull-Rom interpolation from UI to reduce complexity</li>
+              <li><strong>Improved Interpolation Defaults:</strong> PCHIP monotonic interpolation as primary method with Linear fallback</li>
+            </ul>
+          </div>
           
           <div class="mb-4">
             <p class="font-medium">v1.4 - Enhanced Curve Processing & UI:</p>
