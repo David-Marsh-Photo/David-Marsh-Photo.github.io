@@ -3,54 +3,98 @@
 
 <!--
 ================================================================================
-QUADGEN DEVELOPMENT CONTINUATION DOCUMENT
+QUADGEN TECHNICAL SPECIFICATION
 ================================================================================
 
-CURRENT VERSION: v1.3
-LAST UPDATED: 2025-08-28
+VERSION: v1.4
+REVISION DATE: 2025-08-29
 
 ================================================================================
-OVERVIEW
+SYSTEM OVERVIEW
 ================================================================================
-quadGEN is a web-based tool for generating QuadToneRIP .quad files for Epson 
-inkjet printers. It creates 256-step linearization curves with support for 
-custom ink limits, linearization data, and various interpolation methods.
+QuadGEN generates QuadToneRIP .quad files for Epson inkjet printer systems. 
+Implementation provides 256-step linearization curves with configurable ink 
+limits, linearization data processing, and interpolation algorithms.
 
-SUPPORTED PRINTERS:
-- P800: 8 channels (K,C,M,Y,LC,LM,LK,LLK)
-- P700-P900: 10 channels (K,C,M,Y,LC,LM,LK,LLK,V,MK)
+SUPPORTED HARDWARE:
+- P800: 8-channel configuration (K,C,M,Y,LC,LM,LK,LLK)
+- P700-P900: 10-channel configuration (K,C,M,Y,LC,LM,LK,LLK,V,MK)
 
 ================================================================================
-KEY ARCHITECTURAL DECISIONS
+ARCHITECTURAL IMPLEMENTATION
 ================================================================================
 
-CURVE GENERATION PIPELINE:
-1. Base Curve: Either loaded .quad curve data OR generated linear ramp
-2. Per-Channel Linearization: Applied if loaded (.cube files)
-3. Global Linearization: Applied if loaded (.cube/.txt files)
-4. Interpolation Method: Determines how sparse linearization data is interpolated
+CURVE PROCESSING PIPELINE:
+1. Base curve initialization: Loaded .quad data or linear ramp generation
+2. Per-channel linearization: .cube/.txt file application when loaded
+3. Global linearization: .cube/.txt file application when loaded
+4. Interpolation processing: Sparse data expansion via selected algorithm
 
-INTERPOLATION METHODS:
-- Only enabled when linearization data with <256 points is loaded
-- Disabled for loaded .quad files (already have 256 points)
-- Methods: Cubic, Catmull-Rom (with tension), PCHIP, Linear
+INTERPOLATION ALGORITHMS:
+- Activation condition: Linearization data loaded with sparse control points
+- Disabled condition: Loaded .quad files (256-point complete datasets)
+- Available methods: Cubic, Catmull-Rom (tension parameter), PCHIP, Linear
+- Control point source: LAB data uses original measurements, .cube uses file samples
+- Linear interpolation: Handles non-evenly spaced control points via interval search
 
-CHANNEL STATE MANAGEMENT:
-- Channels can be enabled/disabled via checkboxes
-- Disabled channels: Set to 0, remember previous values for restore
-- Apply-to-all functions skip disabled channels
-- Visual feedback: Compact layout, reduced opacity for disabled channels
+DATA POINT SMOOTHING SYSTEM:
+- Purpose: Reduce control point count while preserving curve characteristics
+- Default method: Ramer-Douglas-Peucker (geometric significance preservation)
+- Alternative method: Uniform Sampling (even spacing reduction)
+- Range: 0-90% reduction, disabled at 0%
+- LAB data processing: Operates on original sparse measurements (0%, 5%, 10%, etc.)
+- .cube data processing: Operates on original file sample points
+- Control point output: Always generates sparse points to enable interpolation methods
 
-FILE FORMAT SUPPORT:
-- .quad files: Complete 256-point curves (input/output)
-- .cube files: 1D LUTs for linearization corrections
-- .txt files: Color Muse measurement data for linearization
-- .acv files: REMOVED in v1.2 (limited open-source support)
+CHANNEL MANAGEMENT SYSTEM:
+- State control: Enable/disable via checkbox interface
+- Disabled channel behavior: Value set to 0, previous state stored
+- Function scope: Apply-to-all operations exclude disabled channels
+- UI feedback: Opacity reduction and compact layout for disabled states
+
+FILE FORMAT SPECIFICATIONS:
+- .quad: 256-point curve datasets (bidirectional input/output)
+- 1DLUT (.cube): 1D LUT linearization correction data
+- LAB data (.txt): Color Muse measurement datasets for linearization
+- .acv: Discontinued in v1.2 (insufficient open-source compatibility)
+
+LINEARIZATION DATA PROCESSING:
+- Global LAB data: Applied uniformly to all ink channels via single correction curve
+- Per-channel LAB data: Individual correction curves per ink channel for precise control
+- LAB coordinate transformation: Dual transformation applied to measurement data
+- File processing: parseLinearizationFile() routes .txt files through parseColorMuseData()
+- Data validation: Color Muse format detection via GRAY and LAB_L column headers
+- Error handling: Comprehensive validation with descriptive error messages
 
 ================================================================================
 VERSION HISTORY
 ================================================================================
 
+v1.4 (2025-08-29) - Per-Channel LAB Data & Enhanced Processing:
+ADDED:
+- Per-channel LAB data support: Individual Color Muse .txt file loading per ink channel
+- Dual format support: Per-channel linearization now accepts both .cube and .txt files
+- Individual channel precision: Apply LAB corrections to specific inks for fine-tuned control
+FIXED:
+- Linear interpolation now properly handles non-evenly spaced control points
+- LAB data smoothing now works correctly with both Douglas-Peucker and Uniform methods
+- LAB data now uses interpolation methods immediately upon loading (no smoothing required)
+- Douglas-Peucker algorithm coordinate handling fixed for different data types
+- Curve simplification data type mismatch resolved for LAB measurement data
+ENHANCED:
+- Added Ramer-Douglas-Peucker algorithm as default curve simplification method
+- Sample data now bundled in application (LAB measurements and Gamma 2.2 curve)
+- UI layout reorganized into compact two-column design for better space utilization
+- Sample data buttons now include download functionality for external use
+- Consistent dropdown styling applied across all UI elements
+TECHNICAL:
+- Per-channel LAB processing reuses proven parseLinearizationFile() architecture
+- Removed explicit .txt file blocking from per-channel linearization function
+- LAB data getSmoothingControlPoints always returns control points for interpolation
+- Linear interpolation uses interval search for non-evenly spaced lutX coordinates
+- Douglas-Peucker preserves geometric significance vs uniform sampling's even spacing
+- Control points generated from original measurements, not pre-interpolated 256-point curves
+================================================================================
 v1.3 (2025-08-28) - Linearization Correction Fix:
 FIXED:
 - Color Muse linearization correction algorithm now matches industry standard
@@ -106,38 +150,56 @@ v1.0 (Initial):
 - Chart visualization
 
 ================================================================================
-IMPORTANT IMPLEMENTATION NOTES
+IMPLEMENTATION SPECIFICATIONS
 ================================================================================
 
-CURVE DATA HANDLING:
-- Linear ramps: Generated mathematically from 0 to endValue over 256 steps
-- Loaded curves: Scaled proportionally when ink limits change
-- Linearization: Applied as lookup table transformations
-- All values clamped to 0-65535 range (QuadToneRIP standard)
+CURVE DATA PROCESSING:
+- Linear ramp generation: Mathematical progression 0→endValue across 256 steps
+- Loaded curve scaling: Proportional adjustment upon ink limit modification
+- Linearization application: Lookup table transformation methodology
+- Value constraints: 0-65535 range compliance (QuadToneRIP specification)
 
-INTERPOLATION BEHAVIOR:
-- Only applies to linearization data with sparse control points
-- Uses 1D LUT application via apply1DLUT() function
-- Forward mapping: input value → LUT lookup → output value
-- Different methods affect smoothness of sparse data expansion
+INTERPOLATION PROCESSING:
+- Application scope: Sparse control point linearization data only
+- Processing method: apply1DLUT() function implementation
+- Mapping algorithm: Forward input value → LUT lookup → output value
+- Algorithm impact: Method selection affects sparse data expansion characteristics
 
-CHANNEL MANAGEMENT:
-- Each channel has: percentage, end value, enable/disable state
-- Percentage and end value stay in sync (computed conversion)
-- Disabled channels: checkbox unchecked, values = 0, previous values stored
-- Channel memory: channelPreviousValues object stores values for restore
+SMOOTHING (DATA POINT REDUCTION):
+- Implementation: CurveSimplification object with multiple algorithm support
+- Control interface: Horizontal slider (0-90%) positioned under simplification method dropdown
+- Available methods: Uniform Sampling (even distribution) and Ramer-Douglas-Peucker (shape-preserving, default)
+- Uniform sampling: Preserves start/end points, reduces intermediate points with even spacing
+- Ramer-Douglas-Peucker: Shape-preserving algorithm using perpendicular distance tolerance for optimal point selection
+- Coordinate system handling: Maintains dual transformation for LAB data, preserves .cube coordinate relationships
+- Processing pipeline: originalDataPoints → method selection → smoothing → sparse control points → interpolation → 256-point curve
+- Control point generation: LAB data creates inverse mapping with dual transformation applied to control points
+- File type support: LAB data (.txt) files, manual L* entry, 1DLUT (.cube) files, built-in sample data
+- Algorithm switching: Real-time method selection with immediate preview update
+- Sample data integration: Color Muse measurement sample (21 points) and Gamma 2.2 curve sample (11 points)
+- Coordinate preservation: Douglas-Peucker maintains original X positions for .cube data to prevent interpolation artifacts
+- Notification system: Non-intrusive overlay notification at top of graph when smoothing is active
 
-UI STATE MANAGEMENT:
-- Interpolation controls enabled/disabled based on hasAnyLinearization()
-- File info displayed for loaded .quad files
-- Status messages provide user feedback
-- Tooltips explain control functionality
+CHANNEL STATE ARCHITECTURE:
+- Channel properties: Percentage value, end value, enable/disable state
+- Value synchronization: Percentage-end value computational relationship maintained
+- Disabled channel handling: Checkbox unchecked, values = 0, previous state stored
+- Memory management: channelPreviousValues object maintains restoration data
 
-FILENAME GENERATION:
-- Auto-generated from: PrinterModel_Ch1Value_Ch2Value...
-- User can override by editing (marked as userEdited)
-- Loaded .quad files default to: originalname_copy
-- Sanitized for filesystem compatibility
+UI STATE CONTROL:
+- Interpolation control state: Determined by hasAnyLinearization() function
+- File information display: Activated for loaded .quad file datasets
+- User feedback system: Status message communication protocol
+- Interface documentation: Tooltip-based control functionality explanation
+- Layout organization: Two-column interpolation panel (method selection left, smoothing controls right)
+- Dropdown standardization: Unified .standard-dropdown CSS class for consistent styling
+- Notification overlay: Fixed-position smoothing notification prevents layout shifts
+
+FILENAME GENERATION ALGORITHM:
+- Automatic generation: PrinterModel_Ch1Value_Ch2Value... pattern
+- User override capability: Manual editing with userEdited flag
+- Loaded file handling: originalname_copy default naming convention
+- Filesystem compatibility: Character sanitization processing
 
 ================================================================================
 TESTING NOTES
@@ -149,6 +211,11 @@ KEY TEST SCENARIOS:
 3. Enable/disable channels → verify apply-to-all skips disabled
 4. Switch printers → verify channel count and layout changes
 5. File validation → verify error handling for corrupted/invalid files
+6. LAB data smoothing → verify no curve flipping, all interpolation methods functional
+7. .cube file smoothing → verify coordinate system preservation and Douglas-Peucker X-position accuracy
+8. Smoothing + interpolation → verify Linear/Cubic/Catmull-Rom/PCHIP compatibility
+9. UI layout responsiveness → verify two-column interpolation panel and overlay notifications
+10. Sample data integration → verify Color Muse and Gamma 2.2 curve samples load correctly
 
 EDGE CASES:
 - Empty .quad files or corrupted data
@@ -161,63 +228,78 @@ EDGE CASES:
 LINEARIZATION CORRECTION PROCESSING
 ================================================================================
 
-CRITICAL INSIGHT: Correction curve coordinate system differs from intuitive interpretation
+COORDINATE SYSTEM ANALYSIS: Correction curve implementation requires coordinate transformation distinct from mathematical intuition.
 
-COLOR MUSE DATA INTERPRETATION:
-- Raw data format: GRAY% (0-100) → LAB_L* (measured lightness values)
-- Intuitive reading: "GRAY% input produces LAB_L* output"
-- ACTUAL industry standard: Requires coordinate transformation
+COLOR MUSE DATA PROCESSING:
+- Input format: GRAY% (0-100) → LAB_L* (measured lightness values)
+- Mathematical interpretation: GRAY% input produces LAB_L* output
+- Industry standard implementation: Coordinate transformation required
 
-CORRECTION ALGORITHMS BY FILE TYPE:
+ALGORITHM IMPLEMENTATION BY FILE TYPE:
 
-COLOR MUSE DATA (.txt files) & MANUAL L* ENTRY:
-1. Convert measurements to density values (invert L* since higher L* = lighter = lower density)
-2. Create density mapping: targetDensity (from GRAY%) → actualDensity (from L*)
-3. Generate correction curve: for each target density, find what input produces it
-4. Apply DUAL TRANSFORMATION to match industry standard:
-   - Horizontal flip: flippedInputPos = 1.0 - inputPos (mirrors left-to-right)
-   - Vertical flip: verticallyFlipped = 1.0 - originalSample (mirrors top-to-bottom)
+COLOR MUSE (.txt) & MANUAL L* ENTRY PROCESSING:
+1. Density value conversion: L* inversion (high L* = light = low density)
+2. Density mapping generation: targetDensity (GRAY%) → actualDensity (L*)
+3. Correction curve computation: Input determination for target density
+4. Dual transformation application:
+   - Horizontal flip: flippedInputPos = 1.0 - inputPos (coordinate mirror)
+   - Vertical flip: verticallyFlipped = 1.0 - originalSample (value inversion)
 
-CUBE FILES (.cube files):
-1. Parse 1D LUT samples directly from file
-2. Apply DUAL TRANSFORMATION to match printing coordinate system:
-   - Horizontal flip: Reverses coordinate positions to match ink vs RGB relationship
-   - Vertical flip: Inverts values to match printing intensity expectations
-3. Both transformations needed to match industry standard application (like Photoshop)
+CUBE FILE (.cube) PROCESSING:
+1. 1D LUT sample extraction from file structure
+2. Dual transformation application for coordinate system alignment:
+   - Horizontal flip: Coordinate position reversal (ink-RGB relationship)
+   - Vertical flip: Value inversion (printing intensity compatibility)
+3. Transformation requirement: Industry standard application compatibility
 
-WHY DUAL TRANSFORMATION IS NECESSARY FOR ALL METHODS:
-- All linearization methods now use consistent dual flip transformation
-- .cube files: Need coordinate system conversion from RGB space to printing ink space
-- Color Muse data: Raw measurement data requiring coordinate system interpretation
-- Manual L* data: Laboratory measurement data requiring same coordinate interpretation
-- Industry tools use different coordinate system than mathematical intuition
-- Without transformation: crossing point at ~35% (incorrect)
-- With dual transformation: crossing point at ~65% (matches industry standard)
+DUAL TRANSFORMATION NECESSITY:
+- Implementation consistency: All linearization methods employ identical transformation
+- .cube files: RGB→printing ink coordinate space conversion required
+- Color Muse data: Raw measurement coordinate system interpretation
+- Manual L* data: Laboratory measurement coordinate interpretation identical
+- Industry compatibility: Standard coordinate system differs from mathematical intuition
+- Transformation absence: Incorrect curve topology and crossing point behavior
+- Transformation presence: Industry-standard curve behavior achieved
 
-CUBE FILE COORDINATE SYSTEM UNDERSTANDING:
-- .cube RGB coordinate system: index 0 = white (RGB 255), index end = black (RGB 0)  
-- Printing ink coordinate system: 0% ink = white paper, 100% ink = full black
-- Horizontal flip: Maps .cube end values to 0% ink (white), .cube start values to 100% ink (black)
-- Vertical flip: Inverts .cube values so reduction of RGB whites becomes ink limits
-- Example: test-half.cube limiting RGB to 50% → 0% ink gets 50% limit, 100% ink gets 100% limit
+CUBE FILE COORDINATE SYSTEM SPECIFICATION:
+- .cube RGB system: index 0 = white (RGB 255), index end = black (RGB 0)
+- Printing ink system: 0% ink = white paper, 100% ink = black
+- Horizontal transformation: .cube end → 0% ink, .cube start → 100% ink
+- Vertical transformation: .cube value inversion for ink limit implementation
+- Implementation example: test-half.cube RGB 50% → 0% ink 50% limit, 100% ink 100% limit
 
-VALIDATION WITH TEST FILES:
-- test-linear.cube: Produces straight diagonal line (no effect)
-- test-half.cube: Starts at 50% limit (0% ink), rises to 100% limit (100% ink)  
-- test-gamma.cube: Produces characteristic gamma curve crossing around 60%
-- Matches Photoshop behavior where RGB 255 → RGB 127 limits white areas to 50%
+VALIDATION METHODOLOGY:
+- test-linear.cube: Straight diagonal output (null effect confirmation)
+- test-half.cube: 0% ink 50% limit → 100% ink 100% limit progression
+- test-gamma.cube: Characteristic gamma curve topology (60% crossing point)
+- Industry validation: Photoshop RGB 255 → RGB 127 behavior replication
 
-KEY LESSONS LEARNED:
-1. Relationship interpretation matters more than mathematical sophistication
-2. Industry standards may override intuitive coordinate systems
-3. Empirical validation against established tools is critical
-4. Coordinate system transformation can be more important than algorithm choice
-5. Historical printing workflow conventions influence modern digital tool behavior
+TECHNICAL FINDINGS:
+1. Coordinate interpretation significance exceeds mathematical complexity
+2. Industry standards override intuitive coordinate systems
+3. Empirical validation against established tools required
+4. Coordinate transformation priority over algorithm selection
+5. Historical workflow conventions influence digital implementation
 
-VALIDATION APPROACH:
-- Generate curves using Color-Muse-Data.txt in both quadGEN and industry standard tools
-- Compare crossing points: should match at ~65% on linear diagonal
-- Verify correction curve topology and amplitude match between tools
+================================================================================
+USER WORKFLOW PROCEDURES
+================================================================================
+
+OPERATIONAL SEQUENCE:
+1. .quad file creation: Specify target ink configuration and initial ink limit values
+2. Test target printing: Execute print using specified .quad file with initial ink limits
+3. Measurement data acquisition: Color Muse device measurement OR 1DLUT (.cube) file generation via EDN system (http://www.easydigitalnegatives.com/)
+4. Data importation: LAB data (.txt) file, manual L* entry, or 1DLUT (.cube) application to initial ink configuration
+5. Result verification: Curve graph preview and tonal shape validation
+6. Optional adjustment: Channel limit modification (enable/disable inks, uniform percentage application)
+7. File export: Corrected .quad file generation and QuadToneRIP integration
+8. Validation procedure: Reprint execution with corrected .quad file, tonal reproduction target matching verification
+
+WORKFLOW INTEGRATION:
+- QuadToneRIP ecosystem compatibility maintained throughout process
+- Iterative refinement capability through measurement-correction cycles
+- Alternative measurement methodologies supported (Color Muse, EDN system)
+- Advanced user flexibility via optional adjustment procedures
 
 ================================================================================
 FUTURE CONSIDERATIONS
@@ -242,7 +324,7 @@ ARCHITECTURAL NOTES:
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>quadGEN v1.3</title>
+  <title>quadGEN v1.4</title>
   <meta name="description" content="quadGEN - Generate Epson P700-P900/P800 QuadToneRIP .quad files with 256-step ramps per channel." />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -420,6 +502,32 @@ ARCHITECTURAL NOTES:
     .lstar-input[type=number] {
       -moz-appearance: textfield;
     }
+    
+    /* Standard dropdown styling */
+    .standard-dropdown {
+      width: 100%;
+      padding: 0.25rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      line-height: 1.25;
+      height: 32px;
+      box-sizing: border-box;
+      background-color: white;
+      color: #374151;
+    }
+    
+    .standard-dropdown:disabled {
+      background-color: #f9fafb;
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+    
+    .standard-dropdown option {
+      font-size: 0.875rem;
+      line-height: 1.25;
+      color: #374151;
+    }
   </style>
 </head>
 <body class="min-h-screen bg-gray-50 p-6">
@@ -427,7 +535,7 @@ ARCHITECTURAL NOTES:
     <section class="bg-white rounded-2xl shadow-lg p-6 md:p-8">
       <header class="mb-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center mb-2">
-          <div class="flex items-center gap-4 lg:col-span-2">
+          <div class="flex items-center gap-4 lg:col-span-3">
             <svg id="quadgenLogo" xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 160 160" role="img" aria-labelledby="quadgenTitle quadgenDesc">
               <title id="quadgenTitle">quadGEN icon (CMYK)</title>
               <desc id="quadgenDesc">Four CMYK bars with a rising Bezier-style curve and nodes, flat design.</desc>
@@ -450,32 +558,25 @@ ARCHITECTURAL NOTES:
             <div>
               <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">
                 quadGEN
-                <span class="text-gray-400 text-lg">v1.3</span>
+                <span id="appVersion" class="text-gray-400 text-lg">v1.4</span>
               </h1>
               <p class="text-gray-400 text-sm -mt-1">by <a href="https://www.davidmarshprints.com/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-600 underline">David Marsh</a></p>
             </div>
             
             <!-- Compact printer selector -->
-            <div class="flex items-center gap-2 bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 ml-auto">
+            <div class="flex items-center gap-2 bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 flex-1 ml-4">
               <label for="printerSelect" class="text-sm font-medium text-gray-700">Printer:</label>
-              <select id="printerSelect" class="text-sm rounded border border-gray-300 px-2 py-1">
+              <select id="printerSelect" class="standard-dropdown" style="width: 120px;">
                 <option value="P800">P800</option>
                 <option value="P700P900" selected>P700-P900</option>
               </select>
-              <p id="channelInfo" class="text-xs text-gray-600 ml-1"></p>
-            </div>
-          </div>
-          
-          <!-- Status Display -->
-          <div class="lg:col-span-1">
-            <div class="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-center flex items-center justify-between">
-              <span></span>
-              <span id="status" class="text-xs text-gray-600 font-medium transition-opacity duration-500 ease-in-out">&nbsp;</span>
-              <button id="infoBtn" class="text-xs text-gray-400 hover:text-gray-600 border border-gray-300 rounded px-2 py-1 transition-colors hidden" title="Version info">
-                Info
+              <p id="channelInfo" class="text-xs text-gray-600 ml-1" style="width: 280px;"></p>
+              <button id="infoBtn" class="text-xs text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 transition-colors ml-auto font-bold" title="Version info">
+                About
               </button>
             </div>
           </div>
+          
         </div>
         <p id="printerDescription" class="text-gray-600 mt-1"></p>
       </header>
@@ -483,10 +584,70 @@ ARCHITECTURAL NOTES:
       <!-- Ink Limits Graph and Linearization -->
       <div class="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Graph Section -->
-        <div class="lg:col-span-2">
-          <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <div class="lg:col-span-2 space-y-4">
+          <div class="bg-white border border-gray-200 rounded-xl p-4 relative">
             <div class="bg-gray-50 rounded-lg p-4">
               <canvas id="inkChart" width="950" height="700" class="w-full h-auto max-h-none"></canvas>
+            </div>
+            
+            <!-- Status Display -->
+            <div class="absolute top-4 left-4 right-4 z-10">
+              <div class="bg-gray-50 rounded-lg px-3 py-2 text-center flex items-center justify-center">
+                <span id="status" class="text-xs text-gray-600 font-medium transition-opacity duration-500 ease-in-out">&nbsp;</span>
+              </div>
+            </div>
+            
+            <!-- Smoothing Note Overlay -->
+            <div id="smoothingWarning" class="absolute bottom-4 left-4 right-4 text-xs text-amber-800 text-center hidden">
+              ℹ️ Note: Smoothing allows departure of curves from loaded data
+            </div>
+          </div>
+          
+          <!-- Interpolation Method -->
+          <div class="bg-white border border-gray-200 rounded-xl p-3">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Left Column: Interpolation Method -->
+              <div class="space-y-3">
+                <h3 class="text-sm font-medium text-gray-700">Interpolation Method</h3>
+                <div>
+                  <select id="curveSmoothingMethod" class="standard-dropdown" disabled>
+                    <option value="cubic">Cubic Spline</option>
+                    <option value="catmull">Catmull-Rom</option>
+                    <option value="pchip" selected>PCHIP (monotonic)</option>
+                    <option value="linear">Linear (none)</option>
+                  </select>
+                  <p id="interpolationDescription" class="text-xs text-gray-500 mt-2">Monotonic interpolation preserves data trends</p>
+                </div>
+                
+                <!-- Catmull-Rom Tension Control -->
+                <div id="catmullTensionContainer" style="display: none;">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Curve Tension</label>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500">Tight</span>
+                    <input type="range" id="catmullTension" min="0" max="100" value="50" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" disabled>
+                    <span class="text-xs text-gray-500">Loose</span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">Adjust how curvy the interpolation becomes</p>
+                </div>
+              </div>
+              
+              <!-- Right Column: Data Point Smoothing -->
+              <div class="space-y-3">
+                <h3 class="text-sm font-medium text-gray-700">Data Point Smoothing: <span id="smoothingValue" class="text-xs text-gray-500">0%</span></h3>
+                <div>
+                  <select id="simplificationMethod" class="standard-dropdown" disabled>
+                    <option value="uniform">Uniform Sampling</option>
+                    <option value="douglas-peucker" selected>Ramer-Douglas-Peucker</option>
+                  </select>
+                </div>
+                
+                <!-- Smoothing Slider -->
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-gray-500">0%</span>
+                  <input type="range" id="smoothingSlider" min="0" max="90" value="0" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" disabled>
+                  <span class="text-xs text-gray-500">90%</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -496,13 +657,13 @@ ARCHITECTURAL NOTES:
           <!-- Global Linearization -->
           <div class="bg-white border border-gray-200 rounded-xl p-3">
             <h3 class="text-lg font-semibold mb-2">Global Linearization Data</h3>
-            <p class="text-xs text-gray-600 mb-2">Apply correction curves to modify all ink channels uniformly.</p>
+            <p class="text-xs text-gray-600 mb-2">Apply correction to modify all ink channels uniformly.</p>
             
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3">
-              <p class="text-xs text-blue-800 font-medium mb-1">Linearization Options:</p>
-              <p class="text-xs text-blue-700">
-                <strong>.txt (Color Muse):</strong> Raw measurements → calculates correction curve<br>
-                <strong>.cube:</strong> Pre-made correction curves → applies directly<br>
+            <div class="bg-white border border-gray-200 rounded-lg p-2 mb-3">
+              <p class="text-xs text-gray-700 font-medium mb-1">Linearization Options:</p>
+              <p class="text-xs text-gray-600">
+                <strong>LAB data (.txt):</strong> Raw measurements → calculates correction curve<br>
+                <strong>1DLUT (.cube):</strong> Pre-made correction curves → applies directly<br>
                 <strong>Manual L* Entry:</strong> Enter measured L* values directly (see button below)
               </p>
             </div>
@@ -518,105 +679,85 @@ ARCHITECTURAL NOTES:
                 </div>
                 <div class="inline-flex items-center gap-2">
                   <input type="file" id="linearizationFile" accept=".cube,.txt" class="hidden">
-                  <button id="globalLinearizationBtn" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded border border-gray-300 transition-colors" data-tooltip="Load global linearization">load file</button>
+                  <button id="globalLinearizationBtn" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-tooltip="Load 1DLUT.cube or LABdata.txt files">load file</button>
                   <label class="slider-toggle" title="Enable/disable global linearization">
                     <input type="checkbox" id="globalLinearizationToggle" disabled>
                     <span class="slider"></span>
                   </label>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">accepts .cube or .txt (Color Muse) files</p>
+                <p class="text-xs text-gray-500 mt-1">accepts 1DLUT (.cube) or LAB data (.txt) files</p>
               </div>
             </div>
             
             <!-- Manual L* Entry Button -->
             <div class="mt-3 pt-3 border-t border-gray-200">
-              <button id="manualLstarBtn" class="w-full px-3 py-2 text-sm bg-green-100 hover:bg-green-200 text-green-700 rounded border border-green-300 transition-colors">
+              <button id="manualLstarBtn" class="w-full px-3 py-2 text-sm bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors font-bold">
                 ✏️ Enter L* values manually
               </button>
             </div>
-          </div>
-          
-          <!-- Interpolation Method -->
-          <div class="bg-white border border-gray-200 rounded-xl p-3">
-            <h3 class="text-lg font-semibold mb-2">Interpolation Method</h3>
-            
-            <div class="space-y-3">
-              <!-- Smoothing Method -->
-              <div>
-                <select id="curveSmoothingMethod" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" disabled>
-                  <option value="cubic">Cubic Spline</option>
-                  <option value="catmull">Catmull-Rom</option>
-                  <option value="pchip" selected>PCHIP (monotonic)</option>
-                  <option value="linear">Linear (none)</option>
-                </select>
-                <p id="interpolationDescription" class="text-xs text-gray-500 mt-3">Monotonic interpolation preserves data trends</p>
-                
-                <!-- Catmull-Rom Tension Control -->
-                <div class="mt-2" id="catmullTensionContainer" style="display: none;">
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Curve Tension</label>
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-500">Tight</span>
-                    <input type="range" id="catmullTension" min="0" max="100" value="50" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" disabled>
-                    <span class="text-xs text-gray-500">Loose</span>
-                  </div>
-                  <p class="text-xs text-gray-500 mt-1">Adjust how curvy the interpolation becomes</p>
+
+            <!-- Sample Data -->
+            <div class="mt-3 pt-3 border-t border-gray-200">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Sample Data</label>
+              <div class="flex gap-1">
+                <div class="flex-1">
+                  <button id="loadSampleColorMuse" class="w-full px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors font-bold">
+                    Load sample LABdata.txt
+                  </button>
+                  <a id="downloadSampleColorMuse" href="#" class="block text-center text-xs text-blue-600 hover:text-blue-800 mt-1">Download file</a>
                 </div>
-                
+                <div class="flex-1">
+                  <button id="loadSampleCube" class="w-full px-2 py-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 rounded transition-colors font-bold">
+                    Load sample 1DLUT.cube
+                  </button>
+                  <a id="downloadSampleCube" href="#" class="block text-center text-xs text-purple-600 hover:text-purple-800 mt-1">Download file</a>
+                </div>
               </div>
             </div>
           </div>
-          
         </div>
       </div>
 
-      <!-- Load Existing .quad File -->
-      <div class="mt-6">
-        <div class="bg-white border border-gray-200 rounded-xl p-2">
-          <div class="flex items-center gap-3">
-            <input type="file" id="quadFile" accept=".quad" class="hidden">
-            <button id="loadQuadBtn" class="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded border border-blue-300 transition-colors">
-              📂 Load .quad file
-            </button>
-            <span id="quadFileInfo" class="text-xs text-gray-500 hidden">No file loaded</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Apply-to-all controls -->
-      <div class="grid md:grid-cols-3 gap-4 items-end">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Apply percent to all (0–100)</label>
-          <div class="flex gap-2">
-            <input id="applyPercent" type="number" step="1" min="0" max="100" value="33" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
-            <button id="btnApplyPercent" class="rounded-lg px-4 py-2 bg-black text-white hover:bg-black/90">Apply</button>
-          </div>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Apply end value to all (0–64,000)</label>
-          <div class="flex gap-2">
-            <input id="applyEnd" type="number" step="1" min="0" max="64000" value="21120" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
-            <button id="btnApplyEnd" class="rounded-lg px-4 py-2 bg-black text-white hover:bg-black/90">Apply</button>
-          </div>
-        </div>
-        <div class="text-sm text-gray-600">
-          Edit either <em>Percent</em> or <em>End</em> – they stay in sync. A value of <strong>0</strong> disables the channel (all zeros).
-        </div>
-      </div>
 
       <!-- Channel table -->
       <div class="mt-6 overflow-auto">
         <table class="w-full text-sm border border-gray-200 rounded-xl overflow-hidden">
-          <thead class="bg-gray-50 text-gray-700">
-            <tr>
-              <th class="text-center px-3 py-2">
-                <button id="disableAllBtn" class="px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded border border-red-300 transition-colors" title="Disable all channels (set all to 0)">
+          <thead>
+            <!-- Apply to all controls row -->
+            <tr class="bg-white border-b border-gray-200">
+              <th class="px-1 py-2">
+                <input type="file" id="quadFile" accept=".quad" class="hidden">
+                <button id="loadQuadBtn" class="w-full px-3 py-2 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors font-bold">
+                  💾 Load .quad
+                </button>
+              </th>
+              <th class="px-3 py-2" style="width: 200px;">
+                <span id="quadFileInfo" class="text-xs text-gray-500 hidden block truncate" style="width: 100%;">No file loaded</span>
+              </th>
+              <th class="px-1 py-2"></th>
+              <th class="px-1 py-2">
+                <div class="flex gap-1">
+                  <input id="applyPercent" type="number" step="1" min="0" max="100" value="33" class="w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
+                  <button id="btnApplyPercent" class="rounded px-3 py-1 text-xs bg-black text-white hover:bg-black/90">↓ Apply all</button>
+                </div>
+              </th>
+              <th class="px-1 py-2">
+                <div class="flex gap-1">
+                  <input id="applyEnd" type="number" step="1" min="0" max="64000" value="21120" class="w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
+                  <button id="btnApplyEnd" class="rounded px-3 py-1 text-xs bg-black text-white hover:bg-black/90">↓ Apply all</button>
+                </div>
+              </th>
+            </tr>
+            <tr class="bg-gray-50 text-gray-700">
+              <th class="text-center px-1 py-2">
+                <button id="disableAllBtn" class="px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded transition-colors font-bold" title="Disable all channels (set all to 0)">
                   Disable All
                 </button>
               </th>
-              <th class="text-left px-3 py-2">Channel</th>
-              <th class="text-left px-3 py-2">Curve</th>
-              <th class="text-left px-3 py-2">Percent (0–100)</th>
-              <th class="text-left px-3 py-2">End (0–64,000)</th>
+              <th class="text-left px-1 py-2">Channel</th>
+              <th class="text-left px-1 py-2" style="width: 140px;">Curve</th>
+              <th class="text-left px-1 py-2">Percent (0–100)</th>
+              <th class="text-left px-1 py-2">End (0–64,000)</th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
@@ -637,17 +778,17 @@ ARCHITECTURAL NOTES:
 
       <!-- Configuration Notes -->
       <div class="mt-6">
-        <div class="bg-white border border-gray-200 rounded-xl p-4">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-lg font-semibold">📝 Configuration Notes</h3>
-            <button id="notesToggle" class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded border transition-colors" title="Expand/collapse notes">
-              <svg id="notesChevron" class="w-5 h-5 transform transition-transform duration-200" style="transform: rotate(180deg)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-white border border-gray-200 rounded-xl p-2">
+          <div class="flex items-center gap-2">
+            <button id="notesToggle" class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded transition-colors font-bold" title="Expand/collapse notes">
+              <svg id="notesChevron" class="w-4 h-4 transform transition-transform duration-200" style="transform: rotate(0deg)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
               </svg>
             </button>
+            <h3 class="text-sm font-medium text-gray-700">Configuration Notes</h3>
           </div>
           
-          <div id="notesContent">
+          <div id="notesContent" class="hidden">
             <div>
               <textarea id="userNotes" placeholder="Add notes to be added as comments to the generated .quad file" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 resize-none" rows="4"></textarea>
             </div>
@@ -657,10 +798,8 @@ ARCHITECTURAL NOTES:
 
       <!-- Full Preview -->
       <div class="mt-8">
-        <h2 class="text-lg font-semibold">Full file preview</h2>
-        <p class="text-sm text-gray-600 mb-3">This shows the complete file exactly as it will be saved.</p>
         <div class="border border-gray-200 rounded-xl overflow-hidden">
-          <div class="bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700">Preview</div>
+          <div class="bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700">.quad File Preview</div>
           <pre id="previewFull" class="p-4 text-sm leading-6 overflow-auto max-h-[70vh] bg-black text-white font-mono">–</pre>
         </div>
       </div>
@@ -668,16 +807,16 @@ ARCHITECTURAL NOTES:
     
     <!-- Info Popup -->
     <div id="infoPopup" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-xl max-w-md w-full p-6 relative">
+      <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] p-6 relative">
         <button id="closeInfoBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
         
-        <h2 class="text-xl font-bold mb-4">quadGEN v1.3</h2>
+        <h2 id="infoPopupTitle" class="text-xl font-bold mb-4">quadGEN v1.4</h2>
         
-        <div id="changelogContent" class="text-sm text-gray-700 space-y-4 max-h-96 overflow-y-auto">
+        <div id="changelogContent" class="text-sm text-gray-700 space-y-4 max-h-[70vh] overflow-y-auto">
           <!-- Changelog will be dynamically populated from main documentation -->
         </div>
       </div>
@@ -686,58 +825,70 @@ ARCHITECTURAL NOTES:
 
   <!-- Manual L* Entry Modal -->
   <div id="lstarModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-semibold">Manual Luminosity (L*) Entry</h3>
-        <button id="closeLstarModal" class="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
-      </div>
-      
-      <div class="mb-4 text-sm text-gray-600">
-        <p>Enter L* values from your measurements. Values should be evenly spaced from white to black.</p>
-        <div class="flex justify-between mt-2 text-xs">
-          <span class="text-gray-400">⚪ White (L*=100)</span>
-          <span class="text-gray-600">⚫ Black (L*=0)</span>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded border">
-        <div class="flex gap-2">
-          <button id="addLstarInput" class="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-700 rounded border">+ Add</button>
-          <button id="removeLstarInput" class="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded border">- Remove</button>
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="text-sm text-gray-600">Fields:</label>
-          <input type="number" id="lstarCountInput" min="3" max="50" value="5" class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500">
-        </div>
-      </div>
-
-      <div class="flex gap-4 mb-4">
-        <!-- Gradient Bar -->
-        <div class="w-12 bg-gradient-to-b from-white to-black rounded border border-gray-300 relative">
-          <div class="absolute inset-0 flex flex-col justify-between text-xs text-gray-600 py-2">
-            <div class="text-center bg-white bg-opacity-75 px-1 rounded">100</div>
-            <div class="text-center bg-black bg-opacity-75 text-white px-1 rounded">0</div>
-          </div>
+    <div class="bg-white rounded-lg max-w-md w-full mx-4 max-h-[80vh] flex flex-col">
+      <!-- Fixed Header -->
+      <div class="p-6 pb-4 flex-shrink-0">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold">Manual Luminosity (L*) Entry</h3>
+          <button id="closeLstarModal" class="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
         </div>
         
-        <!-- L* Input Fields -->
-        <div class="flex-1">
-          <div id="lstarInputs" class="space-y-2">
-            <!-- Dynamic inputs will be added here -->
+        <div class="mb-4 text-sm text-gray-600">
+          <p>Enter L* values from your measurements. Values should be evenly spaced from white to black.</p>
+          <div class="flex justify-between mt-2 text-xs">
+            <span class="text-gray-400">⚪ White (L*=100)</span>
+            <span class="text-gray-600">⚫ Black (L*=0)</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded border">
+          <div class="flex gap-2">
+            <button id="addLstarInput" class="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-700 rounded font-bold">+ Add</button>
+            <button id="removeLstarInput" class="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded font-bold">- Remove</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-600">Fields:</label>
+            <input type="number" id="lstarCountInput" min="3" max="50" value="5" class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500">
           </div>
         </div>
       </div>
 
-      <div id="lstarValidation" class="text-sm text-red-600 mb-4 hidden"></div>
+      <!-- Scrollable Content -->
+      <div class="flex-1 overflow-y-auto px-6">
+        <div class="flex gap-4 mb-4">
+          <!-- Gradient Bar -->
+          <div class="w-12 bg-gradient-to-b from-white to-black rounded border border-gray-300 relative">
+            <div class="absolute inset-0 flex flex-col justify-between text-xs text-gray-600 py-2">
+              <div class="text-center bg-white bg-opacity-75 px-1 rounded">100</div>
+              <div class="text-center bg-black bg-opacity-75 text-white px-1 rounded">0</div>
+            </div>
+          </div>
+          
+          <!-- L* Input Fields -->
+          <div class="flex-1">
+            <div id="lstarInputs" class="space-y-2">
+              <!-- Dynamic inputs will be added here -->
+            </div>
+          </div>
+        </div>
 
-      <div class="flex justify-end gap-3">
-        <button id="cancelLstar" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
-        <button id="generateFromLstar" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">Generate Correction</button>
+        <div id="lstarValidation" class="text-sm text-red-600 mb-4 hidden"></div>
+      </div>
+
+      <!-- Fixed Footer -->
+      <div class="p-6 pt-4 flex-shrink-0 border-t border-gray-200">
+        <div class="flex justify-end gap-3">
+          <button id="cancelLstar" class="px-4 py-2 text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded font-bold">Cancel</button>
+          <button id="generateFromLstar" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">Generate Correction</button>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
+    // Application version - update in one place
+    const APP_VERSION = 'v1.4';
+    
     const TOTAL = 64000;
     const N = 256;
     const DENOM = N - 1;
@@ -782,6 +933,10 @@ ARCHITECTURAL NOTES:
       curveSmoothingMethod: document.getElementById('curveSmoothingMethod'),
       catmullTension: document.getElementById('catmullTension'),
       catmullTensionContainer: document.getElementById('catmullTensionContainer'),
+      smoothingSlider: document.getElementById('smoothingSlider'),
+      smoothingValue: document.getElementById('smoothingValue'),
+      smoothingWarning: document.getElementById('smoothingWarning'),
+      simplificationMethod: document.getElementById('simplificationMethod'),
       userNotes: document.getElementById('userNotes'),
       notesToggle: document.getElementById('notesToggle'),
       quadFile: document.getElementById('quadFile'),
@@ -807,6 +962,53 @@ ARCHITECTURAL NOTES:
       globalLinearizationInfo: document.getElementById('globalLinearizationInfo'),
       globalLinearizationFilename: document.getElementById('globalLinearizationFilename'),
       globalLinearizationDetails: document.getElementById('globalLinearizationDetails'),
+      loadSampleColorMuse: document.getElementById('loadSampleColorMuse'),
+      loadSampleCube: document.getElementById('loadSampleCube'),
+    };
+
+    // Sample data constants
+    const SAMPLE_DATA = {
+      colorMuse: `GRAY\tLAB_L\tLAB_A\tLAB_B
+0\t97.15\t0.00\t0.00
+5\t97.14\t0.00\t0.00
+10\t95.90\t0.00\t0.00
+15\t93.30\t0.00\t0.00
+20\t90.06\t0.00\t0.00
+25\t85.89\t0.00\t0.00
+30\t79.22\t0.00\t0.00
+35\t71.65\t0.00\t0.00
+40\t64.43\t0.00\t0.00
+45\t58.21\t0.00\t0.00
+50\t52.13\t0.00\t0.00
+55\t46.63\t0.00\t0.00
+60\t41.83\t0.00\t0.00
+65\t38.50\t0.00\t0.00
+70\t35.63\t0.00\t0.00
+75\t31.53\t0.00\t0.00
+80\t29.94\t0.00\t0.00
+85\t27.34\t0.00\t0.00
+90\t25.91\t0.00\t0.00
+95\t24.17\t0.00\t0.00
+100\t21.33\t0.00\t0.00`,
+
+      gammaCube: `# Test 1D LUT - Gamma 2.2 curve
+TITLE "Test Gamma 2.2"
+LUT_1D_SIZE 11
+DOMAIN_MIN 0.0 0.0 0.0
+DOMAIN_MAX 1.0 1.0 1.0
+
+# Gamma 2.2 curve: output = input^2.2
+0.0 0.0 0.0
+0.01 0.01 0.01
+0.05 0.05 0.05
+0.13 0.13 0.13
+0.24 0.24 0.24
+0.41 0.41 0.41
+0.61 0.61 0.61
+0.78 0.78 0.78
+0.90 0.90 0.90
+0.97 0.97 0.97
+1.0 1.0 1.0`
     };
 
     // Input validation utilities
@@ -1215,10 +1417,11 @@ ARCHITECTURAL NOTES:
         }
       });
       
-      // Add LINEAR suffix if any linearization is applied
-      const hasLinearization = (linearizationData && linearizationApplied) || Object.keys(perChannelLinearization).length > 0;
+      // Add CORRECTED suffix if any linearization is applied
+      const hasLinearization = (linearizationData && linearizationApplied) || 
+                                Object.keys(perChannelLinearization).some(ch => perChannelEnabled[ch]);
       if (hasLinearization) {
-        parts.push('LINEAR');
+        parts.push('CORRECTED');
       }
       
       return parts.join('_');
@@ -1281,7 +1484,7 @@ ARCHITECTURAL NOTES:
         elements.interpolationDescription.style.display = 'block';
       } else if (!hasLinearization) {
         // Show explanation when disabled due to no linearization
-        elements.interpolationDescription.textContent = 'Disabled: No linearization data loaded';
+        elements.interpolationDescription.textContent = 'Disabled: no data loaded';
         elements.interpolationDescription.className = 'text-xs text-gray-500 italic mt-3';
         elements.interpolationDescription.style.display = 'block';
       } else {
@@ -1295,12 +1498,14 @@ ARCHITECTURAL NOTES:
       const hasLinearization = hasAnyLinearization();
       elements.curveSmoothingMethod.disabled = !hasLinearization;
       elements.catmullTension.disabled = !hasLinearization;
+      elements.smoothingSlider.disabled = !hasLinearization;
+      elements.simplificationMethod.disabled = !hasLinearization;
       
       // Update visual styling for disabled state
       if (!hasLinearization) {
-        elements.curveSmoothingMethod.className = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400 bg-gray-100 cursor-not-allowed';
+        elements.curveSmoothingMethod.className = 'standard-dropdown';
       } else {
-        elements.curveSmoothingMethod.className = 'w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400';
+        elements.curveSmoothingMethod.className = 'standard-dropdown';
       }
       
       // Show/hide tension control for Catmull-Rom
@@ -1308,8 +1513,18 @@ ARCHITECTURAL NOTES:
       const showTension = hasLinearization && method === 'catmull';
       elements.catmullTensionContainer.style.display = showTension ? 'block' : 'none';
       
+      // Update smoothing warning visibility
+      const smoothingPercent = parseFloat(elements.smoothingSlider.value) || 0;
+      const showWarning = hasLinearization && smoothingPercent > 0;
+      elements.smoothingWarning.classList.toggle('hidden', !showWarning);
+      
       // Update description
       updateInterpolationDescription();
+    }
+    
+    // Get selected simplification method
+    function getSelectedSimplificationMethod() {
+      return elements.simplificationMethod.value || 'douglas-peucker';
     }
     
     // Per-channel linearization storage
@@ -1454,6 +1669,9 @@ ARCHITECTURAL NOTES:
       // Sort by gray percentage
       dataPoints.sort((a, b) => a.input - b.input);
       
+      // Store original data points for smoothing
+      const originalDataPoints = [...dataPoints];
+      
       // For linearization correction, we need to create a forward correction curve
       // The measured data shows: input% -> actual LAB L*
       // We want: input% -> corrected output% to achieve linear response
@@ -1465,8 +1683,8 @@ ARCHITECTURAL NOTES:
       const labRange = maxLab - minLab;
       
       // NEW APPROACH: What if we need to flip the relationship entirely?
-      // Industry standard treats the measured L* as the "target" and GRAY% as what was actually achieved
-      // This would mean: measured L* tells us what we want, GRAY% tells us what input produces it
+      // Coordinate system transformation: Industry standard treats measured L* as target, GRAY% as achieved value
+      // Implementation: measured L* defines target, GRAY% defines input mapping
       
       // Convert L* to density-like values (invert since higher L* = lighter = lower density)
       const densityPoints = dataPoints.map(point => ({
@@ -1520,7 +1738,7 @@ ARCHITECTURAL NOTES:
         samples.push(correctedInput);
       }
       
-      // Apply horizontal and vertical flips to match industry standard behavior
+      // Dual transformation application: Coordinate system alignment with industry standard
       const flippedSamples = samples.map((sample, i) => {
         const inputPos = i / 255; // Current input position (0-1)
         const flippedInputPos = 1.0 - inputPos; // Horizontal flip
@@ -1539,8 +1757,88 @@ ARCHITECTURAL NOTES:
         domainMin,
         domainMax, 
         samples: flippedSamples,
-        originalData: dataPoints, // Keep original for reference
-        format: 'Color Muse'
+        originalData: originalDataPoints, // Keep original for reference
+        originalSamples: flippedSamples, // Store full-resolution samples
+        format: 'LAB Data',
+        // Function to generate smoothed control points (not full 256-point curve)
+        getSmoothingControlPoints: function(smoothingPercent) {
+          // Always return control points to allow interpolation methods to work
+          // When smoothing is 0%, use all original data points
+          
+          // Apply smoothing to original data points while preserving their structure
+          let smoothedDataPoints;
+          
+          if (smoothingPercent === 0) {
+            // Use all original data points when no smoothing is applied
+            smoothedDataPoints = [...originalDataPoints];
+          } else {
+            const simplificationMethod = getSelectedSimplificationMethod();
+            
+            if (simplificationMethod === 'douglas-peucker') {
+              // For Douglas-Peucker, create points with both input and LAB values
+              const points = originalDataPoints.map(p => ({x: p.input, y: p.lab}));
+              const labRange = Math.max(...originalDataPoints.map(p => p.lab)) - Math.min(...originalDataPoints.map(p => p.lab));
+              const tolerance = (labRange * 0.01) * (smoothingPercent / 100) * 2;
+              const simplified = CurveSimplification._douglasPeuckerRecursive(points, tolerance);
+              smoothedDataPoints = simplified.map(p => ({input: p.x, lab: p.y}));
+            } else {
+              // For uniform sampling, reduce the data points array directly
+              const keepRatio = 1.0 - (smoothingPercent / 100);
+              const targetCount = Math.max(3, Math.round(originalDataPoints.length * keepRatio));
+              const step = (originalDataPoints.length - 1) / (targetCount - 1);
+              
+              smoothedDataPoints = [];
+              for (let i = 0; i < targetCount; i++) {
+                const index = Math.round(i * step);
+                smoothedDataPoints.push(originalDataPoints[index]);
+              }
+            }
+          }
+          
+          // Process smoothed data points through transformation pipeline
+          const processedLabValues = smoothedDataPoints.map(p => p.lab);
+          const minLab = Math.min(...processedLabValues);
+          const maxLab = Math.max(...processedLabValues);
+          const labRange = maxLab - minLab;
+          
+          const densityPoints = smoothedDataPoints.map(point => ({
+            targetDensity: point.input / 100,
+            actualDensity: labRange > 0 ? 1.0 - ((point.lab - minLab) / labRange) : 0.5
+          }));
+          
+          densityPoints.sort((a, b) => a.targetDensity - b.targetDensity);
+          
+          // Create sparse control points that represent the inverse mapping needed for linearization
+          // Each point maps from target density (x) to what actual input density produces it (y)
+          const controlPoints = [];
+          const controlPointsX = [];
+          
+          // Process each reduced density point to create control points for interpolation
+          for (let i = 0; i < densityPoints.length; i++) {
+            const point = densityPoints[i];
+            
+            // The control points need to represent: for target density X, use input Y
+            // This is the inverse of what we measured: input X produced actual density Y
+            
+            // Apply dual transformation to create printing coordinate system
+            const xCoord = 1.0 - point.actualDensity; // Horizontal flip: actual becomes target
+            const yValue = 1.0 - point.targetDensity; // Vertical flip: target becomes corrected input
+            
+            controlPointsX.push(xCoord);
+            controlPoints.push(yValue);
+          }
+          
+          // Sort by X coordinate for proper interpolation
+          const combined = controlPointsX.map((x, i) => ({x, y: controlPoints[i]}));
+          combined.sort((a, b) => a.x - b.x);
+          
+          return {
+            samples: combined.map(p => p.y),
+            xCoords: combined.map(p => p.x),
+            controlPointCount: combined.length,
+            needsDualTransformation: false // Transformation already applied to control points
+          };
+        }
       };
     }
 
@@ -1829,6 +2127,163 @@ ARCHITECTURAL NOTES:
     }
 
     /**
+     * Curve simplification algorithms for data point reduction
+     */
+    const CurveSimplification = {
+      /**
+       * Uniform sampling reduction - reduces points while maintaining even distribution
+       * @param {number[]} samples - Original sample array
+       * @param {number} reductionPercent - Percentage of points to remove (0-90)
+       * @returns {number[]} Reduced sample array
+       */
+      uniformSampling: function(samples, reductionPercent) {
+        if (reductionPercent === 0 || samples.length <= 3) return samples;
+        
+        const keepRatio = 1.0 - (reductionPercent / 100);
+        const targetCount = Math.max(3, Math.round(samples.length * keepRatio));
+        const step = (samples.length - 1) / (targetCount - 1);
+        
+        const reducedSamples = [];
+        for (let i = 0; i < targetCount; i++) {
+          const index = Math.round(i * step);
+          reducedSamples.push(samples[index]);
+        }
+        
+        return reducedSamples;
+      },
+      
+      /**
+       * Douglas-Peucker algorithm for shape-preserving curve simplification
+       * @param {number[]} samples - Original sample array  
+       * @param {number} reductionPercent - Percentage of points to remove (0-90)
+       * @returns {number[]} Reduced sample array
+       */
+      douglasPeucker: function(samples, reductionPercent) {
+        if (reductionPercent === 0 || samples.length <= 3) return samples;
+        
+        // Convert samples to points with x,y coordinates
+        const points = samples.map((y, x) => ({x, y}));
+        
+        // Calculate tolerance based on reduction percentage and data range
+        const yMin = Math.min(...samples);
+        const yMax = Math.max(...samples);
+        const range = yMax - yMin;
+        const baseTolerance = range * 0.01; // 1% of range as base
+        const tolerance = baseTolerance * (reductionPercent / 100) * 2; // Scale with reduction
+        
+        // Apply Douglas-Peucker recursively
+        const simplified = this._douglasPeuckerRecursive(points, tolerance);
+        
+        // Ensure we have at least 3 points
+        if (simplified.length < 3) {
+          return this.uniformSampling(samples, reductionPercent);
+        }
+        
+        return simplified.map(point => point.y);
+      },
+      
+      /**
+       * Recursive Douglas-Peucker implementation
+       * @private
+       */
+      _douglasPeuckerRecursive: function(points, tolerance) {
+        if (points.length <= 2) return points;
+        
+        const first = points[0];
+        const last = points[points.length - 1];
+        
+        // Find point with maximum distance from line segment
+        let maxDistance = 0;
+        let maxIndex = 0;
+        
+        for (let i = 1; i < points.length - 1; i++) {
+          const distance = this._pointToLineDistance(points[i], first, last);
+          if (distance > maxDistance) {
+            maxDistance = distance;
+            maxIndex = i;
+          }
+        }
+        
+        // If max distance is greater than tolerance, recursively simplify
+        if (maxDistance > tolerance) {
+          const left = this._douglasPeuckerRecursive(points.slice(0, maxIndex + 1), tolerance);
+          const right = this._douglasPeuckerRecursive(points.slice(maxIndex), tolerance);
+          
+          // Merge results, avoiding duplicate middle point
+          return left.slice(0, -1).concat(right);
+        } else {
+          // All points are within tolerance, return only endpoints
+          return [first, last];
+        }
+      },
+      
+      /**
+       * Calculate perpendicular distance from point to line segment
+       * @private
+       */
+      _pointToLineDistance: function(point, lineStart, lineEnd) {
+        const A = lineEnd.x - lineStart.x;
+        const B = lineEnd.y - lineStart.y;
+        const C = point.x - lineStart.x;
+        const D = point.y - lineStart.y;
+        
+        const dot = A * C + B * D;
+        const lenSq = A * A + B * B;
+        
+        if (lenSq === 0) return Math.sqrt(C * C + D * D);
+        
+        const param = dot / lenSq;
+        let closestX, closestY;
+        
+        if (param < 0) {
+          closestX = lineStart.x;
+          closestY = lineStart.y;
+        } else if (param > 1) {
+          closestX = lineEnd.x;
+          closestY = lineEnd.y;
+        } else {
+          closestX = lineStart.x + param * A;
+          closestY = lineStart.y + param * B;
+        }
+        
+        const dx = point.x - closestX;
+        const dy = point.y - closestY;
+        return Math.sqrt(dx * dx + dy * dy);
+      },
+      
+      /**
+       * Calculate tolerance for Douglas-Peucker based on reduction percentage and data range
+       * @private
+       */
+      _calculateTolerance: function(samples, reductionPercent) {
+        const yMin = Math.min(...samples);
+        const yMax = Math.max(...samples);
+        const range = yMax - yMin;
+        const baseTolerance = range * 0.01; // 1% of range as base
+        return baseTolerance * (reductionPercent / 100) * 2; // Scale with reduction
+      },
+
+      /**
+       * Apply smoothing reduction using current algorithm
+       * @param {number[]} samples - Original sample array
+       * @param {number} reductionPercent - Percentage of points to remove (0-90)
+       * @param {string} algorithm - 'uniform' or 'douglas-peucker'
+       * @returns {number[]} Reduced sample array
+       */
+      applySmoothingReduction: function(samples, reductionPercent, algorithm = 'douglas-peucker') {
+        if (reductionPercent === 0) return samples;
+        
+        switch (algorithm) {
+          case 'douglas-peucker':
+            return this.douglasPeucker(samples, reductionPercent);
+          case 'uniform':
+          default:
+            return this.uniformSampling(samples, reductionPercent);
+        }
+      }
+    };
+
+    /**
      * Apply a 1D LUT to a list of integers using linear, cubic spline, Catmull-Rom, Bezier, or PCHIP interpolation.
      * Preserves the endpoint values - always starts at 0 and ends at the original max value.
      * @param {number[]} values - input integers in [0..maxValue]
@@ -1839,53 +2294,170 @@ ARCHITECTURAL NOTES:
      * @param {string} interpolationType - 'cubic', 'catmull', or 'linear'
      * @returns {number[]} adjusted integer outputs with preserved endpoints
      */
-    function apply1DLUT(values, lut, domainMin = 0, domainMax = 1, maxValue = 64000, interpolationType = 'cubic') {
-      const K = lut.length;
+    function apply1DLUT(values, lutOrData, domainMin = 0, domainMax = 1, maxValue = 64000, interpolationType = 'cubic', smoothingPercent = 0) {
+      // Handle both direct samples array and linearization data object
+      let processedLUT, lutX, needsDualTransformation = false;
+      
+      if (Array.isArray(lutOrData)) {
+        // Direct samples array
+        if (smoothingPercent > 0) {
+          // For smoothing, we need to preserve the relationship between X positions and Y values
+          const originalLength = lutOrData.length;
+          const simplificationMethod = getSelectedSimplificationMethod();
+          
+          if (simplificationMethod === 'douglas-peucker') {
+            // Douglas-Peucker preserves important points, so we need to track their original positions
+            const points = lutOrData.map((y, x) => ({x, y}));
+            const simplified = CurveSimplification._douglasPeuckerRecursive(
+              points, 
+              CurveSimplification._calculateTolerance(lutOrData, smoothingPercent)
+            );
+            
+            processedLUT = simplified.map(p => p.y);
+            
+            // For interpolated LAB data (256 points), X coordinates should be evenly spaced
+            // For original .cube data, preserve the actual point positions
+            if (originalLength === 256 && domainMin === 0 && domainMax === 1) {
+              // This is likely interpolated LAB data - use evenly spaced coordinates
+              const K = simplified.length;
+              lutX = new Array(K);
+              for (let i = 0; i < K; i++) {
+                lutX[i] = domainMin + (i / (K - 1)) * (domainMax - domainMin);
+              }
+            } else {
+              // This is likely original .cube data - preserve selected point positions
+              lutX = simplified.map(p => domainMin + (p.x / (originalLength - 1)) * (domainMax - domainMin));
+            }
+          } else {
+            // Uniform sampling maintains even spacing
+            processedLUT = CurveSimplification.applySmoothingReduction(lutOrData, smoothingPercent, simplificationMethod);
+            const K = processedLUT.length;
+            lutX = new Array(K);
+            for (let i = 0; i < K; i++) {
+              lutX[i] = domainMin + (i / (K - 1)) * (domainMax - domainMin);
+            }
+          }
+        } else {
+          processedLUT = lutOrData;
+          const K = processedLUT.length;
+          lutX = new Array(K);
+          for (let i = 0; i < K; i++) {
+            lutX[i] = domainMin + (i / (K - 1)) * (domainMax - domainMin);
+          }
+        }
+      } else if (lutOrData && typeof lutOrData === 'object' && lutOrData.getSmoothingControlPoints) {
+        // Linearization data object with smoothing method
+        const controlPoints = lutOrData.getSmoothingControlPoints(smoothingPercent);
+        if (controlPoints) {
+          // Use sparse control points for interpolation
+          processedLUT = controlPoints.samples;
+          lutX = controlPoints.xCoords;
+          needsDualTransformation = controlPoints.needsDualTransformation || false;
+        } else {
+          // Use original full-resolution samples (no smoothing)
+          processedLUT = lutOrData.originalSamples || lutOrData.samples;
+          const K = processedLUT.length;
+          lutX = new Array(K);
+          for (let i = 0; i < K; i++) {
+            lutX[i] = domainMin + (i / (K - 1)) * (domainMax - domainMin);
+          }
+        }
+      } else if (lutOrData && lutOrData.samples) {
+        // Linearization data object without smoothing method
+        processedLUT = smoothingPercent > 0 ? CurveSimplification.applySmoothingReduction(lutOrData.samples, smoothingPercent, getSelectedSimplificationMethod()) : lutOrData.samples;
+        const K = processedLUT.length;
+        lutX = new Array(K);
+        for (let i = 0; i < K; i++) {
+          lutX[i] = domainMin + (i / (K - 1)) * (domainMax - domainMin);
+        }
+      } else {
+        // Fallback
+        processedLUT = lutOrData;
+        const K = processedLUT.length;
+        lutX = new Array(K);
+        for (let i = 0; i < K; i++) {
+          lutX[i] = domainMin + (i / (K - 1)) * (domainMax - domainMin);
+        }
+      }
+      
+      const K = processedLUT.length;
       if (K < 2) return values; // Not enough points for interpolation
       
       // Ensure LUT starts at 0 and we know the end value
-      const lutStart = lut[0];
-      const lutEnd = lut[K - 1];
-      
-      // Create x coordinates for LUT points
-      const lutX = new Array(K);
-      for (let i = 0; i < K; i++) {
-        lutX[i] = domainMin + (i / (K - 1)) * (domainMax - domainMin);
-      }
+      const lutStart = processedLUT[0];
+      const lutEnd = processedLUT[K - 1];
       
       let interpolationFunction;
       
       if (interpolationType === 'cubic') {
         // Cubic spline interpolation for smoothest curves - pure interpolation
-        interpolationFunction = createCubicSpline(lutX, lut);
+        interpolationFunction = createCubicSpline(lutX, processedLUT);
       } else if (interpolationType === 'catmull') {
         // Catmull-Rom spline interpolation - passes through control points like GIMP
         const tension = elements.catmullTension.value / 100; // Convert 0-100 to 0-1
-        interpolationFunction = createCatmullRomSpline(lutX, lut, tension);
+        interpolationFunction = createCatmullRomSpline(lutX, processedLUT, tension);
       } else if (interpolationType === 'pchip') {
         // PCHIP interpolation for monotonic, shape-preserving curves
-        interpolationFunction = createPCHIPSpline(lutX, lut);
+        interpolationFunction = createPCHIPSpline(lutX, processedLUT);
       } else {
         // Linear interpolation for exact point-to-point behavior
-        const denom = (domainMax - domainMin) || 1;
         interpolationFunction = (t) => {
-          const tNorm = clamp01((t - domainMin) / denom);
-          const u = tNorm * (K - 1);
-          const i0 = Math.floor(u);
+          // Handle edge cases
+          if (t <= lutX[0]) return processedLUT[0];
+          if (t >= lutX[K - 1]) return processedLUT[K - 1];
+          
+          // Find the correct interval in the potentially non-evenly spaced lutX array
+          let i0 = 0;
+          for (let i = 0; i < K - 1; i++) {
+            if (t >= lutX[i] && t <= lutX[i + 1]) {
+              i0 = i;
+              break;
+            }
+          }
+          
           const i1 = Math.min(i0 + 1, K - 1);
-          const a = u - i0;
-          return (1 - a) * lut[i0] + a * lut[i1];
+          const x0 = lutX[i0];
+          const x1 = lutX[i1];
+          const y0 = processedLUT[i0];
+          const y1 = processedLUT[i1];
+          
+          // Linear interpolation between the two points
+          if (x1 === x0) return y0; // Avoid division by zero
+          const a = (t - x0) / (x1 - x0);
+          return (1 - a) * y0 + a * y1;
         };
       }
       
-      return values.map((v, index) => {
-        // FORWARD APPLICATION: Use input value to look up LUT output directly
+      const result = values.map((v, index) => {
+        // Forward mapping implementation: Input value → LUT output transformation
         const t = (v / maxValue) * (domainMax - domainMin) + domainMin;
         const lutValue = interpolationFunction(t);
         
         // Scale LUT value directly to maxValue range
         return Math.round(clamp01(lutValue) * maxValue);
       });
+      
+      // Apply dual transformation if needed (for LAB data with smoothing)
+      if (needsDualTransformation) {
+        // Convert result back to 0-1 range for transformation
+        const normalizedResult = result.map(val => val / maxValue);
+        
+        // Apply same dual transformation as parseColorMuseData (lines 1571-1579)
+        const flippedSamples = normalizedResult.map((sample, i) => {
+          const inputPos = i / (normalizedResult.length - 1); // Current input position (0-1)
+          const flippedInputPos = 1.0 - inputPos; // Horizontal flip
+          const flippedInputIndex = Math.round(flippedInputPos * (normalizedResult.length - 1)); // Convert back to index
+          const clampedIndex = Math.max(0, Math.min(normalizedResult.length - 1, flippedInputIndex));
+          const originalSample = normalizedResult[clampedIndex];
+          const verticallyFlipped = 1.0 - originalSample; // Vertical flip
+          return verticallyFlipped;
+        });
+        
+        // Convert back to original scale
+        return flippedSamples.map(val => Math.round(clamp01(val) * maxValue));
+      }
+      
+      return result;
     }
 
     const debouncedPreviewUpdate = debounce(updatePreview, 300);
@@ -1920,15 +2492,16 @@ ARCHITECTURAL NOTES:
       }
       
       const interpolationType = elements.curveSmoothingMethod.value;
+      const smoothingPercent = parseFloat(elements.smoothingSlider.value) || 0;
       
       // Step 2: Apply per-channel linearization on top of base curve
       if (channelName && perChannelLinearization[channelName] && perChannelEnabled[channelName]) {
-        arr = apply1DLUT(arr, perChannelLinearization[channelName].samples, perChannelLinearization[channelName].domainMin, perChannelLinearization[channelName].domainMax, endValue, interpolationType);
+        arr = apply1DLUT(arr, perChannelLinearization[channelName].samples, perChannelLinearization[channelName].domainMin, perChannelLinearization[channelName].domainMax, endValue, interpolationType, smoothingPercent);
       }
       
       // Step 3: Apply global linearization on top of everything
       if (applyLinearization && linearizationData && linearizationApplied) {
-        arr = apply1DLUT(arr, linearizationData.samples, linearizationData.domainMin, linearizationData.domainMax, endValue, interpolationType);
+        arr = apply1DLUT(arr, linearizationData, linearizationData.domainMin, linearizationData.domainMax, endValue, interpolationType, smoothingPercent);
       }
       
       return arr;
@@ -1978,31 +2551,31 @@ ARCHITECTURAL NOTES:
       const tr = document.createElement('tr');
       tr.className = "border-t border-gray-200";
       tr.innerHTML = `
-        <td class="px-3 py-2 text-center">
+        <td class="px-1 py-2 text-center">
           <input type="checkbox" class="channel-enable-checkbox w-4 h-4" title="Enable/disable channel" ${channelEnabled ? 'checked' : ''}>
         </td>
-        <td class="px-3 py-2 font-medium">
+        <td class="px-1 py-2 font-medium">
           <span class="inline-flex items-center gap-2">
             <span class="inline-block w-3.5 h-3.5 rounded-sm border border-black/10" style="background-color: ${INK_COLORS[name] || '#000'}"></span>
             <span class="w-8">${name}</span>
             <span class="text-xs text-gray-500 invisible" data-disabled>(disabled)</span>
           </span>
         </td>
-        <td class="px-3 py-2">
+        <td class="px-1 py-2">
           <div class="inline-flex items-center gap-2">
-            <input type="file" id="perChannel_${name}" accept=".cube" class="hidden per-channel-file">
-            <button class="per-channel-btn px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded border border-gray-300 transition-colors" data-channel="${name}" data-tooltip="Load per-channel linearization">load file</button>
+            <input type="file" id="perChannel_${name}" accept=".cube,.txt" class="hidden per-channel-file">
+            <button class="per-channel-btn px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-channel="${name}" data-tooltip="Load 1DLUT.cube or LABdata.txt files">load file</button>
             <label class="slider-toggle" title="Enable/disable per-channel linearization">
               <input type="checkbox" class="per-channel-toggle" data-channel="${name}" disabled>
               <span class="slider"></span>
             </label>
           </div>
         </td>
-        <td class="px-3 py-2">
-          <input type="number" step="1" min="0" max="100" value="${defaultPercent}" class="percent-input w-28 rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <td class="px-1 py-2">
+          <input type="number" step="1" min="0" max="100" value="${defaultPercent}" class="percent-input w-20 rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </td>
-        <td class="px-3 py-2">
-          <input type="number" step="1" min="0" max="64000" value="${defaultEndValue}" class="end-input w-28 rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <td class="px-1 py-2">
+          <input type="number" step="1" min="0" max="64000" value="${defaultEndValue}" class="end-input w-20 rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </td>
       `;
       
@@ -2131,6 +2704,7 @@ ARCHITECTURAL NOTES:
         }
         
         refreshDisplay();
+        updateDisableAllButton(); // Update button state when individual channel values change
         debouncedPreviewUpdate();
       });
 
@@ -2154,6 +2728,7 @@ ARCHITECTURAL NOTES:
         }
         
         refreshDisplay();
+        updateDisableAllButton(); // Update button state when individual channel values change
         debouncedPreviewUpdate();
       });
 
@@ -2168,13 +2743,7 @@ ARCHITECTURAL NOTES:
         if (!file) return;
         
         try {
-          // Per-channel only supports pre-made curves (.cube)
-          const extension = file.name.toLowerCase().split('.').pop();
-          
-          if (extension === 'txt') {
-            throw new Error('TXT files (Color Muse) are not supported for per-channel linearization. Use only .cube files with pre-calculated corrections.');
-          }
-          
+          // Per-channel supports both pre-made curves (.cube) and LAB data (.txt)
           const fileInput = await file.text();
           const parsed = await parseLinearizationFile(fileInput, file.name);
           perChannelLinearization[channelName] = parsed;
@@ -2194,7 +2763,7 @@ ARCHITECTURAL NOTES:
           showStatus(`Loaded per-channel linearization for ${channelName}: ${parsed.samples.length} points`);
           debouncedPreviewUpdate();
         } catch (error) {
-          console.error('Per-channel cube file error:', error);
+          console.error('Per-channel linearization file error:', error);
           showStatus(`Error loading ${channelName} linearization: ${error.message}`);
           
           // Reset state on error
@@ -2205,7 +2774,7 @@ ARCHITECTURAL NOTES:
           perChannelToggle.checked = false;
           
           // Reset button tooltip
-          perChannelBtn.setAttribute('data-tooltip', 'Load per-channel linearization');
+          perChannelBtn.setAttribute('data-tooltip', 'Load 1DLUT.cube or LABdata.txt files');
           
           // Update interpolation controls since linearization may no longer be available
           updateInterpolationControls();
@@ -2221,6 +2790,10 @@ ARCHITECTURAL NOTES:
           } else {
             showStatus(`Disabled per-channel linearization for ${channelName}`);
           }
+          
+          // Update filename to reflect current state
+          updateFilename();
+          
           debouncedPreviewUpdate();
         }
       });
@@ -2300,7 +2873,7 @@ ARCHITECTURAL NOTES:
       const lines = [
         "## QuadToneRIP " + p.channels.join(","),
         "# Printer: " + p.name,
-        "# quadGEN v1.3 by David Marsh"
+        `# quadGEN ${APP_VERSION} by David Marsh`
       ];
       
       // Add user notes if provided
@@ -2395,6 +2968,7 @@ ARCHITECTURAL NOTES:
         });
         
         updatePreview();
+        updateDisableAllButton(); // Update button state after applying values
         showStatus(`Applied ${val}% to all channels`);
       } catch (error) {
         console.error('Error applying percentage:', error);
@@ -2427,6 +3001,7 @@ ARCHITECTURAL NOTES:
         });
         
         updatePreview();
+        updateDisableAllButton(); // Update button state after applying values
         showStatus(`Applied ${val} end value to all channels`);
       } catch (error) {
         console.error('Error applying end value:', error);
@@ -2498,6 +3073,52 @@ ARCHITECTURAL NOTES:
         }
       }
     });
+
+    // Sample data loading functions
+    function loadSampleData(type) {
+      try {
+        let correctionData;
+        let filename;
+        
+        if (type === 'colorMuse') {
+          correctionData = parseColorMuseData(SAMPLE_DATA.colorMuse, 'Color-Muse-Sample.txt');
+          filename = 'LAB Sample Data';
+        } else if (type === 'cube') {
+          correctionData = parseCube1D(SAMPLE_DATA.gammaCube);
+          filename = '1DLUT Sample Data';
+        } else {
+          throw new Error('Invalid sample data type');
+        }
+        
+        // Apply the correction as global linearization
+        correctionData.filename = filename;
+        linearizationData = correctionData;
+        linearizationApplied = true;
+        
+        // Update UI to show applied correction
+        elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: ${filename}`);
+        elements.globalLinearizationToggle.disabled = false;
+        elements.globalLinearizationToggle.checked = true;
+        
+        // Show file info
+        elements.globalLinearizationInfo.classList.remove('hidden');
+        elements.globalLinearizationFilename.textContent = filename;
+        elements.globalLinearizationDetails.textContent = ` (${correctionData.format || 'Sample Data'})`;
+        
+        // Update interpolation controls
+        updateInterpolationControls();
+        updatePreview();
+        
+        // Update filename to reflect current state
+        updateFilename();
+        
+        showStatus(`Loaded sample data: ${filename}`);
+        
+      } catch (error) {
+        console.error('Error loading sample data:', error);
+        showStatus(`Error loading sample data: ${error.message}`);
+      }
+    }
 
 
     // Initialize
@@ -2581,8 +3202,11 @@ ARCHITECTURAL NOTES:
         linearizationData = null;
         linearizationApplied = false;
         
+        // Update filename to reflect no corrections
+        updateFilename();
+        
         // Reset button tooltip and disable toggle
-        elements.globalLinearizationBtn.setAttribute('data-tooltip', 'Load global linearization');
+        elements.globalLinearizationBtn.setAttribute('data-tooltip', 'Load 1DLUT.cube or LABdata.txt files');
         elements.globalLinearizationToggle.disabled = true;
         elements.globalLinearizationToggle.checked = false;
         
@@ -2606,6 +3230,9 @@ ARCHITECTURAL NOTES:
         
         // Update interpolation controls
         updateInterpolationControls();
+        
+        // Update filename to reflect current state
+        updateFilename();
         
         debouncedPreviewUpdate();
       }
@@ -2639,6 +3266,36 @@ ARCHITECTURAL NOTES:
       }
     });
     
+    // Smoothing slider functionality
+    elements.smoothingSlider.addEventListener('input', (e) => {
+      if (hasAnyLinearization()) {
+        const smoothingPercent = Math.round(e.target.value);
+        elements.smoothingValue.textContent = `${smoothingPercent}%`;
+        
+        // Update warning visibility
+        const showWarning = smoothingPercent > 0;
+        elements.smoothingWarning.classList.toggle('hidden', !showWarning);
+        
+        // Update status and preview
+        if (smoothingPercent > 0) {
+          showStatus(`Data point smoothing: ${smoothingPercent}%`);
+        } else {
+          showStatus(`Data point smoothing: off`);
+        }
+        debouncedPreviewUpdate(); // Update preview with new smoothing setting
+      }
+    });
+    
+    // Simplification method change
+    elements.simplificationMethod.addEventListener('change', (e) => {
+      if (hasAnyLinearization()) {
+        const method = e.target.value;
+        const methodName = method === 'douglas-peucker' ? 'Ramer-Douglas-Peucker' : 'Uniform Sampling';
+        showStatus(`Simplification method: ${methodName}`);
+        debouncedPreviewUpdate(); // Update preview with new method
+      }
+    });
+    
     // Notes toggle functionality
     elements.notesToggle.addEventListener('click', () => {
       const isHidden = elements.notesContent.classList.contains('hidden');
@@ -2654,46 +3311,143 @@ ARCHITECTURAL NOTES:
       }
     });
     
-    // Disable all channels functionality
+    // Sample data button event listeners
+    elements.loadSampleColorMuse.addEventListener('click', () => {
+      loadSampleData('colorMuse');
+    });
+    
+    elements.loadSampleCube.addEventListener('click', () => {
+      loadSampleData('cube');
+    });
+    
+    // Download sample data functionality
+    function downloadFile(content, filename, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }
+    
+    // Download sample data event listeners
+    document.getElementById('downloadSampleColorMuse').addEventListener('click', (e) => {
+      e.preventDefault();
+      downloadFile(SAMPLE_DATA.colorMuse, 'LABdata_sample.txt', 'text/plain');
+    });
+    
+    document.getElementById('downloadSampleCube').addEventListener('click', (e) => {
+      e.preventDefault();
+      downloadFile(SAMPLE_DATA.gammaCube, '1DLUT_sample.cube', 'text/plain');
+    });
+    
+    // Function to check if all channels are disabled
+    function areAllChannelsDisabled() {
+      const rows = Array.from(elements.rows.children);
+      if (rows.length === 0) return false;
+      
+      return rows.every(tr => {
+        const endInput = tr.querySelector('.end-input');
+        return parseInt(endInput.value) === 0;
+      });
+    }
+    
+    // Function to update the disable/enable all button state
+    function updateDisableAllButton() {
+      const allDisabled = areAllChannelsDisabled();
+      const button = elements.disableAllBtn;
+      
+      if (allDisabled) {
+        button.textContent = 'Enable All';
+        button.className = 'px-2 py-1 text-xs bg-green-100 text-green-700 hover:bg-green-200 rounded transition-colors font-bold w-24';
+        button.title = 'Enable all channels (restore previous values)';
+      } else {
+        button.textContent = 'Disable All';
+        button.className = 'px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded transition-colors font-bold w-24';
+        button.title = 'Disable all channels (set all to 0)';
+      }
+    }
+    
+    // Disable/Enable all channels functionality
     elements.disableAllBtn.addEventListener('click', () => {
       try {
-        let disabledCount = 0;
+        const allDisabled = areAllChannelsDisabled();
+        let actionCount = 0;
         
-        Array.from(elements.rows.children).forEach(tr => {
-          const percentInput = tr.querySelector('.percent-input');
-          const endInput = tr.querySelector('.end-input');
-          const channelName = tr.dataset.channel;
+        if (allDisabled) {
+          // Enable all channels - restore previous values or set to defaults
+          Array.from(elements.rows.children).forEach(tr => {
+            const percentInput = tr.querySelector('.percent-input');
+            const endInput = tr.querySelector('.end-input');
+            const channelName = tr.dataset.channel;
+            
+            // Restore previous values if available, otherwise use defaults
+            const previous = channelPreviousValues[channelName];
+            let restorePercent = 33; // Default value
+            let restoreEndValue = InputValidator.computeEndFromPercent(33);
+            
+            if (previous) {
+              restorePercent = previous.percent;
+              restoreEndValue = previous.endValue;
+            }
+            
+            percentInput.value = restorePercent.toString();
+            endInput.value = restoreEndValue.toString();
+            tr.removeAttribute('data-user-disabled');
+            
+            // Use proper state management
+            const refreshDisplay = tr.refreshDisplayFn;
+            if (refreshDisplay) {
+              refreshDisplay();
+            }
+            
+            actionCount++;
+          });
           
-          // Store current values before disabling (if not already 0)
-          const currentEndVal = InputValidator.clampEnd(endInput.value);
-          const currentPercentVal = InputValidator.clampPercent(percentInput.value);
+          showStatus(`Enabled all ${actionCount} channels`);
+        } else {
+          // Disable all channels
+          Array.from(elements.rows.children).forEach(tr => {
+            const percentInput = tr.querySelector('.percent-input');
+            const endInput = tr.querySelector('.end-input');
+            const channelName = tr.dataset.channel;
+            
+            // Store current values before disabling (if not already 0)
+            const currentEndVal = InputValidator.clampEnd(endInput.value);
+            const currentPercentVal = InputValidator.clampPercent(percentInput.value);
+            
+            if (currentEndVal > 0) {
+              channelPreviousValues[channelName] = {
+                percent: currentPercentVal,
+                endValue: currentEndVal
+              };
+            }
+            
+            // Set to 0 and mark as user-disabled
+            percentInput.value = '0';
+            endInput.value = '0';
+            tr.setAttribute('data-user-disabled', 'true');
+            
+            // Use proper state management
+            const refreshDisplay = tr.refreshDisplayFn;
+            if (refreshDisplay) {
+              refreshDisplay();
+            }
+            
+            actionCount++;
+          });
           
-          if (currentEndVal > 0) {
-            channelPreviousValues[channelName] = {
-              percent: currentPercentVal,
-              endValue: currentEndVal
-            };
-          }
-          
-          // Set to 0 and mark as user-disabled
-          percentInput.value = '0';
-          endInput.value = '0';
-          tr.setAttribute('data-user-disabled', 'true');
-          
-          // Use proper state management
-          const refreshDisplay = tr.refreshDisplayFn;
-          if (refreshDisplay) {
-            refreshDisplay();
-          }
-          
-          disabledCount++;
-        });
+          showStatus(`Disabled all ${actionCount} channels`);
+        }
         
         updatePreview();
-        showStatus(`Disabled all ${disabledCount} channels`);
+        updateDisableAllButton(); // Update button state after action
       } catch (error) {
-        console.error('Error disabling all channels:', error);
-        showStatus("Error disabling channels");
+        console.error('Error toggling all channels:', error);
+        showStatus("Error toggling channels");
       }
     });
     
@@ -3051,7 +3805,7 @@ ARCHITECTURAL NOTES:
         samples.push(correctedInput);
       }
       
-      // Apply horizontal and vertical flips to match industry standard behavior
+      // Dual transformation application: Coordinate system alignment with industry standard
       const flippedSamples = samples.map((sample, i) => {
         const inputPos = i / 255; // Current input position (0-1)
         const flippedInputPos = 1.0 - inputPos; // Horizontal flip
@@ -3148,13 +3902,8 @@ ARCHITECTURAL NOTES:
         updateInterpolationControls();
         updatePreview();
         
-        // Update filename to include LINEAR suffix if not user-edited
-        if (!elements.filenameInput.dataset.userEdited) {
-          const currentPrinter = elements.printerSelect.value;
-          const p = PRINTERS[currentPrinter];
-          const sanitizedName = p.name.replace(/\s+/g, '');
-          elements.filenameInput.value = sanitizedName + '_LINEAR.quad';
-        }
+        // Update filename to reflect current state
+        updateFilename();
         
         elements.lstarModal.classList.add('hidden');
         
@@ -3174,36 +3923,72 @@ ARCHITECTURAL NOTES:
       // This ensures the info modal always shows the current changelog
       const changelogHtml = `
         <div>
-          <p class="font-medium">v1.3 (2025-08-28) - Linearization Correction Fix:</p>
-          <ul class="list-disc list-inside space-y-1 ml-2 mt-2">
-            <li>Color Muse linearization correction algorithm now matches industry standard</li>
-            <li>Manual L* data entry linearization correction algorithm now matches industry standard</li>
-            <li>.cube file linearization corrected to use original samples directly</li>
-            <li>Dual coordinate transformation applied to measurement data (Color Muse .txt files and manual L* entry)</li>
-            <li>Removed erroneous inverse mapping logic from .cube file parsing</li>
-            <li>Added comprehensive documentation explaining why different treatments are necessary</li>
-          </ul>
+          <p class="font-medium text-lg mb-3">Workflow Procedures:</p>
+          <ol class="list-decimal list-inside space-y-1 ml-2 mb-4 text-sm">
+            <li>Create a .quad file that specifies what ink or inks to use and their ink limit amounts</li>
+            <li>Print a test target using that .quad file specifying initial ink limits</li>
+            <li>Measure resulting print tonal result values with a Color Muse device (or other measurement device) OR generate a 1DLUT (.cube) file using the EDN system at http://www.easydigitalnegatives.com/</li>
+            <li>Import data into quadGEN (LAB data (.txt) file, manual L* entry, 1DLUT (.cube), or try built-in sample data) and apply it to your initial ink limit setting</li>
+            <li>Preview results in the curve graph and verify tonal shape</li>
+            <li><em>Optional:</em> Adjust channel limits (enable/disable inks, apply uniform percentages if needed)</li>
+            <li>Export the corrected .quad file and load it back into QuadToneRIP</li>
+            <li>Reprint and validate with the corrected .quad file — tonal reproduction should now closely match the target</li>
+          </ol>
         </div>
         
         <div>
-          <p class="font-medium">v1.2 (2025-01-27) - Major Feature Release:</p>
-          <ul class="list-disc list-inside space-y-1 ml-2 mt-2">
-            <li>Complete .quad file loading with curve preservation</li>
-            <li>Layered processing system (base curves + linearization)</li>
-            <li>Enhanced UI with compact controls and better UX</li>
-            <li>Robust file validation and error handling</li>
-            <li>Streamlined printer options (P700-P900 merged)</li>
-            <li>Removed ACV file support (limited open-source support)</li>
-          </ul>
-        </div>
-        
-        <div>
-          <p class="font-medium">v1.1 (Previous):</p>
-          <ul class="list-disc list-inside space-y-1 ml-2 mt-2">
-            <li>Catmull-Rom spline interpolation with tension parameter</li>
-            <li>Channel memory system for disabled channels</li>
-            <li>Cube file inverse mapping corrections</li>
-          </ul>
+          <p class="font-medium text-lg mb-3">Version History:</p>
+          
+          <div class="mb-4">
+            <p class="font-medium">v1.4 - Enhanced Curve Processing & UI:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">
+              <li><strong>Fixed Linear Interpolation:</strong> Now properly handles non-evenly spaced control points from LAB data</li>
+              <li><strong>Enhanced LAB Data Processing:</strong> Smoothing works correctly, interpolation methods active immediately</li>
+              <li><strong>Default Algorithm:</strong> Ramer-Douglas-Peucker now default for shape-preserving curve simplification</li>
+              <li><strong>Built-in Sample Data:</strong> Download LAB measurement and Gamma 2.2 curve samples directly</li>
+              <li><strong>Improved UI Layout:</strong> Compact two-column design with consistent styling throughout</li>
+              <li><strong>Better Data Handling:</strong> Curve simplification works on original measurements, not interpolated curves</li>
+            </ul>
+          </div>
+          
+          <div class="mb-4">
+            <p class="font-medium">v1.3 - Linearization Correction & Smoothing Features:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">
+              <li><strong>Algorithm Corrections:</strong> Color Muse and manual L* data entry linearization now match industry standards</li>
+              <li><strong>Cube File Processing:</strong> Linearization corrected to use original samples directly</li>
+              <li><strong>Data Transformation:</strong> Dual coordinate transformation applied to measurement data</li>
+              <li><strong>Parser Improvements:</strong> Removed erroneous inverse mapping logic from .cube file parsing</li>
+              <li><strong>Documentation:</strong> Added comprehensive explanations for different data treatments</li>
+              <li><strong>Data Point Reduction:</strong> Multiple algorithms for reducing measurement points while preserving curve shape</li>
+              <li><strong>Uniform Sampling:</strong> Even distribution point reduction maintaining start/end points</li>
+              <li><strong>Ramer-Douglas-Peucker Algorithm:</strong> Shape-preserving curve simplification using perpendicular distance tolerance</li>
+              <li><strong>Method Selection Interface:</strong> Real-time algorithm switching with immediate preview updates</li>
+              <li><strong>Multi-Interpolation Support:</strong> Smoothed data works with Linear, Cubic, Catmull-Rom, and PCHIP interpolation methods</li>
+              <li><strong>Coordinate System Integrity:</strong> Smoothing maintains proper coordinate transformations for all data types</li>
+              <li><strong>Built-in Sample Data:</strong> Color Muse measurement sample and Gamma 2.2 curve sample for testing and learning</li>
+            </ul>
+          </div>
+          
+          <div class="mb-4">
+            <p class="font-medium">v1.2 - Major Feature Release:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">
+              <li><strong>File Loading:</strong> Complete .quad file loading with curve preservation</li>
+              <li><strong>Processing System:</strong> Layered processing system (base curves + linearization)</li>
+              <li><strong>UI Enhancements:</strong> Enhanced interface with compact controls and better UX</li>
+              <li><strong>Validation:</strong> Robust file validation and error handling</li>
+              <li><strong>Printer Options:</strong> Streamlined printer options (P700-P900 merged)</li>
+              <li><strong>Format Support:</strong> Removed ACV file support (limited open-source support)</li>
+            </ul>
+          </div>
+          
+          <div>
+            <p class="font-medium">v1.1 - Previous Release:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">
+              <li><strong>Interpolation:</strong> Catmull-Rom spline interpolation with tension parameter</li>
+              <li><strong>Channel Memory:</strong> Channel memory system for disabled channels</li>
+              <li><strong>File Processing:</strong> Cube file inverse mapping corrections</li>
+            </ul>
+          </div>
         </div>
       `;
       
@@ -3234,9 +4019,18 @@ ARCHITECTURAL NOTES:
       }
     });
     
+    // Update version displays using centralized variable
+    function updateVersionDisplays() {
+      document.title = `quadGEN ${APP_VERSION}`;
+      document.getElementById('appVersion').textContent = APP_VERSION;
+      document.getElementById('infoPopupTitle').textContent = `quadGEN ${APP_VERSION}`;
+    }
+    
     // Initial setup with error handling
     try {
+      updateVersionDisplays(); // Set all version displays
       setPrinter('P700P900');
+      updateDisableAllButton(); // Initialize button state
     } catch (error) {
       console.error('Initialization error:', error);
       showStatus("Initialization error. Please refresh the page.");
