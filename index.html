@@ -6,9 +6,9 @@
 QUADGEN TECHNICAL SPECIFICATION
 ================================================================================
 
-VERSION: v1.6
+VERSION: v1.7
 REVISION DATE: 2025-01-30
-PREVIOUS: v1.5 (2025-08-29)
+PREVIOUS: v1.6 (2025-08-31)
 
 ================================================================================
 ⚠️⚠️⚠️ CRITICAL INTERPOLATION REQUIREMENTS ⚠️⚠️⚠️
@@ -1035,6 +1035,21 @@ ARCHITECTURAL NOTES:
       border: none;
       overflow: hidden;
     }
+
+    /* Make assistant links in chat clearly clickable */
+    #chatHistory a {
+      color: #1d4ed8;           /* Tailwind blue-700 */
+      text-decoration: underline;
+      font-weight: 600;
+    }
+    #chatHistory a:hover {
+      color: #1e40af;           /* Tailwind blue-800 */
+      text-decoration: underline;
+    }
+    #chatHistory a[target="_blank"]::after {
+      content: ' ↗';
+      font-weight: 600;
+    }
   </style>
 </head>
 <body class="min-h-screen bg-gray-50 p-6">
@@ -1188,46 +1203,62 @@ ARCHITECTURAL NOTES:
         <div class="lg:col-span-1 space-y-4">
           <!-- Global Linearization -->
           <div class="bg-white border border-gray-200 rounded-xl p-3">
-            <h3 class="text-lg font-semibold mb-2">🌐 Global Linearization Data</h3>
-            <p class="text-xs text-gray-600 mb-2">Apply correction to modify all ink channels uniformly.</p>
+            <h3 class="text-lg font-semibold mb-2">🌐 Global Correction</h3>
+            <p class="text-xs text-gray-600 mb-2">Apply a correction to modify all channels uniformly.</p>
             
             <div class="bg-white border border-gray-200 rounded-lg p-2 mb-3">
-              <p class="text-xs text-gray-700 font-medium mb-1">Linearization Options:</p>
-              <p class="text-xs text-gray-600">
-                <strong>LAB data (.txt):</strong> Raw measurements → calculates correction curve<br>
-                <strong>LUT (.cube):</strong> Pre-made correction curves → applies directly<br>
-                <strong>Photoshop curves (.acv):</strong> Curve presets → smooth spline interpolation<br>
-                <strong>Manual L* Entry:</strong> Enter measured L* values directly (see button below)
-              </p>
+              <div class="space-y-1">
+                <p class="text-xs text-gray-700 font-semibold">Applies Directly →</p>
+                <ul class="list-disc list-inside text-xs text-gray-600 mb-1">
+                  <li>Photoshop Curves (.acv): Curve presets.</li>
+                  <li>LUT (.cube): 1D or 3D LUT.</li>
+                </ul>
+                <p class="text-xs text-gray-700 font-semibold">Calculates Linearization ↕</p>
+                <ul class="list-disc list-inside text-xs text-gray-600 mb-1">
+                  <li>LAB Data (.txt): L* measurements.</li>
+                  <li>Manual L* Entry: L* measurements.</li>
+                </ul>
+              </div>
+              <div>
+                <button id="manualLstarBtn" class="w-full px-2 py-1 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold">
+                  ✏️ Enter L* Values Manually
+                </button>
+              </div>
             </div>
             
             <!-- Linearization Controls -->
-            <div class="space-y-3">              
+          <div class="space-y-3">              
+              <!-- Print Intent -->
+              <div>
+                <label for="printIntent" class="block text-xs font-medium text-gray-700 mb-1">Print Intent</label>
+                <select id="printIntent" class="standard-dropdown w-full">
+                  <option value="positive" selected>Positive (normal print)</option>
+                  <option value="negative">Negative (digital negative)</option>
+                </select>
+                <p class="text-[11px] text-gray-500 mt-1">Controls only how corrections are applied in printer-space. No image editor needed.</p>
+              </div>
+
               <!-- File Upload -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Data Source</label>
                 <div id="globalLinearizationInfo" class="text-xs text-gray-600 mb-2 hidden">
                   <span id="globalLinearizationFilename" class="font-medium"></span>
                   <span id="globalLinearizationDetails" class="text-gray-500"></span>
                 </div>
+                <!-- LAB measurement intent mismatch warning -->
+                <div id="measurementIntentWarning" class="hidden text-[11px] text-orange-700 bg-orange-50 border border-orange-200 rounded px-2 py-1 mb-2"></div>
                 <div class="inline-flex items-center gap-2">
                   <input type="file" id="linearizationFile" accept=".cube,.txt,.acv" class="hidden">
-                  <button id="globalLinearizationBtn" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-tooltip="Load LUT.cube, LABdata.txt, or .acv curve files">load file</button>
+                  <button id="globalLinearizationBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold" data-tooltip="Load LUT.cube, LABdata.txt, or .acv curve files">Load Data File</button>
                   <label class="slider-toggle" title="Enable/disable global linearization">
                     <input type="checkbox" id="globalLinearizationToggle" disabled>
                     <span class="slider"></span>
                   </label>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">accepts LUT (.cube), LAB data (.txt), or Photoshop curves (.acv) files</p>
+                <p class="text-xs text-gray-500 mt-1">LUT (.cube), LAB data (.txt), or Photoshop curves (.acv) files</p>
               </div>
             </div>
             
-            <!-- Manual L* Entry Button -->
-            <div class="mt-3 pt-3 border-t border-gray-200">
-              <button id="manualLstarBtn" class="w-full px-2 py-1 text-xs bg-slate-500 hover:bg-slate-600 text-white rounded transition-colors">
-                ✏️ Enter L* values manually
-              </button>
-            </div>
+            
 
             <!-- Sample Data -->
             <div class="mt-3 pt-3 border-t border-gray-200">
@@ -1235,15 +1266,15 @@ ARCHITECTURAL NOTES:
               <div class="flex gap-1">
                 <div class="flex-1">
                   <button id="loadSampleLabData" class="w-full px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors font-bold">
-                    Load sample LAB data
+                    Load Sample LAB Data
                   </button>
-                  <a id="downloadSampleLabData" href="#" class="block text-center text-xs text-blue-600 hover:text-blue-800 mt-1">↓ Download file</a>
+                  <a id="downloadSampleLabData" href="#" class="block text-center text-xs text-blue-600 hover:text-blue-800 mt-1">↓ Download File</a>
                 </div>
                 <div class="flex-1">
                   <button id="loadSampleCube" class="w-full px-2 py-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 rounded transition-colors font-bold">
-                    Load sample LUT.cube
+                    Load Sample LUT.cube
                   </button>
-                  <a id="downloadSampleCube" href="#" class="block text-center text-xs text-purple-600 hover:text-purple-800 mt-1">↓ Download file</a>
+                  <a id="downloadSampleCube" href="#" class="block text-center text-xs text-purple-600 hover:text-purple-800 mt-1">↓ Download File</a>
                 </div>
               </div>
             </div>
@@ -1292,14 +1323,14 @@ ARCHITECTURAL NOTES:
             <!-- Chat History -->
             <div id="chatHistory" class="bg-gray-50 rounded border border-gray-200 p-2 h-40 overflow-y-auto mb-3 text-xs">
               <div class="bg-gray-50 text-gray-600 px-2 py-1 rounded mb-2 text-xs border border-gray-200">
-                <strong>Try this:</strong> "Create a palladium curve"<br>
-                <strong>or:</strong> "Generate a curve starting at 0%, ramping up quickly to 85% at 25% input, then gradually dropping to 60% at 80% input"
+                <strong>Try this:</strong> "Lift shadows by 15% on the first enabled channel"<br>
+                <strong>or:</strong> "Generate a gentle S-curve: 0→0, 25→20, 75→85, 100→100"
               </div>
             </div>
 
             <!-- Input Area -->
             <div class="flex gap-2">
-              <input type="text" id="aiInput" placeholder="Ask Claude to help with channel settings..." 
+              <input type="text" id="aiInput" placeholder="Ask Lab Tech for assistance..." 
                      class="flex-1 rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400">
               <button id="sendMessageBtn" class="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition-colors font-bold" disabled>
                 Send
@@ -1343,7 +1374,7 @@ ARCHITECTURAL NOTES:
     
     <!-- Info Popup -->
     <div id="infoPopup" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] p-6 relative">
+      <div class="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] p-6 relative">
         <button id="closeInfoBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1423,7 +1454,17 @@ ARCHITECTURAL NOTES:
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'v1.6';
+    const APP_VERSION = 'v1.8';
+    // Global debug logging toggle for non-AI logs
+    var DEBUG_LOGS = false;
+    // AI provider selection (code-level switch, no UI): 'anthropic' or 'openai'
+    const AI_PROVIDER = 'anthropic';
+    const WORKER_URL = 'https://sparkling-shape-8b5a.marshmonkey.workers.dev';
+    const ANTHROPIC_MODEL = 'claude-sonnet-4-0';
+    // Set OPENAI_MODEL to 'gpt-5' if you have access; 'gpt-4o' is a safe default
+    const OPENAI_MODEL = 'gpt-5-mini';
+    // Debug flag for AI logs
+    const DEBUG_AI = false;
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
@@ -1546,33 +1587,34 @@ ARCHITECTURAL NOTES:
     };
     
     // Functions to generate version history content
-    function generateInternalVersionHistory() {
-      let content = '';
-      for (const [version, data] of Object.entries(VERSION_HISTORY)) {
-        content += `${version} (${data.date}) - ${data.title}:\n`;
-        
-        for (const [sectionName, items] of Object.entries(data.sections)) {
-          content += `${sectionName}:\n`;
-          for (const item of items) {
-            content += `- ${item}\n`;
-          }
-        }
-        content += '\n';
-      }
-      return content;
-    }
+    // Removed unused generateInternalVersionHistory()
     
     function generateAboutDialogVersionHistory() {
+      // Helper: decrement the minor version by 1 (e.g., v1.6 → v1.5, v1.4.1 → v1.3.1)
+      const decMinor = (v) => {
+        const m = /^v(\d+)(?:\.(\d+))?(?:\.(\d+))?$/.exec(v);
+        if (!m) return v;
+        const major = parseInt(m[1], 10);
+        const minor = m[2] !== undefined ? Math.max(parseInt(m[2], 10) - 1, 0) : undefined;
+        const patch = m[3] !== undefined ? parseInt(m[3], 10) : undefined;
+        if (minor === undefined) {
+          // No minor provided; conservatively decrement major instead
+          return `v${Math.max(major - 1, 0)}`;
+        }
+        return `v${major}.${minor}${patch !== undefined ? `.${patch}` : ''}`;
+      };
+
       let content = '';
       for (const [version, data] of Object.entries(VERSION_HISTORY)) {
+        const displayVersion = decMinor(version);
         content += `
-          <div class="mb-4">
-            <p class="font-medium">${version} - ${data.title}:</p>
-            <ul class="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">`;
+          <div class="mb-3">
+            <p class="font-bold">${displayVersion}</p>
+            <ul class="list-none ml-2 mt-1 text-sm leading-tight">`;
         
         for (const item of data.aboutDialog) {
           content += `
-              <li><strong>${item.label}:</strong> ${item.desc}</li>`;
+              <li>- ${item.desc}</li>`;
         }
         
         content += `
@@ -2032,6 +2074,7 @@ ARCHITECTURAL NOTES:
             printer: currentPrinter.name,
             channels: channels,
             filename: elements.filenameInput ? elements.filenameInput.value : '',
+            printIntent: elements.printIntent ? elements.printIntent.value : 'positive',
             version: APP_VERSION
           };
 
@@ -3010,7 +3053,13 @@ ARCHITECTURAL NOTES:
 
           return {
             success: true,
-            message: `Generated custom ${interpolationType} curve for ${channelName} channel with ${keyPoints.length} key points`
+            message: `Generated custom ${interpolationType} curve for ${channelName} channel with ${keyPoints.length} key points`,
+            details: {
+              channelName,
+              interpolationType,
+              keyPointsCount: normalizedPoints.length,
+              keyPoints: normalizedPoints.slice(0, 5) // summarize first up to 5 points
+            }
           };
 
         } catch (error) {
@@ -3615,75 +3664,27 @@ ARCHITECTURAL NOTES:
             return { success: true, keyPoints, description: 'Linear curve' };
           }
 
-          // Handle alternative process specific curves
-          if (desc.includes('palladium') && (desc.includes('curve') || desc.includes('correction') || desc.includes('characteristic') || desc.includes('pt/pd'))) {
-            // Platinum/Palladium S-curve with compressed midtones
-            keyPoints = [
-              { input: 0, output: 0 },
-              { input: 15, output: 8 },   // Compressed shadows
-              { input: 50, output: 45 },  // Compressed midtones  
-              { input: 85, output: 92 },  // Lifted highlights
-              { input: 100, output: 100 }
-            ];
-            return { success: true, keyPoints, description: 'Platinum/Palladium characteristic curve' };
+          // Handle alternative process specific requests (image-space domain)
+          // Detect process terms and provide guidance instead of generating a preset
+          const processTerms = [
+            'palladium','pt/pd','platinum','cyanotype','salt print','kallitype','kalitype','gum','gum bichromate','zone system','self-masking','compression curve'
+          ];
+          if (processTerms.some(term => desc.includes(term))) {
+            return {
+              success: false,
+              message: (
+                '**Process curves are image‑space. quadGEN works in printer‑space.**\n' +
+                '- Set Print Intent (Positive/Negative).\n' +
+                '- Load EDN (.cube/.acv); it is mapped by intent.\n' +
+                '- Or load LAB (.txt) from a printed wedge for linearization.\n' +
+                'Provide your EDN or LAB file and I\'ll apply it.'
+              )
+            };
           }
 
-          if (desc.includes('cyanotype') && (desc.includes('curve') || desc.includes('density') || desc.includes('correction') || desc.includes('characteristic'))) {
-            // Cyanotype curve for ES 1.40 (moderate contrast)
-            keyPoints = [
-              { input: 0, output: 0 },
-              { input: 25, output: 18 },
-              { input: 75, output: 88 },
-              { input: 100, output: 100 }
-            ];
-            return { success: true, keyPoints, description: 'Cyanotype curve (ES 1.40)' };
-          }
-
-          if (desc.includes('salt print') && (desc.includes('curve') || desc.includes('range') || desc.includes('correction') || desc.includes('characteristic'))) {
-            // Salt print high density range curve (DR 2.5+)
-            keyPoints = [
-              { input: 0, output: 0 },
-              { input: 20, output: 5 },   // Deep shadows
-              { input: 80, output: 95 },  // High density range
-              { input: 100, output: 100 }
-            ];
-            return { success: true, keyPoints, description: 'Salt print high density curve' };
-          }
-
-          if (desc.includes('gum') && (desc.includes('curve') || desc.includes('contrast') || desc.includes('correction') || desc.includes('characteristic'))) {
-            // Gum bichromate low contrast curve
-            keyPoints = [
-              { input: 0, output: 10 },   // Lifted blacks
-              { input: 50, output: 55 },  // Low contrast
-              { input: 100, output: 90 }  // Compressed whites
-            ];
-            return { success: true, keyPoints, description: 'Gum bichromate low contrast curve' };
-          }
-
-          if (desc.includes('zone system') || desc.includes('11 zone')) {
-            // Zone System 11-zone curve
-            keyPoints = [
-              { input: 0, output: 0 },    // Zone 0
-              { input: 10, output: 5 },   // Zone I
-              { input: 30, output: 20 },  // Zone III
-              { input: 50, output: 50 },  // Zone V (middle gray)
-              { input: 70, output: 75 },  // Zone VII
-              { input: 90, output: 95 },  // Zone IX
-              { input: 100, output: 100 } // Zone X
-            ];
-            return { success: true, keyPoints, description: '11-zone system curve' };
-          }
-
-          if (desc.includes('compression curve') || desc.includes('self-masking')) {
-            // Compression curve for self-masking processes
-            keyPoints = [
-              { input: 0, output: 5 },
-              { input: 25, output: 30 },
-              { input: 75, output: 70 },
-              { input: 100, output: 95 }
-            ];
-            return { success: true, keyPoints, description: 'Compression curve for self-masking processes' };
-          }
+          // Handle alternative process specific curves (removed)
+          // Process-specific presets removed: palladium/pt-pd, cyanotype, salt print, kallitype, gum, zone system, compression/self-masking
+          // These belong to image-space workflows. In quadGEN (printer-space), use EDN LUT/.acv or LAB measurement data instead.
 
           // Parse action-oriented commands
           const actions = [];
@@ -4619,6 +4620,8 @@ ARCHITECTURAL NOTES:
         this.maxRequestsPerHour = 100;
       }
 
+      // (Tool gating removed - always include tools for assistant)
+
       /**
        * Check if user is within rate limits
        * @returns {Object} Rate limit status
@@ -4732,8 +4735,7 @@ ARCHITECTURAL NOTES:
           /\b(global)\b.*\b(curve|correction|adjustment|linearization|compensation)\b/i,
           /\b(apply|add|create)\b.*\b(global)\b/i,
           // Process/paper simulation language
-          /\b(palladium|cyanotype|salt print|platinum|gum bichromate)\b.*\b(print|process|style|characteristics)\b/i,
-          /\b(zone system|contact printing)\b/i,
+          // Process-specific triggers removed to avoid generating image-space style presets in printer-space
           // Paper/process characteristics
           /\b(paper|process|tonality|characteristics|simulation)\b.*\b(curve|adjustment|correction)\b/i,
           /\b(matte paper|glossy paper|textured paper)\b/i,
@@ -4942,6 +4944,8 @@ ARCHITECTURAL NOTES:
             ? `Current QuadGEN state: ${JSON.stringify(currentState.data, null, 2)}`
             : 'Unable to retrieve current state';
 
+          // No bookmarks or reference injection
+
           // Prepare system message separately
           const systemMessage = `You are Lab Tech, the specialized digital darkroom assistant for QuadGEN. You control QuadToneRIP .quad file generation for Epson printers. Always refer to yourself as "Lab Tech" when speaking to users. Adopt the persona of a knowledgeable lab technician who's expert in digital printmaking and alternative photographic processes.
 
@@ -4974,6 +4978,7 @@ P800 (8 channels, K switchable), P700P900 (10 channels, MK+V dedicated)
 • Multiple active channels blend to create neutral or tinted prints
 • Linearization files (.cube/.txt/.acv) compensate for paper/ink characteristics
 • Users can PASTE LAB measurement data or .cube LUT file data directly into chat for instant linearization
+• Print Intent: Positive (default) or Negative. quadGEN operates in printer-space; for Negative intent, EDN-style LUT/.acv are applied as G(x)=1−EDN(x) (no image editor inversion needed). Measurement linearization unchanged.
 • Custom curve generation: Create curves from photography terminology (e.g., "S-curve", "lift shadows", "palladium curve")
 • Photography terms: lift/drop shadows/midtones/highlights, crush/blow, peak/bump, gentle arc, roll off, S-curve
 • Alt-process terms: palladium/pt-pd curve, cyanotype density, salt print range, gum curve, zone system, block shadows, boost shadows, preserve highlights, contact printing density, UV blocking, exposure scale (ES)
@@ -5002,6 +5007,7 @@ RULES:
 • Multiple set_channel_value calls for different percentages (individual undos)
 • Multiple set_channel_end_value calls for different end values (individual undos)
 • Ask clarification if ambiguous
+• Process curve requests (cyanotype, palladium, etc.): Do NOT generate a preset. Briefly explain image-space vs printer-space and ask the user to load EDN (.cube/.acv) or LAB (.txt), or confirm Print Intent.
 
 VALUE INTERPRETATION:
 • Percentages (0-100%) and end values (0-64000) are equivalent representations
@@ -5020,8 +5026,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
 • Step 2: If user didn't specify a channel, use the FIRST enabled channel - that's it!
 • Step 3: If NO channels enabled, ask which channel to use
 • DO NOT overthink, DO NOT analyze "appropriateness", DO NOT enable new channels
-• Curve names describe TONAL CHARACTERISTICS, not which ink to use
-• Example: "cyanotype curve" = use first enabled channel (MK if MK shows as enabled in state)`;
+• Curve names describe TONAL CHARACTERISTICS, not which ink to use`;
 
 
           // Prepare the API request messages
@@ -5036,82 +5041,202 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
           const recentHistory = this.conversationHistory.slice(-10);
           messages.splice(-1, 0, ...recentHistory);
 
-          const response = await fetch('https://sparkling-shape-8b5a.marshmonkey.workers.dev', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: 'claude-sonnet-4-0',
-              max_tokens: 1000,
-              system: systemMessage,
-              messages: messages,
-              tools: CLAUDE_FUNCTIONS.map(func => ({
-                name: func.name,
-                description: func.description,
-                input_schema: func.parameters
-              }))
-            })
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`API Error: ${response.status} - ${errorData.error?.message || response.statusText}`);
-          }
-
-          const data = await response.json();
-          
-          // Extract rate limit headers
-          const rateLimitHeaders = {};
-          ['x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset'].forEach(header => {
-            const value = response.headers.get(header);
-            if (value) rateLimitHeaders[header] = value;
-          });
-          
-          // Process function calls if any
-          const functionResults = [];
-          let assistantMessage = '';
-
-          for (const content of data.content) {
-            if (content.type === 'text') {
-              assistantMessage += content.text;
-            } else if (content.type === 'tool_use') {
-              console.log('🔧 Function call detected:', content.name, content.input);
-              const result = this.executeFunctionCall({
-                name: content.name,
-                parameters: content.input
-              }, userMessage);
-              console.log('📊 Function result:', result);
-              functionResults.push({
-                function: content.name,
-                parameters: content.input,
-                result: result
-              });
+          // Provider request helper with parsing and error propagation
+          const requestProvider = async (provider) => {
+            // Build provider-specific payload
+            let payload;
+            if (provider === 'openai') {
+              const openaiMessages = [
+                { role: 'system', content: systemMessage },
+                ...recentHistory,
+                messages[messages.length - 1]
+              ];
+              const openaiTools = CLAUDE_FUNCTIONS.map(func => ({
+                type: 'function',
+                function: {
+                  name: func.name,
+                  description: func.description,
+                  parameters: func.parameters
+                }
+              }));
+              payload = {
+                provider: 'openai',
+                model: OPENAI_MODEL,
+                messages: openaiMessages,
+                tools: openaiTools
+                // Note: some models only support default temperature; omit to use default
+              };
+            } else {
+              payload = {
+                provider: 'anthropic',
+                model: ANTHROPIC_MODEL,
+                max_tokens: 1000,
+                system: systemMessage,
+                messages: messages,
+                tools: CLAUDE_FUNCTIONS.map(func => ({
+                  name: func.name,
+                  description: func.description,
+                  input_schema: func.parameters
+                }))
+              };
             }
+
+            // Retry wrapper for transient errors (429/5xx/529)
+            const maxAttempts = 3;
+            let response, respText, data;
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              response = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+
+              respText = await response.text();
+              try { data = JSON.parse(respText); } catch { data = {}; }
+
+              if (response.ok) break;
+
+              const status = response.status;
+              const retryAfterHeader = response.headers.get('Retry-After');
+              const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : null;
+              const isRetryable = status === 429 || status === 529 || (status >= 500 && status <= 504);
+              if (attempt < maxAttempts && isRetryable) {
+                const backoff = retryAfter ?? attempt * 600; // ms
+                console.warn(`Transient AI error ${status}; retrying in ${backoff}ms (attempt ${attempt}/${maxAttempts - 1})`);
+                await new Promise(r => setTimeout(r, backoff));
+                continue;
+              }
+
+              const errMsg = data?.error?.message || data?.error || response.statusText || 'Unknown error';
+              const error = new Error(`API Error: ${status} - ${errMsg}`);
+              error.status = status;
+              error.provider = provider;
+              error.data = data;
+              throw error;
+            }
+
+            // One-time model/provider debug line
+            if (!this._modelLogged) {
+              const servedModel = data.model || (provider === 'openai' ? OPENAI_MODEL : ANTHROPIC_MODEL);
+              const servedProvider = response.headers.get('X-Model-Provider') || provider;
+              const connectMsg = `AI connected → provider: ${servedProvider}, model: ${servedModel}`;
+              console.log(connectMsg);
+              try { if (typeof addChatMessage === 'function') addChatMessage('system', connectMsg); } catch {}
+              this._modelLogged = true;
+            }
+
+            // Extract rate limit headers
+            const rateLimitHeaders = {};
+            ['x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset'].forEach(header => {
+              const value = response.headers.get(header);
+              if (value) rateLimitHeaders[header] = value;
+            });
+
+            // Process function calls and text
+            const functionResults = [];
+            let assistantMessage = '';
+            if (provider === 'openai') {
+              const choice = data.choices?.[0] || {};
+              const msg = choice.message || {};
+              // Robust text extraction for OpenAI variants
+              if (typeof msg.content === 'string') {
+                assistantMessage = msg.content;
+              } else if (Array.isArray(msg.content)) {
+                assistantMessage = msg.content.map(c => (typeof c === 'string' ? c : (c?.text ?? ''))).join('');
+              } else if (typeof choice.text === 'string') {
+                assistantMessage = choice.text; // Some responses include .text
+              } else if (Array.isArray(data.output_text)) {
+                assistantMessage = data.output_text.join('\n'); // Responses API style
+              } else if (typeof data.output_text === 'string') {
+                assistantMessage = data.output_text;
+              }
+              const toolCalls = msg.tool_calls || choice.tool_calls || [];
+            for (const call of toolCalls) {
+              if (call.type === 'function' && call.function?.name) {
+                let args = {};
+                try { args = JSON.parse(call.function.arguments || '{}'); } catch {}
+                console.log('🔧 Function call (OpenAI):', call.function.name, args);
+                const result = this.executeFunctionCall({ name: call.function.name, parameters: args }, userMessage);
+                functionResults.push({ function: call.function.name, parameters: args, result });
+              }
+            }
+            } else {
+              for (const content of data.content || []) {
+                if (content.type === 'text') {
+                  assistantMessage += content.text;
+                } else if (content.type === 'tool_use') {
+                  console.log('🔧 Function call (Anthropic):', content.name, content.input);
+                  const result = this.executeFunctionCall({ name: content.name, parameters: content.input }, userMessage);
+                  functionResults.push({ function: content.name, parameters: content.input, result });
+                }
+              }
+            }
+
+            return { assistantMessage, functionResults, rateLimitHeaders, provider };
+          };
+
+          // No fallback: strictly use the configured provider
+          let result = await requestProvider(AI_PROVIDER);
+
+          const { assistantMessage, functionResults, rateLimitHeaders } = result;
+          let finalMessage = assistantMessage || '';
+
+          // If the model didn't produce a narrative, synthesize a concise action summary or guidance
+          try {
+            const hasGenDesc = (functionResults || []).some(fr => fr.function === 'generate_curve_from_description');
+            if ((!finalMessage || finalMessage.trim().length === 0) && hasGenDesc) {
+              const parts = [];
+              for (const fr of functionResults) {
+                if (fr.function === 'generate_curve_from_description') {
+                  const res = fr.result || {};
+                  const d = res.details;
+                  const msg = res.message || '';
+                  if (res.success === false && msg) {
+                    // Provide user-facing guidance when parsing failed (e.g., process-specific requests)
+                    parts.push(msg);
+                  } else {
+                    const safeMsg = msg || 'Curve generated.';
+                    if (d) {
+                      const kpPreview = Array.isArray(d.keyPoints) ? d.keyPoints.map(p => `${p.input}→${p.output}`).join(', ') : '';
+                      parts.push(`Action: ${safeMsg}\n- Channel: ${d.channelName}\n- Interpolation: ${d.interpolationType} (PCHIP for smooth)\n- Key points: ${d.keyPointsCount}${kpPreview ? `\n- Preview: ${kpPreview}` : ''}`);
+                    } else {
+                      parts.push(`Action: ${safeMsg}`);
+                    }
+                  }
+                }
+              }
+              if (parts.length > 0) {
+                finalMessage = parts.join('\n\n');
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to synthesize action summary:', e.message);
           }
+
+          // No auto-citations; references removed (trust the model)
           
           console.log('📝 Total function calls processed:', functionResults.length);
 
           // Update conversation history
           this.conversationHistory.push(
             { role: 'user', content: userMessage },
-            { role: 'assistant', content: assistantMessage || 'I performed the requested actions.' }
+            { role: 'assistant', content: finalMessage || 'I performed the requested actions.' }
           );
 
           return {
             success: true,
             message: 'Request processed successfully',
-            response: assistantMessage || 'Actions completed successfully.',
+            response: finalMessage || 'Actions completed successfully.',
             functionResults: functionResults,
             actionsPerformed: functionResults.length > 0,
             rateLimitHeaders: rateLimitHeaders
           };
 
         } catch (error) {
-          console.error('Claude Sonnet 4 API Error:', error);
+          console.error('AI API Error:', error);
           return {
             success: false,
-            message: `Error communicating with Claude: ${error.message}`,
+            message: `Error communicating with AI provider: ${error.message}`,
             response: `Sorry, I encountered an error: ${error.message}`
           };
         } finally {
@@ -5307,6 +5432,8 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       globalLinearizationInfo: document.getElementById('globalLinearizationInfo'),
       globalLinearizationFilename: document.getElementById('globalLinearizationFilename'),
       globalLinearizationDetails: document.getElementById('globalLinearizationDetails'),
+      measurementIntentWarning: document.getElementById('measurementIntentWarning'),
+      printIntent: document.getElementById('printIntent'),
       loadSampleLabData: document.getElementById('loadSampleLabData'),
       loadSampleCube: document.getElementById('loadSampleCube'),
       pageTitle: document.getElementById('pageTitle'),
@@ -5334,6 +5461,8 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
 
     // Initialize version numbers when DOM is ready
     initializeVersionNumbers();
+
+    // (Removed) IndustryReferences bookmarks system — reverted to trusting the model
 
     // Sample data constants
     const SAMPLE_DATA = {
@@ -5591,7 +5720,7 @@ DOMAIN_MAX 1.0 1.0 1.0
     }
 
     function updateInkChart() {
-      console.log('DEBUG: Global linearization state:', {
+      if (DEBUG_LOGS) console.log('DEBUG: Global linearization state:', {
         hasLinearizationData: !!linearizationData,
         linearizationApplied: linearizationApplied,
         samplesCount: linearizationData?.samples?.length || 0,
@@ -5713,7 +5842,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const values = make256(endVal, channelName, true);
         const maxValue = TOTAL; // 64000
         
-        console.log('DEBUG: Chart values for', channelName, {
+        if (DEBUG_LOGS) console.log('DEBUG: Chart values for', channelName, {
           valuesCount: values.length,
           valuesMin: Math.min(...values),
           valuesMax: Math.max(...values),
@@ -7032,7 +7161,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       // Second: vertical flip (invert values so 0.0 becomes 1.0, 0.5 becomes 0.5, etc.)
       const flippedSamples = horizontallyFlipped.map(sample => 1.0 - sample);
       
-      return { domainMin, domainMax, samples: flippedSamples };
+      return { domainMin, domainMax, samples: flippedSamples, originalSamples: samples, format: '1DLUT' };
     }
 
     /**
@@ -7298,6 +7427,9 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Clamp to valid range and store
         samples.push(Math.max(0, Math.min(1, correctedValue)));
       }
+      // Anchor endpoints for measurement-based linearization
+      samples[0] = 0.0;
+      samples[samples.length - 1] = 1.0;
       
       console.log('LAB Gaussian correction applied:', {
         sampleRange: `${Math.min(...samples).toFixed(3)} - ${Math.max(...samples).toFixed(3)}`,
@@ -7355,6 +7487,9 @@ DOMAIN_MAX 1.0 1.0 1.0
           
           // Return control points in the expected format for compatibility
           // For Gaussian weighting, we return evenly spaced control points from the smooth curve
+          // Ensure endpoints are anchored to preserve dynamic range
+          dynamicSamples[0] = 0.0;
+          dynamicSamples[dynamicSamples.length - 1] = 1.0;
           const controlPointCount = Math.max(3, 21 - Math.floor(smoothingPercent / 10)); // 21 points down to 3 points
           const controlPoints = [];
           const controlPointsX = [];
@@ -7440,10 +7575,22 @@ DOMAIN_MAX 1.0 1.0 1.0
         samples[i] = Math.max(0, Math.min(1, splineInterpolator(inputValue)));
       }
 
+      // Apply the same orientation as .cube: horizontal flip then vertical inversion
+      const horizontallyFlipped = samples.map((sample, i) => {
+        const inputPos = i / (samples.length - 1);
+        const flippedInputPos = 1.0 - inputPos;
+        const flippedInputIndex = Math.round(flippedInputPos * (samples.length - 1));
+        const clampedIndex = Math.max(0, Math.min(samples.length - 1, flippedInputIndex));
+        return samples[clampedIndex];
+      });
+      const flippedSamples = horizontallyFlipped.map(sample => 1.0 - sample);
+
       return {
         domainMin: 0,
         domainMax: 1,
-        samples: samples
+        samples: flippedSamples,
+        originalSamples: samples,
+        format: 'ACV'
       };
     }
 
@@ -7592,88 +7739,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       };
     }
 
-    /**
-     * Bezier curve interpolation using cubic Bezier segments
-     * @param {number[]} x - input points (typically 0, 1, 2, ..., n-1)
-     * @param {number[]} y - output values at each point
-     * @returns {function} interpolation function that takes a value and returns interpolated result
-     */
-    function createBezierSpline(x, y, intensity = 0.5) {
-      const n = x.length;
-      if (n < 2) return (t) => y[0] || 0;
-      
-      // Calculate control points for smooth Bezier curves
-      const segments = [];
-      
-      for (let i = 0; i < n - 1; i++) {
-        const p0 = { x: x[i], y: y[i] };
-        const p3 = { x: x[i + 1], y: y[i + 1] };
-        
-        // Calculate control points based on neighboring points
-        let p1, p2;
-        
-        if (i === 0) {
-          // First segment - use forward difference
-          const slope = (y[i + 1] - y[i]) / (x[i + 1] - x[i]);
-          const dist = (x[i + 1] - x[i]) / 3;
-          p1 = { x: x[i] + dist, y: y[i] + slope * dist };
-          p2 = { x: x[i + 1] - dist, y: y[i + 1] - slope * dist };
-        } else if (i === n - 2) {
-          // Last segment - use backward difference
-          const slope = (y[i + 1] - y[i]) / (x[i + 1] - x[i]);
-          const dist = (x[i + 1] - x[i]) / 3;
-          p1 = { x: x[i] + dist, y: y[i] + slope * dist };
-          p2 = { x: x[i + 1] - dist, y: y[i + 1] - slope * dist };
-        } else {
-          // Middle segments - use centered differences for smooth transitions
-          const prevSlope = (y[i] - y[i - 1]) / (x[i] - x[i - 1]);
-          const nextSlope = (y[i + 2] - y[i + 1]) / (x[i + 2] - x[i + 1]);
-          const currentSlope = (y[i + 1] - y[i]) / (x[i + 1] - x[i]);
-          
-          // Smooth the slopes for continuity
-          const smoothSlope1 = (prevSlope + currentSlope) / 2;
-          const smoothSlope2 = (currentSlope + nextSlope) / 2;
-          
-          const dist = (x[i + 1] - x[i]) / 3;
-          p1 = { x: x[i] + dist, y: y[i] + smoothSlope1 * dist };
-          p2 = { x: x[i + 1] - dist, y: y[i + 1] - smoothSlope2 * dist };
-        }
-        
-        segments.push({ p0, p1, p2, p3 });
-      }
-      
-      return (t) => {
-        if (t <= x[0]) return y[0];
-        if (t >= x[n - 1]) return y[n - 1];
-        
-        // Find the segment
-        let segmentIndex = 0;
-        while (segmentIndex < segments.length - 1 && x[segmentIndex + 1] < t) {
-          segmentIndex++;
-        }
-        
-        const segment = segments[segmentIndex];
-        
-        // Normalize t within the segment (0 to 1)
-        const segmentT = (t - segment.p0.x) / (segment.p3.x - segment.p0.x);
-        
-        // Cubic Bezier formula: B(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃
-        const u = 1 - segmentT;
-        const tt = segmentT * segmentT;
-        const uu = u * u;
-        const uuu = uu * u;
-        const ttt = tt * segmentT;
-        
-        const interpolated = uuu * segment.p0.y +
-               3 * uu * segmentT * segment.p1.y +
-               3 * u * tt * segment.p2.y +
-               ttt * segment.p3.y;
-        
-        // Blend between linear and interpolated based on intensity
-        const linear = segment.p0.y + (segment.p3.y - segment.p0.y) * segmentT;
-        return linear + intensity * (interpolated - linear);
-      };
-    }
+    
 
     /**
      * PCHIP (Piecewise Cubic Hermite Interpolating Polynomial) - Monotonic cubic spline
@@ -8177,7 +8243,7 @@ DOMAIN_MAX 1.0 1.0 1.0
     function make256(endValue, channelName, applyLinearization = false) {
       if (endValue === 0) return new Array(N).fill(0);
       
-      console.log('DEBUG: make256() called:', {
+      if (DEBUG_LOGS) console.log('DEBUG: make256() called:', {
         endValue,
         channelName,
         applyLinearization,
@@ -8202,7 +8268,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         arr = [...loadedCurve];
       } else {
         // Generate linear ramp as base
-        console.log('make256 using linear ramp for', channelName, 'loadedQuadData available:', !!window.loadedQuadData, 'curves:', !!window.loadedQuadData?.curves);
+        if (DEBUG_LOGS) console.log('make256 using linear ramp for', channelName, 'loadedQuadData available:', !!window.loadedQuadData, 'curves:', !!window.loadedQuadData?.curves);
         arr = new Array(N);
         const step = endValue / DENOM;
         
@@ -8250,29 +8316,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       return arr;
     }
 
-    // Randomized starting ink limits for visual variety
-    function getRandomInkLimit(inkName) {
-      // Define realistic ranges for different ink types - all with 100% upper bound for maximum variation
-      const inkRanges = {
-        K: [30, 100],     // Black: 30-100%
-        C: [35, 100],     // Cyan: 35-100%
-        M: [30, 100],     // Magenta: 30-100%
-        Y: [40, 100],     // Yellow: 40-100%
-        LC: [20, 100],    // Light Cyan: 20-100%
-        LM: [20, 100],    // Light Magenta: 20-100%
-        LK: [25, 100],    // Light Black: 25-100%
-        LLK: [15, 100],   // Light Light Black: 15-100%
-        V: [25, 100],     // Violet: 25-100%
-        MK: [20, 100]     // Matte Black: 20-100%
-      };
-      
-      const range = inkRanges[inkName] || [25, 45]; // Default range if ink not found
-      const min = range[0];
-      const max = range[1];
-      
-      // Generate random percentage within range
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
+    
 
     // Extract channel row creation
     function createChannelRow(name, printerKey) {
@@ -8553,6 +8597,14 @@ DOMAIN_MAX 1.0 1.0 1.0
             fileInput = await file.text();
           }
           const parsed = await parseLinearizationFile(fileInput, file.name);
+          // For EDN-style (.cube/.acv), store base samples and derive effective by current intent
+          const isEDNStyle = ['cube','acv'].includes(extension);
+          const isNegative = elements.printIntent && elements.printIntent.value === 'negative';
+          if (isEDNStyle && Array.isArray(parsed.samples)) {
+            parsed._baseSamples = parsed.samples.slice();
+            parsed.samples = isNegative ? parsed._baseSamples.map(v => 1 - v) : parsed._baseSamples.slice();
+            parsed.intentNote = isNegative ? 'negative_inversion_applied' : undefined;
+          }
           perChannelLinearization[channelName] = parsed;
           perChannelEnabled[channelName] = true;
           perChannelFilenames[channelName] = file.name;
@@ -8573,9 +8625,11 @@ DOMAIN_MAX 1.0 1.0 1.0
           if (parsed.is3DLUT) {
             showStatus(`Loaded 3D LUT and extracted ${parsed.samples.length} neutral axis points for ${channelName} (${parsed.lutSize}³ grid)`);
           } else {
-            showStatus(`Loaded per-channel linearization for ${channelName}: ${parsed.samples.length} points`);
+            const intentSuffix = parsed.intentNote ? ' (negative inversion applied)' : '';
+            showStatus(`Loaded per-channel linearization for ${channelName}: ${parsed.samples.length} points${intentSuffix}`);
           }
           debouncedPreviewUpdate();
+          updateMeasurementIntentWarning();
           
           // Update processing detail for this channel
           updateProcessingDetail(channelName);
@@ -8758,6 +8812,9 @@ DOMAIN_MAX 1.0 1.0 1.0
         "# Printer: " + p.name,
         `# quadGEN ${APP_VERSION} by David Marsh`
       ];
+      // Print intent annotation
+      const intent = elements.printIntent?.value === 'negative' ? 'Negative' : 'Positive';
+      lines.push(`# Print Intent: ${intent}`);
       
       // Add user notes if provided
       const userNotes = elements.userNotes.value.trim();
@@ -8779,15 +8836,23 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (linearizationData && linearizationApplied) {
           const globalFilename = linearizationData.filename || "unknown file";
           lines.push(`# - Global: ${globalFilename} (${linearizationData.samples.length} points, affects all channels)`);
+          const fn = (linearizationData.filename || '').toLowerCase();
+          const isEDNStyle = !!linearizationData._baseSamples || fn.endsWith('.acv') || fn.endsWith('.cube') || (linearizationData.format === 'ACV') || (linearizationData.format === '1DLUT');
+          if (elements.printIntent?.value === 'negative' && isEDNStyle) {
+            lines.push(`#   Note: Applied inversion for negative intent (G(x) = 1 - EDN(x) for LUT/ACV)`);
+          }
         }
         
         // Per-channel linearization
         const perChannelList = [];
         Object.keys(perChannelLinearization).forEach(channelName => {
           if (perChannelEnabled[channelName]) {
+            const data = perChannelLinearization[channelName] || {};
             const filename = perChannelFilenames[channelName] || "unknown file";
-            const points = perChannelLinearization[channelName].samples.length;
-            perChannelList.push(`${channelName}: ${filename} (${points} points)`);
+            const points = Array.isArray(data.samples) ? data.samples.length : 0;
+            const intentSuffix = data.intentNote ? ' (negative inversion)' : '';
+            const measuredSuffix = data.measurementIntent ? ` (measured: ${data.measurementIntent})` : '';
+            perChannelList.push(`${channelName}: ${filename} (${points} points)${intentSuffix}${measuredSuffix}`);
           }
         });
         
@@ -8823,6 +8888,8 @@ DOMAIN_MAX 1.0 1.0 1.0
 
       return lines.join("\n") + "\n";
     }
+
+    
 
 
     // Undo button event handler
@@ -8920,6 +8987,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         if (type === 'labData') {
           correctionData = parseLabData(SAMPLE_DATA.colorMuse, 'LAB-Data-Sample.txt');
+          // Record intent at measurement for traceability
+          correctionData.measurementIntent = elements.printIntent ? elements.printIntent.value : 'positive';
           filename = 'LAB Sample Data';
         } else if (type === 'cube') {
           correctionData = parseCube1D(SAMPLE_DATA.gammaCube);
@@ -8929,6 +8998,11 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         
         // Apply the correction as global linearization
+        // Apply inversion for negative intent for EDN-style sample LUT
+        if (type === 'cube' && elements.printIntent && elements.printIntent.value === 'negative' && Array.isArray(correctionData.samples)) {
+          correctionData.samples = correctionData.samples.map(v => 1 - v);
+          correctionData.intentNote = 'negative_inversion_applied';
+        }
         correctionData.filename = filename;
         linearizationData = correctionData;
         linearizationApplied = true;
@@ -8941,7 +9015,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Show file info
         elements.globalLinearizationInfo.classList.remove('hidden');
         elements.globalLinearizationFilename.textContent = filename;
-        elements.globalLinearizationDetails.textContent = ` (${correctionData.format || 'Sample Data'})`;
+        const intentSuffix = correctionData.intentNote ? ' • negative inversion' : '';
+        elements.globalLinearizationDetails.textContent = ` (${correctionData.format || 'Sample Data'})${intentSuffix}`;
         
         // Note: Auto-smoothing removed - Gaussian algorithm handles dense data properly
         
@@ -9006,6 +9081,68 @@ DOMAIN_MAX 1.0 1.0 1.0
     });
 
     // Linearization event listeners
+    function updateMeasurementIntentWarning() {
+      const warnEl = elements.measurementIntentWarning;
+      if (!warnEl) return;
+      const current = elements.printIntent ? elements.printIntent.value : 'positive';
+      const notes = [];
+      if (linearizationData && linearizationApplied && linearizationData.format === 'LAB Data' && linearizationData.measurementIntent && linearizationData.measurementIntent !== current) {
+        notes.push(`Global LAB measured: ${linearizationData.measurementIntent}`);
+      }
+      for (const [ch, data] of Object.entries(perChannelLinearization)) {
+        if (perChannelEnabled[ch] && data && data.format === 'LAB Data' && data.measurementIntent && data.measurementIntent !== current) {
+          notes.push(`${ch} LAB measured: ${data.measurementIntent}`);
+        }
+      }
+      if (notes.length > 0) {
+        warnEl.textContent = `Intent mismatch: ${notes.join(' • ')}; current intent is ${current}. Reprint/remeasure or switch intent to match.`;
+        warnEl.classList.remove('hidden');
+      } else {
+        warnEl.classList.add('hidden');
+        warnEl.textContent = '';
+      }
+    }
+    // React to Print Intent changes by recomputing effective LUT samples for EDN-style data
+    elements.printIntent.addEventListener('change', () => {
+      try {
+        const isNegative = elements.printIntent && elements.printIntent.value === 'negative';
+
+        // Update global linearization if EDN-style with base samples stored
+        if (linearizationData && Array.isArray(linearizationData._baseSamples)) {
+          // Orientation: always reverse; Positive adds vertical inversion, Negative does not
+          let eff = linearizationData._baseSamples.slice().reverse();
+          if (!isNegative) eff = eff.map(v => 1 - v);
+          linearizationData.samples = eff;
+          linearizationData.intentNote = isNegative ? 'negative_inversion_applied' : undefined;
+
+        // Update UI info suffix
+          if (elements.globalLinearizationDetails) {
+            const formatInfo = linearizationData.format ? ` (${linearizationData.format})` : '';
+            const intentSuffix = linearizationData.intentNote ? ' • negative inversion' : '';
+            const measurementSuffix = linearizationData.measurementIntent ? ` • measured: ${linearizationData.measurementIntent}` : '';
+            elements.globalLinearizationDetails.textContent = ` - ${linearizationData.samples.length} points${formatInfo}${intentSuffix}${measurementSuffix}`;
+          }
+        }
+
+        // Update per-channel linearization where applicable
+        for (const [ch, data] of Object.entries(perChannelLinearization)) {
+          if (data && Array.isArray(data._baseSamples)) {
+            let eff = data._baseSamples.slice().reverse();
+            if (!isNegative) eff = eff.map(v => 1 - v);
+            data.samples = eff;
+            data.intentNote = isNegative ? 'negative_inversion_applied' : undefined;
+            // Update per-channel display if panel is open
+            updateProcessingDetail(ch);
+          }
+        }
+
+        // Refresh preview and chart
+        updatePreview();
+        updateMeasurementIntentWarning();
+      } catch (e) {
+        console.warn('Print Intent change handling failed:', e.message);
+      }
+    });
     
     // Global linearization button click
     elements.globalLinearizationBtn.addEventListener('click', () => {
@@ -9029,6 +9166,14 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         
         const parsed = await parseLinearizationFile(fileInput, file.name);
+        // For EDN-style (.cube/.acv), store base samples and derive effective by current intent
+        const isEDNStyle = ['cube','acv'].includes(extension);
+        const isNegative = elements.printIntent && elements.printIntent.value === 'negative';
+        if (isEDNStyle && Array.isArray(parsed.samples)) {
+          parsed._baseSamples = parsed.samples.slice();
+          parsed.samples = isNegative ? parsed._baseSamples.map(v => 1 - v) : parsed._baseSamples.slice();
+          parsed.intentNote = isNegative ? 'negative_inversion_applied' : undefined;
+        }
         parsed.filename = file.name; // Store filename for documentation
         linearizationData = parsed;
         linearizationApplied = true; // Auto-apply when file is loaded
@@ -9041,7 +9186,13 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Show file info below Data Source label
         elements.globalLinearizationFilename.textContent = file.name;
         const formatInfo = parsed.format ? ` (${parsed.format})` : '';
-        elements.globalLinearizationDetails.textContent = ` - ${parsed.samples.length} points${formatInfo}`;
+        const intentSuffix = parsed.intentNote ? ' • negative inversion' : '';
+        // Record measurement intent if LAB data
+        if (parsed && parsed.format === 'LAB Data') {
+          parsed.measurementIntent = elements.printIntent ? elements.printIntent.value : 'positive';
+        }
+        const measurementSuffix = parsed.measurementIntent ? ` • measured: ${parsed.measurementIntent}` : '';
+        elements.globalLinearizationDetails.textContent = ` - ${parsed.samples.length} points${formatInfo}${intentSuffix}${measurementSuffix}`;
         elements.globalLinearizationInfo.classList.remove('hidden');
         
         // Note: Auto-smoothing removed - Gaussian algorithm handles dense data properly
@@ -9056,6 +9207,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           showStatus(`Loaded and applied ${parsed.samples.length} data points from ${file.name}`);
         }
         debouncedPreviewUpdate(); // Update preview to show the applied linearization
+        updateMeasurementIntentWarning();
         
         // Update processing details for all channels since global affects all
         const channelNames = getCurrentPrinter().channels;
@@ -10082,26 +10234,32 @@ DOMAIN_MAX 1.0 1.0 1.0
       const changelogContent = document.getElementById('changelogContent');
       if (!changelogContent) return;
       
-      // Since the changelog is in HTML comments, create it directly here
-      // This ensures the info modal always shows the current changelog
+      // Build a clean, scannable About layout
       const changelogHtml = `
-        <div>
-          <p class="font-medium text-lg mb-3">Workflow Procedures:</p>
-          <ol class="list-decimal list-inside space-y-1 ml-2 mb-4 text-sm">
-            <li>Create a .quad file that specifies what ink or inks to use and their ink limit amounts</li>
-            <li>Print a test target using that .quad file specifying initial ink limits</li>
-            <li>Measure resulting print tonal result values with a LAB measurement device (or other measurement device) OR generate a LUT (.cube) file using the EDN system at http://www.easydigitalnegatives.com/</li>
-            <li>Import data into quadGEN (LAB data (.txt) file, manual L* entry, LUT (.cube), or try built-in sample data) and apply it to your initial ink limit setting</li>
-            <li>Preview results in the curve graph and verify tonal shape</li>
-            <li><em>Optional:</em> Adjust channel limits (enable/disable inks, apply uniform percentages if needed)</li>
-            <li>Export the corrected .quad file and load it back into QuadToneRIP</li>
-            <li>Reprint and validate with the corrected .quad file — tonal reproduction should now closely match the target</li>
-          </ol>
-        </div>
-        
-        <div>
-          <p class="font-medium text-lg mb-3">Version History:</p>
-          ${generateAboutDialogVersionHistory()}
+        <div class="space-y-6">
+          <div>
+            <p class="font-medium text-lg mb-2">Overview</p>
+            <p class="text-sm text-gray-600">quadGEN helps you build and refine .quad curves for QuadToneRIP. Load measurement data or curve files, preview the tonal response, adjust channel limits, and export a corrected .quad for printing.</p>
+          </div>
+          
+          <div>
+            <p class="font-medium text-lg mb-2">Quick Workflow</p>
+            <ol class="list-decimal list-inside space-y-1 ml-2 text-sm">
+              <li>Create a .quad file with selected inks and ink limits.</li>
+              <li>Print a test target using that .quad file.</li>
+              <li>Measure tonal results (LAB device) or generate a LUT (.cube) via EDN.</li>
+              <li>Load data into quadGEN: LAB (.txt), Manual L*, or LUT (.cube).</li>
+              <li>Preview the curve and verify tonal shape.</li>
+              <li><em>Optional:</em> Adjust channel limits or enable/disable inks.</li>
+              <li>Export the corrected .quad and load it in QuadToneRIP.</li>
+              <li>Reprint and validate — tones should closely match the target.</li>
+            </ol>
+          </div>
+          
+          <div>
+            <p class="font-medium text-lg mb-2">Version History</p>
+            ${generateAboutDialogVersionHistory()}
+          </div>
         </div>
       `;
       
@@ -10188,7 +10346,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       // Capture initial state for undo system
       setTimeout(() => {
         CurveHistory.captureState('Initial state');
-        console.log('📸 Initial state captured for undo system');
+        if (DEBUG_LOGS) console.log('📸 Initial state captured for undo system');
       }, 100); // Small delay to ensure UI is fully initialized
     } catch (error) {
       console.error('Initialization error:', error);
@@ -10198,3 +10356,19 @@ DOMAIN_MAX 1.0 1.0 1.0
 
 </body>
 </html>
+v1.7 (2025-09-02) - EDN Intent + .ACV/LUT Parity:
+FIXED:
+- .acv orientation now matches .cube: applies horizontal flip (x → 1−x) and vertical inversion (y → 1−y) for positive-domain EDN data, ensuring parity between ACV and LUT paths.
+- Print Intent toggle (Positive/Negative) now recomputes effective EDN curves (global and per‑channel) from stored base samples, updating graphs/preview immediately.
+- LAB measurement linearization endpoints anchored to 0 and 1 to preserve full dynamic range (0%,0% and 100% endpoints).
+
+ADDED:
+- Print Intent selector in Global Correction: Positive (default) or Negative. In Negative intent, EDN mappings are applied without vertical inversion to emulate “apply correction to positive then invert image” entirely in printer‑space.
+- LAB measurement traceability: UI shows “measured: Positive/Negative” and .quad comments include measurement intent.
+- LAB intent mismatch warning: Displays a banner when loaded LAB data’s measurement intent differs from the current Print Intent.
+- Debug logging toggle (DEBUG_LOGS) to silence verbose logs outside troubleshooting.
+
+NOTES:
+- Measurement (LAB/step wedge) linearization is unchanged and unaffected by intent.
+- .quad header includes Print Intent and notes negative inversion when EDN‑style corrections are active.
+- References/bookmarks: removed prior experiment; assistant no longer auto-injects or auto-cites external links (trust the model).
