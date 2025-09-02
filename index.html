@@ -1468,6 +1468,33 @@ ARCHITECTURAL NOTES:
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v1.8': {
+        date: '2025-09-02',
+        title: 'Print Intent Mapping, ACV/LUT Parity, LAB Traceability',
+        sections: {
+          ADDED: [
+            'Print Intent selector (Positive/Negative) applied to EDN-style corrections; live recompute on toggle',
+            'LAB measurement intent traceability: UI shows “measured: Positive/Negative” and .quad comments include it',
+            'LAB intent mismatch warning banner when current intent differs from recorded LAB measurement intent'
+          ],
+          FIXED: [
+            'ACV/LUT parity: ACV path now uses same orientation as LUT (horizontal flip + vertical inversion for positive-domain EDN)',
+            'Immediate graph update when toggling Print Intent with EDN corrections loaded',
+            'LAB endpoints anchored to 0 and 1 to preserve full dynamic range'
+          ],
+          REMOVED: [
+            'Built-in process presets (cyanotype, palladium, etc.) and process triggers from AI routing',
+            'Bookmarks/auto-citation experiment; the assistant no longer auto-injects sources'
+          ]
+        },
+        aboutDialog: [
+          { label: 'Print Intent Mapping', desc: 'EDN (.cube/.acv) mapped by intent (Positive: flip+invert; Negative: flip only) with live recompute' },
+          { label: 'ACV/LUT Parity', desc: 'ACV orientation normalized to match LUT; midtones now align closely' },
+          { label: 'LAB Traceability', desc: 'Recorded “measured: Positive/Negative” and added mismatch warning banner' },
+          { label: 'LAB Endpoints Anchored', desc: 'Measurement curves now start at 0% and end at 100% to preserve range' },
+          { label: 'Simplified AI Scope', desc: 'Removed process presets; assistant provides guidance to load EDN/LAB instead' }
+        ]
+      },
       'v1.7': {
         date: '2025-09-02',
         title: 'Gaussian Weighted Correction & LAB Data Artifacts Fix',
@@ -1590,23 +1617,9 @@ ARCHITECTURAL NOTES:
     // Removed unused generateInternalVersionHistory()
     
     function generateAboutDialogVersionHistory() {
-      // Helper: decrement the minor version by 1 (e.g., v1.6 → v1.5, v1.4.1 → v1.3.1)
-      const decMinor = (v) => {
-        const m = /^v(\d+)(?:\.(\d+))?(?:\.(\d+))?$/.exec(v);
-        if (!m) return v;
-        const major = parseInt(m[1], 10);
-        const minor = m[2] !== undefined ? Math.max(parseInt(m[2], 10) - 1, 0) : undefined;
-        const patch = m[3] !== undefined ? parseInt(m[3], 10) : undefined;
-        if (minor === undefined) {
-          // No minor provided; conservatively decrement major instead
-          return `v${Math.max(major - 1, 0)}`;
-        }
-        return `v${major}.${minor}${patch !== undefined ? `.${patch}` : ''}`;
-      };
-
       let content = '';
       for (const [version, data] of Object.entries(VERSION_HISTORY)) {
-        const displayVersion = decMinor(version);
+        const displayVersion = version;
         content += `
           <div class="mb-3">
             <p class="font-bold">${displayVersion}</p>
