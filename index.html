@@ -32,9 +32,9 @@ Scope: This license applies to this HTML file (quadgen.html) only.
 QUADGEN TECHNICAL SPECIFICATION
 ================================================================================
 
-VERSION: v1.8.1
+VERSION: v1.8.2
 REVISION DATE: 2025-09-03
-PREVIOUS: v1.8 (2025-09-02)
+PREVIOUS: v1.8.1 (2025-09-03)
 
 ================================================================================
 ⚠️⚠️⚠️ CRITICAL INTERPOLATION REQUIREMENTS ⚠️⚠️⚠️
@@ -1253,25 +1253,13 @@ ARCHITECTURAL NOTES:
             </div>
             
             <!-- Linearization Controls -->
-          <div class="space-y-3">              
-              <!-- Print Intent -->
-              <div>
-                <label for="printIntent" class="block text-xs font-medium text-gray-700 mb-1">Print Intent</label>
-                <select id="printIntent" class="standard-dropdown w-full">
-                  <option value="positive" selected>Positive (normal print)</option>
-                  <option value="negative">Negative (digital negative)</option>
-                </select>
-                <p class="text-[11px] text-gray-500 mt-1">Controls only how corrections are applied in printer-space. No image editor needed.</p>
-              </div>
-
+          <div class="space-y-3">
               <!-- File Upload -->
               <div>
                 <div id="globalLinearizationInfo" class="text-xs text-gray-600 mb-2 hidden">
                   <span id="globalLinearizationFilename" class="font-medium"></span>
                   <span id="globalLinearizationDetails" class="text-gray-500"></span>
                 </div>
-                <!-- LAB measurement intent mismatch warning -->
-                <div id="measurementIntentWarning" class="hidden text-[11px] text-orange-700 bg-orange-50 border border-orange-200 rounded px-2 py-1 mb-2"></div>
                 <div class="inline-flex items-center gap-2">
                   <input type="file" id="linearizationFile" accept=".cube,.txt,.acv" class="hidden">
                   <button id="globalLinearizationBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold" data-tooltip="Load LUT.cube, LABdata.txt, or .acv curve files">Load Data File</button>
@@ -1480,7 +1468,7 @@ ARCHITECTURAL NOTES:
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'v1.8.1';
+    const APP_VERSION = 'v1.8.2';
     // Global debug logging toggle for non-AI logs
     var DEBUG_LOGS = false;
     // AI provider selection (code-level switch, no UI): 'anthropic' or 'openai'
@@ -1494,6 +1482,25 @@ ARCHITECTURAL NOTES:
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v1.8.2': {
+        date: '2025-09-03',
+        title: 'Unified Workflow Summary & Positive-only Cleanup',
+        sections: {
+          CHANGED: [
+            'About: Consolidated Recommended + Quick Workflow into a single beginner-friendly Workflow Summary',
+            'About: Removed the “(Positive‑Only)” label and the PCHIP requirement bullet to simplify guidance'
+          ],
+          DOCS: [
+            'Clarified Positive-only operation in UI text and helper messages; EDN LUT/.acv use Positive mapping (reverse + invert) by default',
+            'Removed user-facing references to toggling intent or mismatch warnings; older release notes retained for history'
+          ]
+        },
+        aboutDialog: [
+          { label: 'Workflow Summary', desc: 'Step-by-step beginner overview replaces separate Recommended/Quick sections' },
+          { label: 'Simplified Wording', desc: 'Cleaned up language and removed extra qualifiers for clarity' },
+          { label: 'Positive-only Operation', desc: 'Tool operates in printer-space with Positive mapping; invert images in your editor for digital negatives' }
+        ]
+      },
       'v1.8.1': {
         date: '2025-09-03',
         title: 'MIT License + Chart Orientation Aids',
@@ -1504,14 +1511,19 @@ ARCHITECTURAL NOTES:
           ],
           CHANGED: [
             'Axis titles: X now “Input Level Percent”, Y now “Ink Limit Percent”',
-            'Axis label contrast: Force solid black text and adjust spacing to avoid overlap with gradients'
+            'Axis label contrast: Force solid black text and adjust spacing to avoid overlap with gradients',
+            'EDN mapping fixed to Positive semantics (reverse + invert) with no intent toggle'
+          ],
+          REMOVED: [
+            'Negative Print Intent UI and intent mismatch warning banner; tool now operates in Positive intent only'
           ]
         },
         aboutDialog: [
           { label: 'MIT License (HTML only)', desc: 'Added MIT header in quadgen.html and brief notice in About; scope limited to this HTML file' },
           { label: 'Axis Gradients', desc: 'Added white→black bars under X and along Y for clear white/black orientation' },
           { label: 'Readable Labels', desc: 'Labels forced to black with spacing tweaks for clarity' },
-          { label: 'Axis Titles', desc: 'Renamed to “Input Level Percent” (X) and “Ink Limit Percent” (Y)' }
+          { label: 'Axis Titles', desc: 'Renamed to “Input Level Percent” (X) and “Ink Limit Percent” (Y)' },
+          { label: 'Positive-only Intent', desc: 'Removed Negative intent; EDN mapping uses Positive semantics by default' }
         ]
       },
       'v1.8': {
@@ -3735,9 +3747,9 @@ ARCHITECTURAL NOTES:
               success: false,
               message: (
                 '**Process curves are image‑space. quadGEN works in printer‑space.**\n' +
-                '- Set Print Intent (Positive/Negative).\n' +
-                '- Load EDN (.cube/.acv); it is mapped by intent.\n' +
-                '- Or load LAB (.txt) from a printed wedge for linearization.\n' +
+                '- Recommended: Work in positive space; invert your image when printing a digital negative.\n' +
+                '- Load EDN (.cube/.acv); mapped for Positive orientation (reverse + invert).\n' +
+                '- Or load LAB (.txt) from a printed positive result for linearization.\n' +
                 'Provide your EDN or LAB file and I\'ll apply it.'
               )
             };
@@ -5039,7 +5051,7 @@ P800 (8 channels, K switchable), P700P900 (10 channels, MK+V dedicated)
 • Multiple active channels blend to create neutral or tinted prints
 • Linearization files (.cube/.txt/.acv) compensate for paper/ink characteristics
 • Users can PASTE LAB measurement data or .cube LUT file data directly into chat for instant linearization
-• Print Intent: Positive (default) or Negative. quadGEN operates in printer-space; for Negative intent, EDN-style LUT/.acv are applied as G(x)=1−EDN(x) (no image editor inversion needed). Measurement linearization unchanged.
+• Positive-only workflow: quadGEN operates in printer-space. EDN LUT/.acv are mapped for Positive orientation (reverse + invert). Work in positive space; invert your image when printing a digital negative. Measurement linearization unchanged.
 • Custom curve generation: Create curves from photography terminology (e.g., "S-curve", "lift shadows", "palladium curve")
 • Photography terms: lift/drop shadows/midtones/highlights, crush/blow, peak/bump, gentle arc, roll off, S-curve
 • Alt-process terms: palladium/pt-pd curve, cyanotype density, salt print range, gum curve, zone system, block shadows, boost shadows, preserve highlights, contact printing density, UV blocking, exposure scale (ES)
@@ -5068,7 +5080,7 @@ RULES:
 • Multiple set_channel_value calls for different percentages (individual undos)
 • Multiple set_channel_end_value calls for different end values (individual undos)
 • Ask clarification if ambiguous
-• Process curve requests (cyanotype, palladium, etc.): Do NOT generate a preset. Briefly explain image-space vs printer-space and ask the user to load EDN (.cube/.acv) or LAB (.txt), or confirm Print Intent.
+• Process curve requests (cyanotype, palladium, etc.): Do NOT generate a preset. Briefly explain image-space vs printer-space and ask the user to load EDN (.cube/.acv) or LAB (.txt).
 
 VALUE INTERPRETATION:
 • Percentages (0-100%) and end values (0-64000) are equivalent representations
@@ -5493,8 +5505,6 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       globalLinearizationInfo: document.getElementById('globalLinearizationInfo'),
       globalLinearizationFilename: document.getElementById('globalLinearizationFilename'),
       globalLinearizationDetails: document.getElementById('globalLinearizationDetails'),
-      measurementIntentWarning: document.getElementById('measurementIntentWarning'),
-      printIntent: document.getElementById('printIntent'),
       loadSampleLabData: document.getElementById('loadSampleLabData'),
       loadSampleCube: document.getElementById('loadSampleCube'),
       pageTitle: document.getElementById('pageTitle'),
@@ -8707,13 +8717,12 @@ DOMAIN_MAX 1.0 1.0 1.0
             fileInput = await file.text();
           }
           const parsed = await parseLinearizationFile(fileInput, file.name);
-          // For EDN-style (.cube/.acv), store base samples and derive effective by current intent
+          // For EDN-style (.cube/.acv), store base samples and compute effective Positive mapping (reverse + invert)
           const isEDNStyle = ['cube','acv'].includes(extension);
-          const isNegative = elements.printIntent && elements.printIntent.value === 'negative';
           if (isEDNStyle && Array.isArray(parsed.samples)) {
             parsed._baseSamples = parsed.samples.slice();
-            parsed.samples = isNegative ? parsed._baseSamples.map(v => 1 - v) : parsed._baseSamples.slice();
-            parsed.intentNote = isNegative ? 'negative_inversion_applied' : undefined;
+            const eff = parsed._baseSamples.slice().reverse().map(v => 1 - v);
+            parsed.samples = eff;
           }
           perChannelLinearization[channelName] = parsed;
           perChannelEnabled[channelName] = true;
@@ -8735,11 +8744,10 @@ DOMAIN_MAX 1.0 1.0 1.0
           if (parsed.is3DLUT) {
             showStatus(`Loaded 3D LUT and extracted ${parsed.samples.length} neutral axis points for ${channelName} (${parsed.lutSize}³ grid)`);
           } else {
-            const intentSuffix = parsed.intentNote ? ' (negative inversion applied)' : '';
-            showStatus(`Loaded per-channel linearization for ${channelName}: ${parsed.samples.length} points${intentSuffix}`);
+            showStatus(`Loaded per-channel linearization for ${channelName}: ${parsed.samples.length} points`);
           }
           debouncedPreviewUpdate();
-          updateMeasurementIntentWarning();
+          // No intent mismatch warning (Positive-only workflow)
           
           // Update processing detail for this channel
           updateProcessingDetail(channelName);
@@ -8922,9 +8930,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         "# Printer: " + p.name,
         `# quadGEN ${APP_VERSION} by David Marsh`
       ];
-      // Print intent annotation
-      const intent = elements.printIntent?.value === 'negative' ? 'Negative' : 'Positive';
-      lines.push(`# Print Intent: ${intent}`);
+      // Positive-only workflow: no Print Intent annotation
       
       // Add user notes if provided
       const userNotes = elements.userNotes.value.trim();
@@ -8946,11 +8952,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (linearizationData && linearizationApplied) {
           const globalFilename = linearizationData.filename || "unknown file";
           lines.push(`# - Global: ${globalFilename} (${linearizationData.samples.length} points, affects all channels)`);
-          const fn = (linearizationData.filename || '').toLowerCase();
-          const isEDNStyle = !!linearizationData._baseSamples || fn.endsWith('.acv') || fn.endsWith('.cube') || (linearizationData.format === 'ACV') || (linearizationData.format === '1DLUT');
-          if (elements.printIntent?.value === 'negative' && isEDNStyle) {
-            lines.push(`#   Note: Applied inversion for negative intent (G(x) = 1 - EDN(x) for LUT/ACV)`);
-          }
+          // Positive-only workflow: no intent notes
         }
         
         // Per-channel linearization
@@ -8960,9 +8962,8 @@ DOMAIN_MAX 1.0 1.0 1.0
             const data = perChannelLinearization[channelName] || {};
             const filename = perChannelFilenames[channelName] || "unknown file";
             const points = Array.isArray(data.samples) ? data.samples.length : 0;
-            const intentSuffix = data.intentNote ? ' (negative inversion)' : '';
             const measuredSuffix = data.measurementIntent ? ` (measured: ${data.measurementIntent})` : '';
-            perChannelList.push(`${channelName}: ${filename} (${points} points)${intentSuffix}${measuredSuffix}`);
+            perChannelList.push(`${channelName}: ${filename} (${points} points)${measuredSuffix}`);
           }
         });
         
@@ -9097,22 +9098,23 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         if (type === 'labData') {
           correctionData = parseLabData(SAMPLE_DATA.colorMuse, 'LAB-Data-Sample.txt');
-          // Record intent at measurement for traceability
-          correctionData.measurementIntent = elements.printIntent ? elements.printIntent.value : 'positive';
+          // Positive-only workflow: record measurement intent as positive
+          correctionData.measurementIntent = 'positive';
           filename = 'LAB Sample Data';
         } else if (type === 'cube') {
           correctionData = parseCube1D(SAMPLE_DATA.gammaCube);
+          // For EDN-style sample LUT, compute effective Positive mapping (reverse + invert)
+          if (Array.isArray(correctionData.samples)) {
+            correctionData._baseSamples = correctionData.samples.slice();
+            const eff = correctionData._baseSamples.slice().reverse().map(v => 1 - v);
+            correctionData.samples = eff;
+          }
           filename = 'LUT Sample Data';
         } else {
           throw new Error('Invalid sample data type');
         }
         
         // Apply the correction as global linearization
-        // Apply inversion for negative intent for EDN-style sample LUT
-        if (type === 'cube' && elements.printIntent && elements.printIntent.value === 'negative' && Array.isArray(correctionData.samples)) {
-          correctionData.samples = correctionData.samples.map(v => 1 - v);
-          correctionData.intentNote = 'negative_inversion_applied';
-        }
         correctionData.filename = filename;
         linearizationData = correctionData;
         linearizationApplied = true;
@@ -9125,8 +9127,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Show file info
         elements.globalLinearizationInfo.classList.remove('hidden');
         elements.globalLinearizationFilename.textContent = filename;
-        const intentSuffix = correctionData.intentNote ? ' • negative inversion' : '';
-        elements.globalLinearizationDetails.textContent = ` (${correctionData.format || 'Sample Data'})${intentSuffix}`;
+        elements.globalLinearizationDetails.textContent = ` (${correctionData.format || 'Sample Data'})`;
         
         // Note: Auto-smoothing removed - Gaussian algorithm handles dense data properly
         
@@ -9190,69 +9191,10 @@ DOMAIN_MAX 1.0 1.0 1.0
       }
     });
 
-    // Linearization event listeners
-    function updateMeasurementIntentWarning() {
-      const warnEl = elements.measurementIntentWarning;
-      if (!warnEl) return;
-      const current = elements.printIntent ? elements.printIntent.value : 'positive';
-      const notes = [];
-      if (linearizationData && linearizationApplied && linearizationData.format === 'LAB Data' && linearizationData.measurementIntent && linearizationData.measurementIntent !== current) {
-        notes.push(`Global LAB measured: ${linearizationData.measurementIntent}`);
-      }
-      for (const [ch, data] of Object.entries(perChannelLinearization)) {
-        if (perChannelEnabled[ch] && data && data.format === 'LAB Data' && data.measurementIntent && data.measurementIntent !== current) {
-          notes.push(`${ch} LAB measured: ${data.measurementIntent}`);
-        }
-      }
-      if (notes.length > 0) {
-        warnEl.textContent = `Intent mismatch: ${notes.join(' • ')}; current intent is ${current}. Reprint/remeasure or switch intent to match.`;
-        warnEl.classList.remove('hidden');
-      } else {
-        warnEl.classList.add('hidden');
-        warnEl.textContent = '';
-      }
-    }
-    // React to Print Intent changes by recomputing effective LUT samples for EDN-style data
-    elements.printIntent.addEventListener('change', () => {
-      try {
-        const isNegative = elements.printIntent && elements.printIntent.value === 'negative';
-
-        // Update global linearization if EDN-style with base samples stored
-        if (linearizationData && Array.isArray(linearizationData._baseSamples)) {
-          // Orientation: always reverse; Positive adds vertical inversion, Negative does not
-          let eff = linearizationData._baseSamples.slice().reverse();
-          if (!isNegative) eff = eff.map(v => 1 - v);
-          linearizationData.samples = eff;
-          linearizationData.intentNote = isNegative ? 'negative_inversion_applied' : undefined;
-
-        // Update UI info suffix
-          if (elements.globalLinearizationDetails) {
-            const formatInfo = linearizationData.format ? ` (${linearizationData.format})` : '';
-            const intentSuffix = linearizationData.intentNote ? ' • negative inversion' : '';
-            const measurementSuffix = linearizationData.measurementIntent ? ` • measured: ${linearizationData.measurementIntent}` : '';
-            elements.globalLinearizationDetails.textContent = ` - ${linearizationData.samples.length} points${formatInfo}${intentSuffix}${measurementSuffix}`;
-          }
-        }
-
-        // Update per-channel linearization where applicable
-        for (const [ch, data] of Object.entries(perChannelLinearization)) {
-          if (data && Array.isArray(data._baseSamples)) {
-            let eff = data._baseSamples.slice().reverse();
-            if (!isNegative) eff = eff.map(v => 1 - v);
-            data.samples = eff;
-            data.intentNote = isNegative ? 'negative_inversion_applied' : undefined;
-            // Update per-channel display if panel is open
-            updateProcessingDetail(ch);
-          }
-        }
-
-        // Refresh preview and chart
-        updatePreview();
-        updateMeasurementIntentWarning();
-      } catch (e) {
-        console.warn('Print Intent change handling failed:', e.message);
-      }
-    });
+    // Positive-only workflow: no Print Intent control or warnings
+    // (Intent mismatch warnings removed; EDN mapping fixed to Positive.)
+    
+    
     
     // Global linearization button click
     elements.globalLinearizationBtn.addEventListener('click', () => {
@@ -9276,13 +9218,12 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         
         const parsed = await parseLinearizationFile(fileInput, file.name);
-        // For EDN-style (.cube/.acv), store base samples and derive effective by current intent
+        // For EDN-style (.cube/.acv), store base samples and compute effective Positive mapping (reverse + invert)
         const isEDNStyle = ['cube','acv'].includes(extension);
-        const isNegative = elements.printIntent && elements.printIntent.value === 'negative';
         if (isEDNStyle && Array.isArray(parsed.samples)) {
           parsed._baseSamples = parsed.samples.slice();
-          parsed.samples = isNegative ? parsed._baseSamples.map(v => 1 - v) : parsed._baseSamples.slice();
-          parsed.intentNote = isNegative ? 'negative_inversion_applied' : undefined;
+          const eff = parsed._baseSamples.slice().reverse().map(v => 1 - v);
+          parsed.samples = eff;
         }
         parsed.filename = file.name; // Store filename for documentation
         linearizationData = parsed;
@@ -9296,13 +9237,12 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Show file info below Data Source label
         elements.globalLinearizationFilename.textContent = file.name;
         const formatInfo = parsed.format ? ` (${parsed.format})` : '';
-        const intentSuffix = parsed.intentNote ? ' • negative inversion' : '';
-        // Record measurement intent if LAB data
+        // Record measurement intent if LAB data (Positive-only workflow)
         if (parsed && parsed.format === 'LAB Data') {
-          parsed.measurementIntent = elements.printIntent ? elements.printIntent.value : 'positive';
+          parsed.measurementIntent = 'positive';
         }
         const measurementSuffix = parsed.measurementIntent ? ` • measured: ${parsed.measurementIntent}` : '';
-        elements.globalLinearizationDetails.textContent = ` - ${parsed.samples.length} points${formatInfo}${intentSuffix}${measurementSuffix}`;
+        elements.globalLinearizationDetails.textContent = ` - ${parsed.samples.length} points${formatInfo}${measurementSuffix}`;
         elements.globalLinearizationInfo.classList.remove('hidden');
         
         // Note: Auto-smoothing removed - Gaussian algorithm handles dense data properly
@@ -9317,7 +9257,6 @@ DOMAIN_MAX 1.0 1.0 1.0
           showStatus(`Loaded and applied ${parsed.samples.length} data points from ${file.name}`);
         }
         debouncedPreviewUpdate(); // Update preview to show the applied linearization
-        updateMeasurementIntentWarning();
         
         // Update processing details for all channels since global affects all
         const channelNames = getCurrentPrinter().channels;
@@ -10355,19 +10294,19 @@ DOMAIN_MAX 1.0 1.0 1.0
             <p class="font-medium text-lg mb-2">Overview</p>
             <p class="text-sm text-gray-600">quadGEN helps you build and refine .quad curves for QuadToneRIP. Load measurement data or curve files, preview the tonal response, adjust channel limits, and export a corrected .quad for printing.</p>
           </div>
-          
           <div>
-            <p class="font-medium text-lg mb-2">Quick Workflow</p>
+            <p class="font-medium text-lg mb-2">Workflow Summary</p>
             <ol class="list-decimal list-inside space-y-1 ml-2 text-sm">
-              <li>Create a .quad file with selected inks and ink limits.</li>
-              <li>Print a test target using that .quad file.</li>
-              <li>Measure tonal results (LAB device) or generate a LUT (.cube) via EDN.</li>
-              <li>Load data into quadGEN: LAB (.txt), Manual L*, or LUT (.cube).</li>
-              <li>Preview the curve and verify tonal shape.</li>
-              <li><em>Optional:</em> Adjust channel limits or enable/disable inks.</li>
-              <li>Export the corrected .quad and load it in QuadToneRIP.</li>
-              <li>Reprint and validate — tones should closely match the target.</li>
+              <li>Choose your printer and set ink limits for each channel.</li>
+              <li>Export a test .quad and print a 0–100% step wedge.</li>
+              <li>Measure the positive result (inkjet print or alt‑process print).</li>
+              <li>Load data into quadGEN: LAB (.txt), EDN LUT (.cube/.acv), or Manual L*.</li>
+              <li>Review the graph and adjust channel limits if needed.</li>
+              <li>Export the corrected .quad and reprint to verify.</li>
             </ol>
+            <div class="text-xs text-gray-600 ml-2 mt-2">
+              Tip for digital negatives: work in positive space, then invert your image in your editor before printing the negative. Measure the positive print you make from that negative, then refine in quadGEN.
+            </div>
           </div>
           
           <div>
