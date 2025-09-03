@@ -32,9 +32,9 @@ Scope: This license applies to this HTML file (quadgen.html) only.
 QUADGEN TECHNICAL SPECIFICATION
 ================================================================================
 
-VERSION: v1.8.2
+VERSION: v1.8.3
 REVISION DATE: 2025-09-03
-PREVIOUS: v1.8.1 (2025-09-03)
+PREVIOUS: v1.8.2 (2025-09-03)
 
 ================================================================================
 ⚠️⚠️⚠️ CRITICAL INTERPOLATION REQUIREMENTS ⚠️⚠️⚠️
@@ -52,9 +52,15 @@ QuadGEN generates QuadToneRIP .quad files for Epson inkjet printer systems.
 Implementation provides 256-step linearization curves with configurable ink 
 limits, linearization data processing, and interpolation algorithms.
 
-SUPPORTED HARDWARE:
-- P800: 8-channel configuration (K,C,M,Y,LC,LM,LK,LLK)
-- P700-P900: 10-channel configuration (K,C,M,Y,LC,LM,LK,LLK,V,MK)
+SUPPORTED HARDWARE (newest → oldest):
+ - P700-P900: 10-channel configuration (K,C,M,Y,LC,LM,LK,LLK,V,MK)
+ - P5-7-9000: 10-channel configuration (K,C,M,Y,LC,LM,LK,LLK,OR,GR)
+ - P600-P800: 8-channel configuration (K,C,M,Y,LC,LM,LK,LLK)
+ - P400: 6-channel configuration (K,C,M,Y,LC,LM)
+ - x900: 10-channel configuration (K,C,M,Y,LC,LM,LK,LLK,OR,GR)
+ - 3880-7880: 8-channel configuration (K,C,M,Y,LC,LM,LK,LLK)
+ - x800-x890: 8-channel configuration (K,C,M,Y,LC,LM,LK,LLK)
+ - P4-6-8000: 8-channel configuration (K,C,M,Y,LC,LM,LK,LLK)
 
 ================================================================================
 ARCHITECTURAL IMPLEMENTATION
@@ -256,7 +262,7 @@ CURVE GENERATION FUNCTIONS:
 SYSTEM CONTROL FUNCTIONS:
 - set_interpolation_method: Select interpolation algorithm (pchip/linear)
 - set_smoothing_percentage: Control data point smoothing (0-90% reduction)
-- change_printer: Switch between P800 and P700P900 printer configurations
+- change_printer: Switch between P600-P800 and P700-P900 printer configurations
 
 UTILITY FUNCTIONS:
 - get_current_state: Retrieve complete system state for analysis
@@ -271,7 +277,7 @@ UTILITY FUNCTIONS:
 - Rate limiting implemented: 10 requests/minute, 100 requests/hour (via Cloudflare Worker)
 - Model: Claude Sonnet 4 (claude-sonnet-4-0) - Latest snapshot alias for optimal performance
 - Function results integrate with CurveHistory system for undo functionality
-- All channel operations respect current printer configuration (P800 vs P700P900)
+- All channel operations respect current printer configuration (P600-P800 vs P700-P900)
 
 ⚠️  GLOBAL CURVE GENERATION IMPLEMENTATION NOTES:
 - Batch operation flag (CurveHistory.isBatchOperation) prevents individual undo actions during global operations
@@ -358,7 +364,7 @@ PERFORMANCE CHARACTERISTICS:
 - Visibility check prevents unnecessary updates of closed panels
 - Force update on panel open ensures current state display
 - Works with all data sources: AI, manual files, sample buttons
-- Respects printer configuration (P800 vs P700P900 channels)
+- Respects printer configuration (P600-P800 vs P700-P900 channels)
 
 ================================================================================
 UNDO & HISTORY SYSTEM
@@ -430,7 +436,7 @@ PERFORMANCE CHARACTERISTICS:
 - State capture occurs BEFORE modification, not after
 - Manual undo button reflects most recent undoable action in tooltip
 - Lab Tech assistant undo commands return success/failure status with descriptive messages
-- History survives printer configuration changes (P800 ↔ P700P900)
+- History survives printer configuration changes (P600-P800 ↔ P700-P900)
 - Curve data restoration preserves interpolation and smoothing settings
 
 ================================================================================
@@ -773,7 +779,8 @@ ARCHITECTURAL NOTES:
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title id="pageTitle">quadGEN</title>
-  <meta name="description" content="quadGEN - Generate Epson P700-P900/P800 QuadToneRIP .quad files with 256-step ramps per channel." />
+  <meta name="description" content="quadGEN - Generate Epson P700-P900/P600-P800 QuadToneRIP .quad files with 256-step ramps per channel." />
+  <!-- Version History notes guidance: keep entries concise, direct, factual, and short. See AGENTS.md and CLAUDE.md. -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* Always show number input arrows */
@@ -1115,8 +1122,14 @@ ARCHITECTURAL NOTES:
             <div class="flex items-center gap-2 bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 flex-1 ml-4">
               <label for="printerSelect" class="text-sm font-medium text-gray-700">Printer:</label>
               <select id="printerSelect" class="standard-dropdown" style="width: 120px;">
-                <option value="P800">P800</option>
                 <option value="P700P900" selected>P700-P900</option>
+                <option value="P5-7-9000">P5-7-9000</option>
+                <option value="P800">P600-P800</option>
+                <option value="P400">P400</option>
+                <option value="x900">x900</option>
+                <option value="3880-7880">3880-7880</option>
+                <option value="x800-x890">x800-x890</option>
+                <option value="P4-6-8000">P4-6-8000</option>
               </select>
               <p id="channelInfo" class="text-xs text-gray-600 ml-1" style="width: 280px;"></p>
               <button id="saveLogBtn" class="text-xs text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 transition-colors ml-auto font-bold" title="Save log to file">
@@ -1337,7 +1350,7 @@ ARCHITECTURAL NOTES:
             <!-- Chat History -->
             <div id="chatHistory" class="bg-gray-50 rounded border border-gray-200 p-2 h-40 overflow-y-auto mb-3 text-xs">
               <div class="bg-gray-50 text-gray-600 px-2 py-1 rounded mb-2 text-xs border border-gray-200">
-                <strong>Try this:</strong> "Lift shadows by 15% on the first enabled channel"<br>
+                <strong>Try this:</strong> "Reduce all ink limits by 20%"<br>
                 <strong>or:</strong> "Generate a gentle S-curve: 0→0, 25→20, 75→85, 100→100"
               </div>
             </div>
@@ -1415,7 +1428,7 @@ ARCHITECTURAL NOTES:
         </div>
         
         <div class="mb-4 text-sm text-gray-600">
-          <p>Enter L* values from your measurements. Values should be evenly spaced from white to black.</p>
+          <p>Enter L* values from your measurements. Values MUST be evenly spaced from white to black.</p>
           <div class="flex justify-between mt-2 text-xs">
             <span class="text-gray-400">⚪ White (L*=100)</span>
             <span class="text-gray-600">⚫ Black (L*=0)</span>
@@ -1468,7 +1481,7 @@ ARCHITECTURAL NOTES:
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'v1.8.2';
+    const APP_VERSION = 'v1.8.3';
     // Global debug logging toggle for non-AI logs
     var DEBUG_LOGS = false;
     // AI provider selection (code-level switch, no UI): 'anthropic' or 'openai'
@@ -1482,6 +1495,32 @@ ARCHITECTURAL NOTES:
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v1.8.3': {
+        date: '2025-09-03',
+        title: 'Expanded Printer Support, OR/GR Inks, Ordered by Release',
+        sections: {
+          ADDED: [
+            'New printers: P400 (K,C,M,Y,LC,LM), x800-x890 (K,C,M,Y,LC,LM,LK,LLK), x900 (K,C,M,Y,LC,LM,LK,LLK,OR,GR), P4-6-8000 (K,C,M,Y,LC,LM,LK,LLK), P5-7-9000 (K,C,M,Y,LC,LM,LK,LLK,OR,GR)',
+            'Ink colors: OR (#FF7F00, Orange) and GR (#00A651, Green) supported in charts and swatches'
+          ],
+          CHANGED: [
+            'Printer dropdown, Lab Tech enums, and validation lists reordered newest→oldest based on Epson release eras',
+            'Supported printers list in .quad import error updated to include new models'
+          ],
+          FIXED: [
+            'AI-generated curves now respect ink limit percentage; plots update on relative adjustments (e.g., “reduce by 20%”).'
+          ],
+          REMOVED: [
+            'Legacy 860-1160-VM model removed from UI and internal registry'
+          ]
+        },
+        aboutDialog: [
+          { label: 'More Printers', desc: 'Added P400, x800-x890, x900, P4-6-8000, P5-7-9000' },
+          { label: 'OR/GR Inks', desc: 'Added support for Orange and Green ink channels' },
+          { label: 'AI Curve Scaling', desc: 'AI-generated curves now scale with ink limit changes (e.g., reduce by 20%).' },
+          { label: 'Defaults', desc: 'Channels now default to 100%' }
+        ]
+      },
       'v1.8.2': {
         date: '2025-09-03',
         title: 'Unified Workflow Summary & Positive-only Cleanup',
@@ -2888,7 +2927,7 @@ ARCHITECTURAL NOTES:
 
       /**
        * Change the active printer
-       * @param {string} printerName - Printer name (P800 or P700P900)
+       * @param {string} printerName - Printer name (P600-P800 or P700P900)
        * @returns {Object} Result with success status and message
        */
       changePrinter(printerName) {
@@ -2902,7 +2941,7 @@ ARCHITECTURAL NOTES:
           }
 
           // Validate printer name
-          const validPrinters = ['P800', 'P700P900'];
+          const validPrinters = ['P700P900', 'P5-7-9000', 'P800', 'P400', 'x900', '3880-7880', 'x800-x890', 'P4-6-8000'];
           if (!validPrinters.includes(printerName)) {
             return {
               success: false,
@@ -3968,10 +4007,13 @@ ARCHITECTURAL NOTES:
 
           // Initialize loadedQuadData if it doesn't exist (ensure global scope)
           if (!window.loadedQuadData) {
-            window.loadedQuadData = { curves: {} };
+            window.loadedQuadData = { curves: {}, sources: {} };
           }
           if (!window.loadedQuadData.curves) {
             window.loadedQuadData.curves = {};
+          }
+          if (!window.loadedQuadData.sources) {
+            window.loadedQuadData.sources = {};
           }
 
           // Capture old curve data before changing it
@@ -3985,8 +4027,9 @@ ARCHITECTURAL NOTES:
             console.log(`⏭️ Skipping individual curve action for ${channelName} (in batch mode)`);
           }
 
-          // Store the curve in the global loadedQuadData
+          // Store the curve in the global loadedQuadData and mark as AI source
           window.loadedQuadData.curves[channelName] = [...curve];
+          window.loadedQuadData.sources[channelName] = 'ai';
           console.log(`DEBUG: Stored AI curve for ${channelName}:`, {
             curveLength: curve.length,
             firstFew: curve.slice(0, 5),
@@ -4436,14 +4479,14 @@ ARCHITECTURAL NOTES:
       },
       {
         name: "change_printer",
-        description: "Switch between P800 and P700/P900 printer models",
+        description: "Switch between supported printer models",
         parameters: {
           type: "object",
           properties: {
             printerName: {
               type: "string",
               description: "Printer model to switch to",
-              enum: ["P800", "P700P900"]
+              enum: ["P700P900", "P5-7-9000", "P800", "P400", "x900", "3880-7880", "x800-x890", "P4-6-8000"]
             }
           },
           required: ["printerName"]
@@ -5043,7 +5086,7 @@ INK COLORS:
 K=Black(Photo/Matte), C=Cyan, M=Magenta, Y=Yellow, LC=Light Cyan, LM=Light Magenta, LK=Gray/Light Black, LLK=Light Gray, V=Violet, MK=Matte Black
 
 PRINTERS:
-P800 (8 channels, K switchable), P700P900 (10 channels, MK+V dedicated)
+P600-P800 (8 channels, K switchable), P700-P900 (10 channels, MK+V dedicated)
 
 .QUAD ESSENTIALS:
 • 256-step linearization curves mapping input density to ink output
@@ -5442,8 +5485,15 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
     const claudeAssistant = new LabTech();
 
     const PRINTERS = {
-      P800: { name: "Epson P800", channels: ["K","C","M","Y","LC","LM","LK","LLK"] },
-      P700P900: { name: "Epson P700-P900", channels: ["K","C","M","Y","LC","LM","LK","LLK","V","MK"] }
+      P400: { name: "Epson P400", channels: ["K","C","M","Y","LC","LM"] },
+      P800: { name: "Epson P600-P800", channels: ["K","C","M","Y","LC","LM","LK","LLK"] },
+      "3880-7880": { name: "Epson 3880-7880", channels: ["K","C","M","Y","LC","LM","LK","LLK"] },
+      "x800-x890": { name: "Epson x800-x890", channels: ["K","C","M","Y","LC","LM","LK","LLK"] },
+      "x900": { name: "Epson x900", channels: ["K","C","M","Y","LC","LM","LK","LLK","OR","GR"] },
+      "P4-6-8000": { name: "Epson P4-6-8000", channels: ["K","C","M","Y","LC","LM","LK","LLK"] },
+      "P5-7-9000": { name: "Epson P5-7-9000", channels: ["K","C","M","Y","LC","LM","LK","LLK","OR","GR"] },
+      P700P900: { name: "Epson P700-P900", channels: ["K","C","M","Y","LC","LM","LK","LLK","V","MK"] },
+      
     };
 
     const INK_COLORS = {
@@ -5455,6 +5505,8 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       LM: "#FF9AD5",
       LK: "#777777",
       LLK: "#BBBBBB",
+      OR: "#FF7F00",
+      GR: "#00A651",
       V: "#7F00FF",
       MK: "#000000"
     };
@@ -6538,7 +6590,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             if (enableCheckbox) {
               enableCheckbox.checked = true;
               
-              // Restore previous values or default to 33% (same as normal enable logic)
+              // Restore previous values or default to 100% (same as normal enable logic)
               const previousValues = channelPreviousValues[action.channelName];
               
               if (previousValues && previousValues.percent > 0) {
@@ -6546,9 +6598,9 @@ DOMAIN_MAX 1.0 1.0 1.0
                 enablePercentInput.value = previousValues.percent.toString();
                 enableEndInput.value = previousValues.endValue.toString();
               } else {
-                // Default to 33% if no previous value stored
-                enablePercentInput.value = '33';
-                enableEndInput.value = String(InputValidator.computeEndFromPercent(33));
+                // Default to 100% if no previous value stored
+                enablePercentInput.value = '100';
+                enableEndInput.value = String(InputValidator.computeEndFromPercent(100));
               }
               
               tr.removeAttribute('data-user-disabled');
@@ -6908,7 +6960,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             if (checkbox) {
               checkbox.checked = true;
               
-              // Restore previous values or default to 33% (same as normal enable logic)
+              // Restore previous values or default to 100% (same as normal enable logic)
               const previousValues = channelPreviousValues[action.channelName];
               
               if (previousValues && previousValues.percent > 0) {
@@ -6916,9 +6968,9 @@ DOMAIN_MAX 1.0 1.0 1.0
                 enablePercentInput.value = previousValues.percent.toString();
                 enableEndInput.value = previousValues.endValue.toString();
               } else {
-                // Default to 33% if no previous value stored
-                enablePercentInput.value = '33';
-                enableEndInput.value = String(InputValidator.computeEndFromPercent(33));
+                // Default to 100% if no previous value stored
+                enablePercentInput.value = '100';
+                enableEndInput.value = String(InputValidator.computeEndFromPercent(100));
               }
               
               tr.removeAttribute('data-user-disabled');
@@ -8376,16 +8428,22 @@ DOMAIN_MAX 1.0 1.0 1.0
       
       // Step 1: Start with base curve (loaded data or linear ramp)
       if (window.loadedQuadData && window.loadedQuadData.curves && window.loadedQuadData.curves[channelName]) {
-        // Use loaded .quad curve data directly - these are already final 256-point curves
-        // that should NOT be scaled, as they represent the complete channel response
         const loadedCurve = window.loadedQuadData.curves[channelName];
-        
+
         if (Math.max(...loadedCurve) === 0) {
           return new Array(N).fill(0); // Handle edge case
         }
-        
-        // Use loaded curve data directly without scaling
-        arr = [...loadedCurve];
+
+        // Distinguish AI-generated curves vs. file-loaded .quad curves
+        const isAICurve = !!(window.loadedQuadData.sources && window.loadedQuadData.sources[channelName] === 'ai');
+        if (isAICurve) {
+          // Scale AI-generated curves to respect current endValue (ink limit)
+          const scale = endValue / TOTAL;
+          arr = loadedCurve.map(v => Math.round(v * scale));
+        } else {
+          // For file-loaded .quad curves, do NOT scale (they are already final datasets)
+          arr = [...loadedCurve];
+        }
       } else {
         // Generate linear ramp as base
         if (DEBUG_LOGS) console.log('make256 using linear ramp for', channelName, 'loadedQuadData available:', !!window.loadedQuadData, 'curves:', !!window.loadedQuadData?.curves);
@@ -8443,12 +8501,12 @@ DOMAIN_MAX 1.0 1.0 1.0
       // Set default values based on printer and channel
       let defaultPercent = 0; // Default to disabled
       let channelEnabled = false; // Default to disabled
-      
-      // Enable only specific channels with 100%
-      if (printerKey === 'P800' && name === 'K') {
-        defaultPercent = 100;
-        channelEnabled = true;
-      } else if (printerKey === 'P700P900' && name === 'MK') {
+
+      // Preferred default channel selection: prefer MK if available, otherwise K
+      const cfg = PRINTERS[printerKey] || { channels: [] };
+      const hasMK = Array.isArray(cfg.channels) && cfg.channels.includes('MK');
+      const preferredDefault = hasMK ? 'MK' : 'K';
+      if (name === preferredDefault) {
         defaultPercent = 100;
         channelEnabled = true;
       }
@@ -8581,7 +8639,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         
         if (enableCheckbox.checked) {
-          // Enable: restore previous values or default to 33%
+          // Enable: restore previous values or default to 100%
           const previousValues = channelPreviousValues[channelName];
           
           if (previousValues && previousValues.percent > 0) {
@@ -8590,10 +8648,10 @@ DOMAIN_MAX 1.0 1.0 1.0
             endInput.value = previousValues.endValue.toString();
             showStatus(`Enabled ${channelName} (restored to ${previousValues.percent}%)`);
           } else {
-            // Default to 33% if no previous value stored
-            percentInput.value = '33';
-            endInput.value = String(InputValidator.computeEndFromPercent(33));
-            showStatus(`Enabled ${channelName} (set to default 33%)`);
+            // Default to 100% if no previous value stored
+            percentInput.value = '100';
+            endInput.value = String(InputValidator.computeEndFromPercent(100));
+            showStatus(`Enabled ${channelName} (set to default 100%)`);
           }
           
           tr.removeAttribute('data-user-disabled'); // Mark as not disabled by user
@@ -8865,10 +8923,10 @@ DOMAIN_MAX 1.0 1.0 1.0
             </div>
           </td>
           <td class="px-1 pt-2 pb-1">
-            <input type="number" step="1" min="0" max="100" value="33" class="percent-input w-20 rounded-lg border border-gray-300 px-2 py-1 invisible" disabled>
+            <input type="number" step="1" min="0" max="100" value="100" class="percent-input w-20 rounded-lg border border-gray-300 px-2 py-1 invisible" disabled>
           </td>
           <td class="px-1 pt-2 pb-1">
-            <input type="number" step="1" min="0" max="64000" value="21120" class="end-input w-20 rounded-lg border border-gray-300 px-2 py-1 invisible" disabled>
+            <input type="number" step="1" min="0" max="64000" value="64000" class="end-input w-20 rounded-lg border border-gray-300 px-2 py-1 invisible" disabled>
           </td>
         `;
         elements.rows.appendChild(noChannelsRow);
@@ -9033,9 +9091,10 @@ DOMAIN_MAX 1.0 1.0 1.0
           const cleanName = customName.replace(/\.quad$/, '');
           const sanitizedName = sanitizeFilename(cleanName);
           
-          // If sanitization removed everything, fall back to default
+          // If sanitization removed everything, fall back to default (sanitized printer name)
           if (!sanitizedName) {
-            filename = p.name.replace(/\s+/g, '') + "_linear.quad";
+            const defaultBase = sanitizeFilename(p.name.replace(/\s+/g, '')) || 'quadGEN';
+            filename = defaultBase + "_linear.quad";
             showStatus("Invalid filename, using default");
           } else {
             filename = sanitizedName + '.quad';
@@ -9046,8 +9105,9 @@ DOMAIN_MAX 1.0 1.0 1.0
             }
           }
         } else {
-          // Use default naming
-          filename = p.name.replace(/\s+/g, '') + "_linear.quad";
+          // Use default naming (sanitized printer name)
+          const defaultBase = sanitizeFilename(p.name.replace(/\s+/g, '')) || 'quadGEN';
+          filename = defaultBase + "_linear.quad";
         }
         
         const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
@@ -9974,7 +10034,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const matchingPrinter = findMatchingPrinter(parsed.channels);
         if (!matchingPrinter) {
           const channelList = parsed.channels.join(', ');
-          throw new Error(`No supported printer matches channels: ${channelList}. Supported printers: P800 (K,C,M,Y,LC,LM,LK,LLK), P700-P900 (K,C,M,Y,LC,LM,LK,LLK,V,MK)`);
+          throw new Error(`No supported printer matches channels: ${channelList}. Supported printers: P400 (K,C,M,Y,LC,LM), x800-x890 (K,C,M,Y,LC,LM,LK,LLK), P4-6-8000 (K,C,M,Y,LC,LM,LK,LLK), P5-7-9000 (K,C,M,Y,LC,LM,LK,LLK,OR,GR), x900 (K,C,M,Y,LC,LM,LK,LLK,OR,GR), 3880-7880 (K,C,M,Y,LC,LM,LK,LLK), P600-P800 (K,C,M,Y,LC,LM,LK,LLK), P700-P900 (K,C,M,Y,LC,LM,LK,LLK,V,MK)`);
         }
         
         // Switch to matching printer (mark that we're switching due to quad load)
@@ -10293,6 +10353,9 @@ DOMAIN_MAX 1.0 1.0 1.0
           <div>
             <p class="font-medium text-lg mb-2">Overview</p>
             <p class="text-sm text-gray-600">quadGEN helps you build and refine .quad curves for QuadToneRIP. Load measurement data or curve files, preview the tonal response, adjust channel limits, and export a corrected .quad for printing.</p>
+            <div class="text-xs text-gray-600 mt-2">
+              Default channel behavior: if the selected printer has an <code>MK</code> channel, MK starts enabled at 100%. Otherwise, <code>K</code> starts enabled at 100%. All other channels start disabled.
+            </div>
           </div>
           <div>
             <p class="font-medium text-lg mb-2">Workflow Summary</p>
