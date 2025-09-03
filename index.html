@@ -2,13 +2,39 @@
 <html lang="en">
 
 <!--
+MIT License
+
+Copyright (c) 2025 David Marsh
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Scope: This license applies to this HTML file (quadgen.html) only.
+-->
+
+<!--
 ================================================================================
 QUADGEN TECHNICAL SPECIFICATION
 ================================================================================
 
-VERSION: v1.7
-REVISION DATE: 2025-01-30
-PREVIOUS: v1.6 (2025-08-31)
+VERSION: v1.8.1
+REVISION DATE: 2025-09-03
+PREVIOUS: v1.8 (2025-09-02)
 
 ================================================================================
 ⚠️⚠️⚠️ CRITICAL INTERPOLATION REQUIREMENTS ⚠️⚠️⚠️
@@ -1454,7 +1480,7 @@ ARCHITECTURAL NOTES:
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'v1.8';
+    const APP_VERSION = 'v1.8.1';
     // Global debug logging toggle for non-AI logs
     var DEBUG_LOGS = false;
     // AI provider selection (code-level switch, no UI): 'anthropic' or 'openai'
@@ -1468,6 +1494,26 @@ ARCHITECTURAL NOTES:
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v1.8.1': {
+        date: '2025-09-03',
+        title: 'MIT License + Chart Orientation Aids',
+        sections: {
+          ADDED: [
+            'MIT License for quadgen.html only: header comment added; About dialog blurb notes scope and holder',
+            'Chart orientation aids: White→black gradient bars added under X-axis (left→right) and beside Y-axis (bottom→top)'
+          ],
+          CHANGED: [
+            'Axis titles: X now “Input Level Percent”, Y now “Ink Limit Percent”',
+            'Axis label contrast: Force solid black text and adjust spacing to avoid overlap with gradients'
+          ]
+        },
+        aboutDialog: [
+          { label: 'MIT License (HTML only)', desc: 'Added MIT header in quadgen.html and brief notice in About; scope limited to this HTML file' },
+          { label: 'Axis Gradients', desc: 'Added white→black bars under X and along Y for clear white/black orientation' },
+          { label: 'Readable Labels', desc: 'Labels forced to black with spacing tweaks for clarity' },
+          { label: 'Axis Titles', desc: 'Renamed to “Input Level Percent” (X) and “Ink Limit Percent” (Y)' }
+        ]
+      },
       'v1.8': {
         date: '2025-09-02',
         title: 'Print Intent Mapping, ACV/LUT Parity, LAB Traceability',
@@ -1480,7 +1526,8 @@ ARCHITECTURAL NOTES:
           FIXED: [
             'ACV/LUT parity: ACV path now uses same orientation as LUT (horizontal flip + vertical inversion for positive-domain EDN)',
             'Immediate graph update when toggling Print Intent with EDN corrections loaded',
-            'LAB endpoints anchored to 0 and 1 to preserve full dynamic range'
+            'LAB endpoints anchored to 0 and 1 to preserve full dynamic range',
+            'Natural-language curve parser: Tonal regions flipped to match 0% = white, 100% = black ("shadows" now 75–100%)'
           ],
           REMOVED: [
             'Built-in process presets (cyanotype, palladium, etc.) and process triggers from AI routing',
@@ -1492,6 +1539,7 @@ ARCHITECTURAL NOTES:
           { label: 'ACV/LUT Parity', desc: 'ACV orientation normalized to match LUT; midtones now align closely' },
           { label: 'LAB Traceability', desc: 'Recorded “measured: Positive/Negative” and added mismatch warning banner' },
           { label: 'LAB Endpoints Anchored', desc: 'Measurement curves now start at 0% and end at 100% to preserve range' },
+          { label: 'Tonal Region Mapping', desc: 'Parser regions flipped; 0% is white and 100% is black. "Lift shadows" now affects 75–100% correctly.' },
           { label: 'Simplified AI Scope', desc: 'Removed process presets; assistant provides guidance to load EDN/LAB instead' }
         ]
       },
@@ -3637,13 +3685,13 @@ ARCHITECTURAL NOTES:
 
           // Define tonal regions
           const regions = {
-            'shadows': { start: 0, mid: 12.5, end: 25 },
-            'darks': { start: 0, mid: 12.5, end: 25 },
+            'highlights': { start: 0, mid: 12.5, end: 25 },
+            'lights': { start: 0, mid: 12.5, end: 25 },
             'quarter-tones': { start: 15, mid: 25, end: 35 },
             'midtones': { start: 25, mid: 50, end: 75 },
             'three-quarter-tones': { start: 65, mid: 75, end: 85 },
-            'highlights': { start: 75, mid: 87.5, end: 100 },
-            'lights': { start: 75, mid: 87.5, end: 100 }
+            'darks': { start: 75, mid: 87.5, end: 100 },
+            'shadows': { start: 75, mid: 87.5, end: 100 }
           };
 
           // Handle common curve shapes
@@ -5797,6 +5845,43 @@ DOMAIN_MAX 1.0 1.0 1.0
       ctx.font = '12px system-ui';
       ctx.textAlign = 'center';
       
+      // Ink-level orientation helper: vertical white↕black gradient beside Y-axis
+      // White at 0% (bottom), Black at 100% (top)
+      (function drawInkLevelGradient() {
+        const gradientWidth = 10; // slim vertical strip for orientation
+        // Place outside chart area, just to the left of the Y-axis line
+        const gradientX = leftPadding - gradientWidth - 1;
+        const grad = ctx.createLinearGradient(0, padding, 0, height - padding);
+        grad.addColorStop(0, '#000000'); // top = 100% ink = black
+        grad.addColorStop(1, '#ffffff'); // bottom = 0% ink = white
+        ctx.fillStyle = grad;
+        ctx.fillRect(gradientX, padding, gradientWidth, chartHeight);
+        // subtle border for visibility
+        ctx.strokeStyle = '#9ca3af';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(gradientX, padding, gradientWidth, chartHeight);
+      })();
+
+      // Input-level orientation helper: white→black gradient under X-axis
+      // White at 0% (left), Black at 100% (right)
+      (function drawInputLevelGradient() {
+        const gradientHeight = 10; // small strip for orientation
+        // Position so the strip touches the axis line
+        const gradientY = height - padding + 1; // flush with axis bottom
+        const grad = ctx.createLinearGradient(leftPadding, 0, leftPadding + chartWidth, 0);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(1, '#000000');
+        ctx.fillStyle = grad;
+        ctx.fillRect(leftPadding, gradientY, chartWidth, gradientHeight);
+        // subtle border for visibility on light backgrounds
+        ctx.strokeStyle = '#9ca3af';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(leftPadding, gradientY, chartWidth, gradientHeight);
+      })();
+      
+      // Ensure text labels are solid black regardless of prior fills
+      ctx.fillStyle = '#000000';
+      
       // X-axis labels (0% to 100%)
       for (let i = 0; i <= 10; i++) {
         const x = leftPadding + (i * chartWidth / 10);
@@ -5807,11 +5892,16 @@ DOMAIN_MAX 1.0 1.0 1.0
         } else {
           ctx.font = '12px system-ui';
         }
-        ctx.fillText(`${value}`, x, height - padding + 20);
+        // Nudge labels slightly lower to avoid overlapping the gradient strip
+        ctx.fillText(`${value}`, x, height - padding + 28);
       }
       
       // Y-axis labels (0% to 100%)
       ctx.textAlign = 'right';
+      ctx.fillStyle = '#000000';
+      // Nudge labels left to account for the vertical gradient width (10px) + 1px gap + ~1px margin
+      // Nudge slightly more to the right for spacing
+      const yAxisLabelX = leftPadding - (10 /* gradient */ + 1 /* gap */ + 10 /* original offset */ + 1 /* margin */) + 4;
       for (let i = 0; i <= 10; i++) {
         const y = height - padding - (i * chartHeight / 10);
         const value = i * 10;
@@ -5821,18 +5911,25 @@ DOMAIN_MAX 1.0 1.0 1.0
         } else {
           ctx.font = '12px system-ui';
         }
-        ctx.fillText(`${value}`, leftPadding - 10, y + 4);
+        ctx.fillText(`${value}`, yAxisLabelX, y + 4);
       }
       
       // Axis titles
       ctx.textAlign = 'center';
       ctx.font = '14px system-ui';
-      ctx.fillText('Input Level (1-100)', width / 2, height - 10);
+      ctx.fillStyle = '#000000';
+      ctx.fillText('Input Level Percent', width / 2, height - 10);
       
       ctx.save();
-      ctx.translate(15, height / 2);
+      // Shift Y-axis title left; clamp to keep it inside canvas
+      const yAxisTitleBaseX = 15;
+      const yAxisTitleShift = (10 /* gradient */ + 1 /* gap */ + 1 /* margin */);
+      // Nudge a bit further left while keeping it inside canvas
+      const yAxisTitleX = Math.max(11, yAxisTitleBaseX - yAxisTitleShift);
+      ctx.translate(yAxisTitleX, height / 2);
       ctx.rotate(-Math.PI / 2);
-      ctx.fillText('Ink Limit Percentage', 0, 0);
+      ctx.fillStyle = '#000000';
+      ctx.fillText('Ink Limit Percent', 0, 0);
       ctx.restore();
       
       // Draw curves and collect label info
@@ -10248,8 +10345,12 @@ DOMAIN_MAX 1.0 1.0 1.0
       if (!changelogContent) return;
       
       // Build a clean, scannable About layout
+      const licenseYear = new Date().getFullYear();
       const changelogHtml = `
         <div class="space-y-6">
+          <div class="text-xs text-gray-500">
+            MIT License — quadgen.html © ${licenseYear} David Marsh. HTML file only. Full text is in the page source.
+          </div>
           <div>
             <p class="font-medium text-lg mb-2">Overview</p>
             <p class="text-sm text-gray-600">quadGEN helps you build and refine .quad curves for QuadToneRIP. Load measurement data or curve files, preview the tonal response, adjust channel limits, and export a corrected .quad for printing.</p>
