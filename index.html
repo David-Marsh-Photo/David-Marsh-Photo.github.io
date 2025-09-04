@@ -32,9 +32,9 @@ Scope: This license applies to this HTML file (quadgen.html) only.
 QUADGEN TECHNICAL SPECIFICATION
 ================================================================================
 
-VERSION: v1.8.3
+VERSION: v1.8.4
 REVISION DATE: 2025-09-03
-PREVIOUS: v1.8.2 (2025-09-03)
+PREVIOUS: v1.8.3 (2025-09-03)
 
 ================================================================================
 ⚠️⚠️⚠️ CRITICAL INTERPOLATION REQUIREMENTS ⚠️⚠️⚠️
@@ -78,19 +78,16 @@ CURVE PROCESSING PIPELINE:
   * Horizontal flattening around key points (smoothstep problem)
   * Sharp corners at control points (linear problem)  
   * Overshooting between points (spline problem)
-- VERIFIED WORKING in v1.5: Natural language curve generation relies on PCHIP
+- VERIFIED: Smooth AI curves use PCHIP with numeric key points (natural‑language presets deprecated)
 - DO NOT REPLACE with smoothstep, cosine, Catmull-Rom, or other methods
 - Linear interpolation acceptable for 'linear' mode only
 - If curve issues reported, check PCHIP implementation BEFORE changing algorithms
 
-⚠️  CRITICAL: NATURAL LANGUAGE CURVE GENERATION ⚠️  
-- Lab Tech MUST use generate_curve_from_description function for photography terminology
-- DO NOT let Lab Tech use generate_custom_curve for "palladium curve", "S-curve", etc.
-- Implementation: _parsePhotographyCurveDescription() method processes photography terminology  
-- Supported terms: 'palladium curve', 'S-curve', 'lift shadows', 'cyanotype density', 'salt print range', etc.
-- Key point generation: Converts natural language to mathematical curve control points
-- Interpolation: REQUIRES PCHIP for smooth curves through generated control points
-- If Lab Tech generates wrong key points, check function descriptions guide Lab Tech to correct function
+⚠️  CRITICAL: AI CURVE CREATION POLICY ⚠️
+- Lab Tech must compute explicit numeric key points based on user intent and apply them with set_ai_key_points.
+- Do NOT rely on built-in presets or pre-defined curves; generate_curve_from_description is deprecated.
+- Photography terms (e.g., 'S-curve', 'lift shadows', 'salt print range') may guide intent, but the AI must choose actual numeric key points.
+- Interpolation: PCHIP (smooth) is required for smooth curves; Linear allowed only for technical cases.
 
 INTERPOLATION ALGORITHMS:
 - Activation condition: Linearization data loaded with sparse control points
@@ -150,9 +147,11 @@ PROCESSING DETAILS:
 - Processing detail toggle buttons: Show/hide channel processing pipeline info
 
 AI CURVE GENERATION:
-- generateCustomCurve(): Create curves from key points with interpolation (~2530)
-- generateCurveFromDescription(): Parse natural language to curves (~2498)
-- _parsePhotographyCurveDescription(): Photography terminology parser (~2735)
+- generateCustomCurve(): Create curves from numeric key points (~2530)
+- setAIKeyPoints(): Apply numeric key points for AI curves (~3760)
+- adjustAIKeyPointByIndex(): Nudge or set a single point by ordinal (~3807)
+- insertAIKeyPointAt()/Between(): Insert new points by X or between ordinals (~3910)
+- Natural-language parser removed (deprecated)
 - _pchipInterpolate(): PCHIP smooth interpolation algorithm (~2925)
 
 UNDO/HISTORY SYSTEM:
@@ -213,7 +212,7 @@ BATCH UNDO INTEGRATION:
 - AI operations affecting multiple channels automatically create batch undo actions
 - batch_channel_operations: Records only channels with actual state changes
 - apply_to_all_channels: Groups percentage changes across multiple enabled channels
-- generate_global_curve_from_description: Groups curve changes across multiple channels
+- generate_global_custom_curve: Groups custom curve changes across multiple channels
 - generate_global_custom_curve: Groups custom curve changes across multiple channels  
 - Single undo button press reverts entire batch operation across all affected channels
 - Prevents individual action recording during batch operations via isBatchOperation flag
@@ -240,21 +239,15 @@ LINEARIZATION CONTROL FUNCTIONS:
 - set_per_channel_linearization: Enable/disable linearization for specific channel
 
 CURVE GENERATION FUNCTIONS:
+- set_ai_key_points: Apply explicit numeric key points (preferred for AI-driven curves)
+- adjust_ai_key_point_by_index: Adjust a single key point by ordinal (1-based, endpoints included)
+- get_ai_key_points: Inspect currently stored AI key points
+- insert_ai_key_point_at: Insert a new key point at a given input (X), optional output (Y)
+- insert_ai_key_point_between: Insert a new key point between two adjacent ordinals
 - generate_custom_curve: Create curve from explicit numerical control points (single channel)
 - copy_curve_to_channel: Copy existing curve from source channel to target channel
-- generate_curve_from_description: Create curve from natural language photography terms (single channel)
-  * Supported terms: 'palladium curve', 'S-curve', 'cyanotype density', 'salt print range'
-  * 'lift shadows', 'drop highlights', 'gentle arc', 'roll off highlights', etc.
-  * REQUIRES PCHIP interpolation for smooth photography-style curves
-- generate_global_curve_from_description: Create curves from natural language for multiple channels
-  * Same photography terms as single channel function
+- generate_global_custom_curve: Create curves from numerical points for multiple channels (batch)
   * Channel filters: 'all' (all printer channels), 'enabled' (only enabled channels)
-  * Creates single batch undo action for all affected channels
-  * Automatically adjusts channel percentages to accommodate curve range
-  * Updates graphs and UI state synchronously across all channels
-- generate_global_custom_curve: Create curves from numerical points for multiple channels
-  * Same key point format as single channel function
-  * Channel filters: 'all' (all printer channels), 'enabled' (only enabled channels) 
   * Creates single batch undo action for all affected channels
   * Handles percentage adjustments and channel enabling as needed
   * Full UI synchronization with immediate graph updates
@@ -272,8 +265,8 @@ UTILITY FUNCTIONS:
 ⚠️  CRITICAL LAB TECH INTEGRATION NOTES:
 - All functions include comprehensive input validation and error handling
 - Function execution results are logged to chat interface for user feedback
-- Natural language curve generation uses _parsePhotographyCurveDescription() method
-- Lab Tech MUST use generate_curve_from_description for photography terminology, NOT generate_custom_curve
+- Do NOT use pre-defined/preset curve mappings; generate_curve_from_description is deprecated.
+- Lab Tech must compute numeric key points and use set_ai_key_points (or generate_global_custom_curve for multiple channels).
 - Rate limiting implemented: 10 requests/minute, 100 requests/hour (via Cloudflare Worker)
 - Model: Claude Sonnet 4 (claude-sonnet-4-0) - Latest snapshot alias for optimal performance
 - Function results integrate with CurveHistory system for undo functionality
@@ -465,7 +458,7 @@ FIXED:
 
 v1.6 (2025-01-30) - Global AI Curve Generation with Batch Undo:
 ADDED:
-- generate_global_curve_from_description: Apply natural language curve descriptions to multiple channels simultaneously
+- generate_global_custom_curve: Apply numeric key points to multiple channels simultaneously
 - generate_global_custom_curve: Apply custom curve key points to multiple channels simultaneously
 - Comprehensive batch undo system: Single undo action reverts all channels affected by global curve operations
 - Channel filter support: Target 'all' printer channels or 'enabled' channels only
@@ -1351,7 +1344,8 @@ ARCHITECTURAL NOTES:
             <div id="chatHistory" class="bg-gray-50 rounded border border-gray-200 p-2 h-40 overflow-y-auto mb-3 text-xs">
               <div class="bg-gray-50 text-gray-600 px-2 py-1 rounded mb-2 text-xs border border-gray-200">
                 <strong>Try this:</strong> "Reduce all ink limits by 20%"<br>
-                <strong>or:</strong> "Generate a gentle S-curve: 0→0, 25→20, 75→85, 100→100"
+                <strong>or:</strong> "generate a curve with points 0,0 25,20 75,85 100,100"<br>
+                <strong>or:</strong> "apply a midtone lift"
               </div>
             </div>
 
@@ -1481,7 +1475,7 @@ ARCHITECTURAL NOTES:
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'v1.8.3';
+    const APP_VERSION = 'v1.8.4';
     // Global debug logging toggle for non-AI logs
     var DEBUG_LOGS = false;
     // AI provider selection (code-level switch, no UI): 'anthropic' or 'openai'
@@ -1495,17 +1489,45 @@ ARCHITECTURAL NOTES:
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v1.8.4': {
+        date: '2025-09-04',
+        title: 'AI Key‑Point Labels and UI Polish',
+        sections: {
+          ADDED: [
+            'Numbered labels above AI key points with ink‑colored backgrounds and auto black/white text for readability',
+            'Lab Tech sample: added “apply a midtone lift” example'
+          ],
+          CHANGED: [
+            'Graph axis titles now use %: “Input Level %” (X), “Output Ink Level %” (Y)',
+            'Key‑point label positioning refined: shifts slightly right near 0% and left near 100% to reduce overlap',
+            'Lab Tech sample updated to “generate a curve with points 0,0 25,20 75,85 100,100”'
+          ],
+          DOCS: [
+            'Updated CLAUDE.md and AGENTS.md to reflect numeric key‑point workflow and insert/adjust commands'
+          ]
+        },
+        aboutDialog: [
+          { label: 'Key‑Point Labels', desc: 'AI key points now show numbered labels with ink‑colored backgrounds and readable text' },
+          { label: 'Axis Titles', desc: 'Graph uses “Input Level %” (X) and “Output Ink Level %” (Y)' },
+          { label: 'Lab Tech Samples', desc: 'Focused natural language controls on curve generation' }
+        ]
+      },
       'v1.8.3': {
         date: '2025-09-03',
         title: 'Expanded Printer Support, OR/GR Inks, Ordered by Release',
         sections: {
           ADDED: [
             'New printers: P400 (K,C,M,Y,LC,LM), x800-x890 (K,C,M,Y,LC,LM,LK,LLK), x900 (K,C,M,Y,LC,LM,LK,LLK,OR,GR), P4-6-8000 (K,C,M,Y,LC,LM,LK,LLK), P5-7-9000 (K,C,M,Y,LC,LM,LK,LLK,OR,GR)',
-            'Ink colors: OR (#FF7F00, Orange) and GR (#00A651, Green) supported in charts and swatches'
+            'Ink colors: OR (#FF7F00, Orange) and GR (#00A651, Green) supported in charts and swatches',
+            'AI key‑point overlays: squares + ordinal labels for AI curves (<21 points)',
+            'AI key‑point insert commands: insert point at X or between ordinals',
+            'Undo/redo now restores AI key points and interpolation meta along with curves'
           ],
           CHANGED: [
             'Printer dropdown, Lab Tech enums, and validation lists reordered newest→oldest based on Epson release eras',
-            'Supported printers list in .quad import error updated to include new models'
+            'Supported printers list in .quad import error updated to include new models',
+            'AI workflow: natural‑language preset curves deprecated; AI now computes numeric key points and applies them directly',
+            'Graph axis titles: display shows “Input Level %” (X) and “Output Ink Level %” (Y)'
           ],
           FIXED: [
             'AI-generated curves now respect ink limit percentage; plots update on relative adjustments (e.g., “reduce by 20%”).'
@@ -1549,7 +1571,7 @@ ARCHITECTURAL NOTES:
             'Chart orientation aids: White→black gradient bars added under X-axis (left→right) and beside Y-axis (bottom→top)'
           ],
           CHANGED: [
-            'Axis titles: X now “Input Level Percent”, Y now “Ink Limit Percent”',
+            'Axis titles: X now “Input Level Percent”, Y now “Output Ink Level Percent”',
             'Axis label contrast: Force solid black text and adjust spacing to avoid overlap with gradients',
             'EDN mapping fixed to Positive semantics (reverse + invert) with no intent toggle'
           ],
@@ -1561,7 +1583,7 @@ ARCHITECTURAL NOTES:
           { label: 'MIT License (HTML only)', desc: 'Added MIT header in quadgen.html and brief notice in About; scope limited to this HTML file' },
           { label: 'Axis Gradients', desc: 'Added white→black bars under X and along Y for clear white/black orientation' },
           { label: 'Readable Labels', desc: 'Labels forced to black with spacing tweaks for clarity' },
-          { label: 'Axis Titles', desc: 'Renamed to “Input Level Percent” (X) and “Ink Limit Percent” (Y)' },
+          { label: 'Axis Titles', desc: 'Renamed to “Input Level Percent” (X) and “Output Ink Level Percent” (Y)' },
           { label: 'Positive-only Intent', desc: 'Removed Negative intent; EDN mapping uses Positive semantics by default' }
         ]
       },
@@ -1748,6 +1770,24 @@ ARCHITECTURAL NOTES:
       constructor() {
         this.lastAction = null;
         this.lastActionTime = null;
+      }
+
+      /**
+       * Resolve channel: if not provided, choose the first enabled channel
+       * Enabled = percentage > 0 OR endValue > 0 OR enabled = true
+       */
+      _resolveChannel(preferredChannel = null) {
+        const currentPrinter = getCurrentPrinter();
+        if (preferredChannel && currentPrinter.channels.includes(preferredChannel)) {
+          return preferredChannel;
+        }
+        const state = this.getCurrentState();
+        if (!state.success) return currentPrinter.channels[0];
+        const entries = Object.entries(state.data.channels || {});
+        const firstEnabled = entries.find(([name, ch]) => ch && (ch.enabled || (ch.percentage || 0) > 0 || (ch.endValue || 0) > 0));
+        if (firstEnabled) return firstEnabled[0];
+        // Fallback: first printer channel
+        return currentPrinter.channels[0];
       }
 
       /**
@@ -3082,22 +3122,10 @@ ARCHITECTURAL NOTES:
        * @returns {Object} Result with success status and message
        */
       generateCurveFromDescription(channelName, description, interpolationType = 'smooth') {
-        try {
-          // Parse natural language description into key points
-          const parseResult = this._parsePhotographyCurveDescription(description);
-          if (!parseResult.success) {
-            return parseResult;
-          }
-
-          // Generate curve from parsed key points
-          return this.generateCustomCurve(channelName, parseResult.keyPoints, interpolationType);
-
-        } catch (error) {
-          return {
-            success: false,
-            message: `Error parsing curve description: ${error.message}`
-          };
-        }
+        return {
+          success: false,
+          message: 'DEPRECATED: Natural-language curve generation is disabled. Compute numeric key points and call setAIKeyPoints.'
+        };
       }
 
       /**
@@ -3158,6 +3186,16 @@ ARCHITECTURAL NOTES:
           if (!result.success) {
             return result;
           }
+          // Persist AI key points for overlay display (store normalized 0-100 inputs/outputs)
+          try {
+            if (!window.loadedQuadData) window.loadedQuadData = {};
+            if (!window.loadedQuadData.keyPoints) window.loadedQuadData.keyPoints = {};
+            if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+            window.loadedQuadData.keyPoints[channelName] = normalizedPoints.map(p => ({ input: p.input, output: p.output }));
+            window.loadedQuadData.keyPointsMeta[channelName] = { interpolationType };
+          } catch (e) {
+            console.warn('Could not persist AI key points for overlay:', e);
+          }
 
           // Record action and trigger update
           this._recordAction('generateCustomCurve', { channelName, keyPoints: normalizedPoints, interpolationType });
@@ -3190,22 +3228,10 @@ ARCHITECTURAL NOTES:
        * @returns {Object} Result with success status and message
        */
       generateGlobalCurveFromDescription(description, interpolationType = 'smooth', channelFilter = 'enabled') {
-        try {
-          // Parse natural language description into key points
-          const parseResult = this._parsePhotographyCurveDescription(description);
-          if (!parseResult.success) {
-            return parseResult;
-          }
-
-          // Generate curves for multiple channels using parsed key points
-          return this.generateGlobalCustomCurve(parseResult.keyPoints, interpolationType, channelFilter);
-
-        } catch (error) {
-          return {
-            success: false,
-            message: `Error parsing global curve description: ${error.message}`
-          };
-        }
+        return {
+          success: false,
+          message: 'DEPRECATED: Natural-language curve generation is disabled. Compute numeric key points and call generateGlobalCustomCurve or setAIKeyPoints.'
+        };
       }
 
       /**
@@ -3314,13 +3340,27 @@ ARCHITECTURAL NOTES:
               const result = this._applyCurveToChannel(channelName, curve);
               
               if (result.success) {
+                // Persist the same AI key points for each affected channel
+                try {
+                  if (!window.loadedQuadData) window.loadedQuadData = {};
+                  if (!window.loadedQuadData.keyPoints) window.loadedQuadData.keyPoints = {};
+                  if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+                  window.loadedQuadData.keyPoints[channelName] = normalizedPoints.map(p => ({ input: p.input, output: p.output }));
+                  window.loadedQuadData.keyPointsMeta[channelName] = { interpolationType };
+                } catch (e) {
+                  console.warn('Could not persist AI key points for overlay (global):', channelName, e);
+                }
                 // For global curve generation, we only need to record the curve changes
                 // The curve undo will automatically restore the channel to its previous state
                 channelActions.push({
                   channelName: channelName,
                   type: 'curve',
                   oldValue: oldCurveData,
-                  newValue: [...curve]
+                  newValue: [...curve],
+                  oldKeyPoints: (window.loadedQuadData?.keyPoints?.[channelName]) ? window.loadedQuadData.keyPoints[channelName].map(p => ({ input: p.input, output: p.output })) : null,
+                  newKeyPoints: normalizedPoints.map(p => ({ input: p.input, output: p.output })),
+                  oldInterpolation: window.loadedQuadData?.keyPointsMeta?.[channelName]?.interpolationType || 'smooth',
+                  newInterpolation: interpolationType
                 });
                 
                 results.push(`${channelName}: curve applied`);
@@ -3425,159 +3465,7 @@ ARCHITECTURAL NOTES:
        * @returns {Object} Result with success status and message
        */
       generateGlobalLinearizationFromDescription(description, interpolationType = 'smooth', pointCount = 256) {
-        try {
-          // Parse natural language description into key points
-          const parseResult = this._parsePhotographyCurveDescription(description);
-          if (!parseResult.success) {
-            return parseResult;
-          }
-
-          // Validate and normalize key points
-          const normalizedPoints = parseResult.keyPoints.map((point, index) => {
-            if (!point || typeof point.input !== 'number' || typeof point.output !== 'number') {
-              throw new Error(`Invalid key point at index ${index}: must have 'input' and 'output' properties`);
-            }
-            return {
-              input: Math.max(0, Math.min(100, point.input)),
-              output: Math.max(0, Math.min(100, point.output))
-            };
-          });
-
-          // Sort by input value
-          normalizedPoints.sort((a, b) => a.input - b.input);
-
-          // Ensure we have start and end points
-          if (normalizedPoints[0].input !== 0) {
-            normalizedPoints.unshift({ input: 0, output: 0 });
-          }
-          if (normalizedPoints[normalizedPoints.length - 1].input !== 100) {
-            normalizedPoints.push({ input: 100, output: normalizedPoints[normalizedPoints.length - 1].output });
-          }
-
-          // Generate linearization curve directly (like .acv file)
-          console.log('Generating global linearization curve with key points:', normalizedPoints, 'interpolation:', interpolationType);
-          
-          // Generate full 256-point curve using proper interpolation
-          const samples = [];
-          for (let i = 0; i < pointCount; i++) {
-            const inputPercent = (i / (pointCount - 1)) * 100;
-            let outputPercent;
-            
-            if (interpolationType === 'linear') {
-              // Linear interpolation between key points
-              let leftPoint = null;
-              let rightPoint = null;
-              
-              for (let j = 0; j < normalizedPoints.length - 1; j++) {
-                if (inputPercent >= normalizedPoints[j].input && inputPercent <= normalizedPoints[j + 1].input) {
-                  leftPoint = normalizedPoints[j];
-                  rightPoint = normalizedPoints[j + 1];
-                  break;
-                }
-              }
-              
-              if (!leftPoint || !rightPoint) {
-                if (inputPercent <= normalizedPoints[0].input) {
-                  outputPercent = normalizedPoints[0].output;
-                } else {
-                  outputPercent = normalizedPoints[normalizedPoints.length - 1].output;
-                }
-              } else {
-                const t = leftPoint.input === rightPoint.input ? 0 : 
-                         (inputPercent - leftPoint.input) / (rightPoint.input - leftPoint.input);
-                outputPercent = leftPoint.output + t * (rightPoint.output - leftPoint.output);
-              }
-            } else {
-              // ⚠️  CRITICAL: SMOOTH INTERPOLATION MUST USE PCHIP ⚠️
-              // PCHIP is the ONLY approved method - DO NOT change to other interpolation methods
-              // This requirement is documented and verified working in v1.5
-              const x = normalizedPoints.map(p => p.input);
-              const y = normalizedPoints.map(p => p.output);
-              
-              // Use PCHIP - monotonic interpolation that avoids overshoot and kinks
-              outputPercent = this._pchipInterpolate(x, y, inputPercent);
-            }
-            
-            // Convert to 0-1 range for linearization format
-            const outputValue = outputPercent / 100;
-            samples.push(outputValue);
-          }
-          
-          console.log('DEBUG: Generated samples for linearization:', {
-            keyPointsCount: normalizedPoints.length,
-            samplesCount: samples.length,
-            interpolationType: interpolationType,
-            firstFewSamples: samples.slice(0, 10),
-            lastFewSamples: samples.slice(-5)
-          });
-
-          // Capture current state for undo BEFORE making changes
-          CurveHistory.captureState(`Before: AI Global Linearization: "${description}"`);
-
-          // Create new linearization data
-          const newLinearizationData = {
-            samples: samples,
-            domainMin: 0,
-            domainMax: 1,
-            filename: `AI-Generated: ${description}`,
-            format: 'ai_generated'
-          };
-
-          // Apply the global linearization
-          linearizationData = newLinearizationData;
-          linearizationApplied = true;
-          
-          console.log('DEBUG: Global linearization data set:', {
-            samplesCount: newLinearizationData.samples.length,
-            firstSample: newLinearizationData.samples[0],
-            lastSample: newLinearizationData.samples[newLinearizationData.samples.length - 1],
-            linearizationApplied: linearizationApplied,
-            linearizationData: linearizationData
-          });
-
-          // Update UI elements
-          const globalToggle = document.getElementById('globalLinearizationToggle');
-          const globalBtn = document.getElementById('globalLinearizationBtn');
-          
-          if (globalToggle) {
-            globalToggle.disabled = false;
-            globalToggle.checked = true;
-            // CRITICAL: Dispatch change event to trigger all the update handlers
-            globalToggle.dispatchEvent(new Event('change', { bubbles: true }));
-            // Ensure graph updates immediately
-            setTimeout(() => updatePreview(), 50);
-          }
-          
-          if (globalBtn) {
-            globalBtn.setAttribute('data-tooltip', `AI Generated: ${description} (${samples.length} points)`);
-          }
-
-
-          // The toggle change event will trigger updatePreview(), so we don't need to call it here
-          
-          // Capture state AFTER the changes are complete (for redo functionality)
-          // Use setTimeout to ensure all UI updates are done first
-          setTimeout(() => {
-            CurveHistory.captureState(`After: AI Global Linearization: "${description}"`);
-          }, 100);
-
-          return {
-            success: true,
-            message: `Generated global ${interpolationType} linearization curve: "${description}" with ${samples.length} points`,
-            details: {
-              description,
-              interpolationType,
-              pointCount: samples.length,
-              keyPoints: parseResult.keyPoints.length
-            }
-          };
-
-        } catch (error) {
-          return {
-            success: false,
-            message: `Error generating global linearization curve: ${error.message}`
-          };
-        }
+        return { success: false, message: 'DEPRECATED: Natural-language global linearization is disabled. Compute numeric key points and use generate_global_custom_curve or setAIKeyPoints per channel.' };
       }
 
       /**
@@ -3730,261 +3618,7 @@ ARCHITECTURAL NOTES:
       }
 
       _parsePhotographyCurveDescription(description) {
-        try {
-          const desc = description.toLowerCase().trim();
-          let keyPoints = [];
-
-          // Define tonal regions
-          const regions = {
-            'highlights': { start: 0, mid: 12.5, end: 25 },
-            'lights': { start: 0, mid: 12.5, end: 25 },
-            'quarter-tones': { start: 15, mid: 25, end: 35 },
-            'midtones': { start: 25, mid: 50, end: 75 },
-            'three-quarter-tones': { start: 65, mid: 75, end: 85 },
-            'darks': { start: 75, mid: 87.5, end: 100 },
-            'shadows': { start: 75, mid: 87.5, end: 100 }
-          };
-
-          // Handle common curve shapes
-          if (desc.includes('s-curve') || desc.includes('s curve')) {
-            // Classic S-curve: drop shadows, lift highlights
-            keyPoints = [
-              { input: 0, output: 0 },    // Start at origin
-              { input: 25, output: 20 },  // Drop shadows
-              { input: 75, output: 85 },  // Lift highlights
-              { input: 100, output: 100 }
-            ];
-            return { success: true, keyPoints, description: 'Classic S-curve for contrast' };
-          }
-
-          if (desc.includes('gentle arc') || desc.includes('subtle curve')) {
-            // Gentle brightening curve
-            keyPoints = [
-              { input: 0, output: 0 },
-              { input: 50, output: 55 },
-              { input: 100, output: 100 }
-            ];
-            return { success: true, keyPoints, description: 'Gentle arc curve' };
-          }
-
-          if (desc.includes('linear')) {
-            // Linear curve (no change)
-            keyPoints = [
-              { input: 0, output: 0 },
-              { input: 100, output: 100 }
-            ];
-            return { success: true, keyPoints, description: 'Linear curve' };
-          }
-
-          // Handle alternative process specific requests (image-space domain)
-          // Detect process terms and provide guidance instead of generating a preset
-          const processTerms = [
-            'palladium','pt/pd','platinum','cyanotype','salt print','kallitype','kalitype','gum','gum bichromate','zone system','self-masking','compression curve'
-          ];
-          if (processTerms.some(term => desc.includes(term))) {
-            return {
-              success: false,
-              message: (
-                '**Process curves are image‑space. quadGEN works in printer‑space.**\n' +
-                '- Recommended: Work in positive space; invert your image when printing a digital negative.\n' +
-                '- Load EDN (.cube/.acv); mapped for Positive orientation (reverse + invert).\n' +
-                '- Or load LAB (.txt) from a printed positive result for linearization.\n' +
-                'Provide your EDN or LAB file and I\'ll apply it.'
-              )
-            };
-          }
-
-          // Handle alternative process specific curves (removed)
-          // Process-specific presets removed: palladium/pt-pd, cyanotype, salt print, kallitype, gum, zone system, compression/self-masking
-          // These belong to image-space workflows. In quadGEN (printer-space), use EDN LUT/.acv or LAB measurement data instead.
-
-          // Parse action-oriented commands
-          const actions = [];
-          
-          // Look for lift/raise commands
-          const liftMatches = desc.match(/(lift|raise|brighten|push up)\s+(shadows|darks|midtones|highlights|lights|quarter-tones|three-quarter-tones)(?:\s+by\s+(\d+))?/g);
-          if (liftMatches) {
-            liftMatches.forEach(match => {
-              const parts = match.match(/(lift|raise|brighten|push up)\s+(shadows|darks|midtones|highlights|lights|quarter-tones|three-quarter-tones)(?:\s+by\s+(\d+))?/);
-              if (parts) {
-                const region = parts[2];
-                const amount = parseInt(parts[3]) || 20; // Default lift amount
-                actions.push({ action: 'lift', region, amount });
-              }
-            });
-          }
-
-          // Look for drop/lower commands  
-          const dropMatches = desc.match(/(drop|lower|darken|pull down)\s+(shadows|darks|midtones|highlights|lights|quarter-tones|three-quarter-tones)(?:\s+by\s+(\d+))?/g);
-          if (dropMatches) {
-            dropMatches.forEach(match => {
-              const parts = match.match(/(drop|lower|darken|pull down)\s+(shadows|darks|midtones|highlights|lights|quarter-tones|three-quarter-tones)(?:\s+by\s+(\d+))?/);
-              if (parts) {
-                const region = parts[2];
-                const amount = parseInt(parts[3]) || 20; // Default drop amount
-                actions.push({ action: 'drop', region, amount });
-              }
-            });
-          }
-
-          // Look for roll off commands
-          const rollOffMatches = desc.match(/roll\s+off\s+(shadows|darks|midtones|highlights|lights)/g);
-          if (rollOffMatches) {
-            rollOffMatches.forEach(match => {
-              const parts = match.match(/roll\s+off\s+(shadows|darks|midtones|highlights|lights)/);
-              if (parts) {
-                const region = parts[1];
-                actions.push({ action: 'roll_off', region, amount: 15 });
-              }
-            });
-          }
-
-          // Look for crush/blow commands
-          if (desc.includes('crush') && (desc.includes('shadows') || desc.includes('blacks'))) {
-            actions.push({ action: 'crush', region: 'shadows', amount: 50 });
-          }
-          if (desc.includes('blow') && (desc.includes('highlights') || desc.includes('whites'))) {
-            actions.push({ action: 'blow', region: 'highlights', amount: 50 });
-          }
-
-          // Look for density and blocking commands
-          if (desc.includes('block') && (desc.includes('shadows') || desc.includes('darks'))) {
-            actions.push({ action: 'block_shadows', region: 'shadows', amount: 100 });
-          }
-          if (desc.includes('preserve highlight detail') || desc.includes('preserve highlights')) {
-            actions.push({ action: 'preserve_highlights', region: 'highlights', amount: 15 });
-          }
-
-          // Look for boost commands
-          const boostMatches = desc.match(/boost\s+(shadows|darks)\s+by\s+(\d+)/g);
-          if (boostMatches) {
-            boostMatches.forEach(match => {
-              const parts = match.match(/boost\s+(shadows|darks)\s+by\s+(\d+)/);
-              if (parts) {
-                const region = parts[1];
-                const amount = parseInt(parts[2]);
-                actions.push({ action: 'boost', region, amount });
-              }
-            });
-          }
-
-          // Look for exposure scale matching
-          const esMatches = desc.match(/(?:es|exposure scale)\s+(?:of\s+)?(\d+\.?\d*)/g);
-          if (esMatches) {
-            esMatches.forEach(match => {
-              const parts = match.match(/(?:es|exposure scale)\s+(?:of\s+)?(\d+\.?\d*)/);
-              if (parts) {
-                const esValue = parseFloat(parts[1]);
-                actions.push({ action: 'exposure_scale', value: esValue });
-              }
-            });
-          }
-
-          // Look for contact printing density
-          if (desc.includes('contact printing') && desc.includes('density')) {
-            actions.push({ action: 'contact_density', region: 'all', amount: 25 });
-          }
-
-          // Look for UV blocking
-          if (desc.includes('uv blocking') || desc.includes('uv density')) {
-            actions.push({ action: 'uv_blocking', region: 'all', amount: 30 });
-          }
-
-          // Look for peak/valley commands
-          const peakMatches = desc.match(/(?:peak|bump)\s+(?:at|in|around)\s+(\d+)(?:%|\s+percent)?/g);
-          if (peakMatches) {
-            peakMatches.forEach(match => {
-              const parts = match.match(/(?:peak|bump)\s+(?:at|in|around)\s+(\d+)/);
-              if (parts) {
-                const position = parseInt(parts[1]);
-                actions.push({ action: 'peak', position, amount: 30 });
-              }
-            });
-          }
-
-          // Convert actions to key points
-          if (actions.length > 0) {
-            // Start with linear curve
-            keyPoints = [{ input: 0, output: 0 }, { input: 100, output: 100 }];
-            
-            actions.forEach(action => {
-              const { action: actionType, region, position, amount, value } = action;
-              
-              if (actionType === 'peak') {
-                // Add peak at specific position
-                keyPoints.push({ input: position, output: position + amount });
-              } else if (actionType === 'exposure_scale') {
-                // Adjust curve based on exposure scale value
-                const contrast = Math.min(2.0, Math.max(0.5, value));
-                const midpoint = 50;
-                keyPoints = keyPoints.map(point => ({
-                  input: point.input,
-                  output: midpoint + (point.output - midpoint) * contrast
-                }));
-              } else if (actionType === 'contact_density') {
-                // Boost overall density for contact printing
-                keyPoints = keyPoints.map(point => ({
-                  input: point.input,
-                  output: Math.min(100, point.output + amount)
-                }));
-              } else if (actionType === 'uv_blocking') {
-                // Increase density for UV blocking
-                keyPoints = keyPoints.map(point => ({
-                  input: point.input,
-                  output: Math.min(100, point.output + (amount * (point.input / 100)))
-                }));
-              } else if (regions[region]) {
-                const regionData = regions[region];
-                
-                switch (actionType) {
-                  case 'lift':
-                    keyPoints.push({ input: regionData.mid, output: regionData.mid + amount });
-                    break;
-                  case 'drop':
-                    keyPoints.push({ input: regionData.mid, output: Math.max(0, regionData.mid - amount) });
-                    break;
-                  case 'roll_off':
-                    keyPoints.push({ input: regionData.start, output: regionData.start });
-                    keyPoints.push({ input: regionData.end, output: regionData.end - amount });
-                    break;
-                  case 'crush':
-                    keyPoints.push({ input: regionData.end, output: 5 });
-                    break;
-                  case 'blow':
-                    keyPoints.push({ input: regionData.start, output: 95 });
-                    break;
-                  case 'block_shadows':
-                    keyPoints.push({ input: 0, output: 0 });
-                    keyPoints.push({ input: regionData.end, output: 100 });
-                    break;
-                  case 'preserve_highlights':
-                    keyPoints.push({ input: regionData.start, output: regionData.start });
-                    keyPoints.push({ input: 100, output: 100 - amount });
-                    break;
-                  case 'boost':
-                    keyPoints.push({ input: regionData.mid, output: regionData.mid + amount });
-                    break;
-                }
-              }
-            });
-
-            // Sort and deduplicate keyPoints
-            keyPoints.sort((a, b) => a.input - b.input);
-            return { success: true, keyPoints, description: `Parsed ${actions.length} curve actions` };
-          }
-
-          // If no recognized patterns, return error
-          return {
-            success: false,
-            message: 'Could not parse curve description. Try terms like "lift shadows", "S-curve", "peak at 30%", etc.'
-          };
-
-        } catch (error) {
-          return {
-            success: false,
-            message: `Error parsing curve description: ${error.message}`
-          };
-        }
+        return { success: false, message: 'DEPRECATED: Natural-language curve parsing is disabled. Compute numeric key points and use setAIKeyPoints.' };
       }
 
       /**
@@ -4022,7 +3656,24 @@ ARCHITECTURAL NOTES:
           
           // Record the curve change action (only if not during batch operation)
           if (!CurveHistory.isBatchOperation) {
-            CurveHistory.recordChannelAction(channelName, 'curve', oldCurveData, [...curve]);
+            // Include keyPoints/meta extras when available (set by setAIKeyPoints/insert functions)
+            let extras = null;
+            const pending = window._pendingKeyPointsChange;
+            if (pending && pending.channelName === channelName) {
+              extras = {
+                oldKeyPoints: pending.oldKeyPoints ? pending.oldKeyPoints.map(p => ({ input: p.input, output: p.output })) : undefined,
+                newKeyPoints: pending.newKeyPoints ? pending.newKeyPoints.map(p => ({ input: p.input, output: p.output })) : undefined,
+                oldInterpolation: pending.oldInterpolation,
+                newInterpolation: pending.newInterpolation
+              };
+            } else {
+              // Fallback: attach current pre-change key points as oldKeyPoints if present
+              const existingKP = window.loadedQuadData?.keyPoints?.[channelName];
+              if (existingKP) {
+                extras = { oldKeyPoints: existingKP.map(p => ({ input: p.input, output: p.output })) };
+              }
+            }
+            CurveHistory.recordChannelAction(channelName, 'curve', oldCurveData, [...curve], extras);
           } else {
             console.log(`⏭️ Skipping individual curve action for ${channelName} (in batch mode)`);
           }
@@ -4137,6 +3788,246 @@ ARCHITECTURAL NOTES:
             success: false,
             message: `Error applying curve to channel: ${error.message}`
           };
+        }
+      }
+
+      /**
+       * Get stored AI key points for a channel (deep copy)
+       */
+      getAIKeyPoints(channelName) {
+        try {
+          channelName = this._resolveChannel(channelName);
+          const kp = window.loadedQuadData?.keyPoints?.[channelName];
+          if (!kp || kp.length < 2) {
+            return { success: false, message: `No AI key points stored for ${channelName}. Generate a curve first.` };
+          }
+          const interp = window.loadedQuadData?.keyPointsMeta?.[channelName]?.interpolationType || 'smooth';
+          return { success: true, keyPoints: kp.map(p => ({ input: p.input, output: p.output })), interpolationType: interp };
+        } catch (e) {
+          return { success: false, message: `Error getting AI key points: ${e.message}` };
+        }
+      }
+
+      /**
+       * Set AI key points for a channel and apply the resulting curve
+       */
+      setAIKeyPoints(channelName, points, interpolationType = 'smooth') {
+        try {
+          channelName = this._resolveChannel(channelName);
+          if (!Array.isArray(points) || points.length < 2) {
+            return { success: false, message: 'At least 2 key points are required' };
+          }
+          // Normalize and clamp
+          const norm = points.map((pt, i) => {
+            if (typeof pt?.input !== 'number' || typeof pt?.output !== 'number') {
+              throw new Error(`Invalid key point at index ${i}`);
+            }
+            return {
+              input: Math.max(0, Math.min(100, pt.input)),
+              output: Math.max(0, Math.min(100, pt.output))
+            };
+          });
+          // Sort by input
+          norm.sort((a, b) => a.input - b.input);
+          // Enforce strictly increasing input with small gap
+          const gap = 0.01;
+          for (let i = 1; i < norm.length; i++) {
+            if (norm[i].input <= norm[i - 1].input) {
+              norm[i].input = Math.min(100, norm[i - 1].input + gap);
+            }
+          }
+          // Interpolate to 256-point curve
+          const curve = this._interpolateCurve(norm, interpolationType === 'linear' ? 'linear' : 'smooth');
+          // Prepare pending key points metadata so history captures keyPoints along with curve
+          const oldKP = window.loadedQuadData?.keyPoints?.[channelName] ? window.loadedQuadData.keyPoints[channelName].map(p => ({ input: p.input, output: p.output })) : null;
+          const oldInterp = window.loadedQuadData?.keyPointsMeta?.[channelName]?.interpolationType || 'smooth';
+          window._pendingKeyPointsChange = {
+            channelName,
+            oldKeyPoints: oldKP,
+            newKeyPoints: norm.map(p => ({ input: p.input, output: p.output })),
+            oldInterpolation: oldInterp,
+            newInterpolation: (interpolationType === 'linear' ? 'linear' : 'smooth')
+          };
+          const applied = this._applyCurveToChannel(channelName, curve);
+          if (!applied.success) return applied;
+          // Persist
+          if (!window.loadedQuadData) window.loadedQuadData = {};
+          if (!window.loadedQuadData.keyPoints) window.loadedQuadData.keyPoints = {};
+          if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+          window.loadedQuadData.keyPoints[channelName] = norm.map(p => ({ input: p.input, output: p.output }));
+          window.loadedQuadData.keyPointsMeta[channelName] = { interpolationType: (interpolationType === 'linear' ? 'linear' : 'smooth') };
+          // Clear pending metadata
+          if (window._pendingKeyPointsChange && window._pendingKeyPointsChange.channelName === channelName) {
+            delete window._pendingKeyPointsChange;
+          }
+          updatePreview();
+          this._recordAction('setAIKeyPoints', { channelName, points: norm, interpolationType });
+          return { success: true, message: `Updated AI key points for ${channelName} (${norm.length} points)`, details: { keyPoints: norm } };
+        } catch (e) {
+          return { success: false, message: `Error setting AI key points: ${e.message}` };
+        }
+      }
+
+      /**
+       * Adjust a single AI key point by ordinal (1-based, endpoints included)
+       * Supports absolute or delta changes to input (X) and output (Y)
+       */
+      adjustAIKeyPointByIndex(channelName, ordinal, params = {}) {
+        try {
+          channelName = this._resolveChannel(channelName);
+          const kp = window.loadedQuadData?.keyPoints?.[channelName];
+          if (!kp || kp.length < 2) {
+            return { success: false, message: `No AI key points stored for ${channelName}. Generate a curve first.` };
+          }
+          if (typeof ordinal !== 'number' || ordinal < 1 || ordinal > kp.length) {
+            return { success: false, message: `Invalid ordinal ${ordinal}. Valid range: 1..${kp.length}` };
+          }
+          const interp = window.loadedQuadData?.keyPointsMeta?.[channelName]?.interpolationType || 'smooth';
+          const gap = 0.01;
+          const points = kp.map(p => ({ input: p.input, output: p.output }));
+          const idx = ordinal - 1;
+          let target = points[idx];
+          // Compute new values
+          let newInput = target.input;
+          let newOutput = target.output;
+          if (typeof params.inputPercent === 'number') newInput = params.inputPercent;
+          if (typeof params.deltaInput === 'number') newInput = newInput + params.deltaInput;
+          if (typeof params.outputPercent === 'number') newOutput = params.outputPercent;
+          if (typeof params.deltaOutput === 'number') newOutput = newOutput + params.deltaOutput;
+          // Clamp output
+          newOutput = Math.max(0, Math.min(100, newOutput));
+          // Bounds for input to maintain order
+          const prevX = idx > 0 ? points[idx - 1].input : 0;
+          const nextX = idx < points.length - 1 ? points[idx + 1].input : 100;
+          const minX = idx === 0 ? 0 : prevX + gap;
+          const maxX = idx === points.length - 1 ? 100 : nextX - gap;
+          newInput = Math.max(minX, Math.min(maxX, newInput));
+          // Apply and re-set
+          points[idx] = { input: newInput, output: newOutput };
+          return this.setAIKeyPoints(channelName, points, interp);
+        } catch (e) {
+          return { success: false, message: `Error adjusting AI key point: ${e.message}` };
+        }
+      }
+
+      /**
+       * Insert a new AI key point at a specific input (X). If output (Y) omitted, sample current AI curve at X.
+       */
+      insertAIKeyPointAt(channelName, inputPercent, outputPercent = null) {
+        try {
+          channelName = this._resolveChannel(channelName);
+          const kp = window.loadedQuadData?.keyPoints?.[channelName];
+          if (!kp || kp.length < 2) {
+            return { success: false, message: `No AI key points stored for ${channelName}. Generate a curve first.` };
+          }
+          let x = typeof inputPercent === 'number' ? inputPercent : null;
+          if (x === null || isNaN(x)) {
+            return { success: false, message: 'inputPercent is required and must be a number (0-100).' };
+          }
+          x = Math.max(0, Math.min(100, x));
+          const points = kp.map(p => ({ input: p.input, output: p.output }));
+          // Ensure sorted by input
+          points.sort((a, b) => a.input - b.input);
+          const gap = 0.01;
+          // Find neighbors
+          let insertIndex = 0;
+          while (insertIndex < points.length && points[insertIndex].input < x) insertIndex++;
+          const left = insertIndex > 0 ? points[insertIndex - 1] : null;
+          const right = insertIndex < points.length ? points[insertIndex] : null;
+          // Enforce spacing
+          const leftBound = left ? left.input + gap : 0;
+          const rightBound = right ? right.input - gap : 100;
+          if (left && right && (right.input - left.input) <= 2 * gap) {
+            return { success: false, message: `Not enough space to insert between ${left.input}% and ${right.input}%.` };
+          }
+          x = Math.max(leftBound, Math.min(rightBound, x));
+          // Determine Y
+          let y;
+          if (typeof outputPercent === 'number') {
+            y = Math.max(0, Math.min(100, outputPercent));
+          } else {
+            // Sample current AI curve using stored interpolation across AI key points
+            const interpType = window.loadedQuadData?.keyPointsMeta?.[channelName]?.interpolationType || 'smooth';
+            const xs = points.map(p => p.input);
+            const ys = points.map(p => p.output);
+            if (interpType === 'linear') {
+              if (x <= xs[0]) y = ys[0];
+              else if (x >= xs[xs.length - 1]) y = ys[ys.length - 1];
+              else {
+                let i = 0; while (i < xs.length - 1 && xs[i + 1] < x) i++;
+                const x0 = xs[i], x1 = xs[i + 1];
+                const y0 = ys[i], y1 = ys[i + 1];
+                const t = (x - x0) / (x1 - x0);
+                y = y0 + t * (y1 - y0);
+              }
+            } else {
+              y = this._pchipInterpolate(xs, ys, x);
+            }
+          }
+          // Insert and persist
+          points.splice(insertIndex, 0, { input: x, output: y });
+          const interpPersist = window.loadedQuadData?.keyPointsMeta?.[channelName]?.interpolationType || 'smooth';
+          return this.setAIKeyPoints(channelName, points, interpPersist);
+        } catch (e) {
+          return { success: false, message: `Error inserting AI key point: ${e.message}` };
+        }
+      }
+
+      /**
+       * Insert a new AI key point between two adjacent ordinals. If output omitted, sample current AI curve at midpoint.
+       */
+      insertAIKeyPointBetween(channelName, leftOrdinal, rightOrdinal, outputPercent = null) {
+        try {
+          channelName = this._resolveChannel(channelName);
+          const kp = window.loadedQuadData?.keyPoints?.[channelName];
+          if (!kp || kp.length < 2) {
+            return { success: false, message: `No AI key points stored for ${channelName}. Generate a curve first.` };
+          }
+          const n = kp.length;
+          if (typeof leftOrdinal !== 'number' || typeof rightOrdinal !== 'number') {
+            return { success: false, message: 'leftOrdinal and rightOrdinal must be numbers.' };
+          }
+          if (leftOrdinal < 1 || rightOrdinal < 1 || leftOrdinal > n || rightOrdinal > n) {
+            return { success: false, message: `Ordinals must be within 1..${n}.` };
+          }
+          if (rightOrdinal !== leftOrdinal + 1) {
+            return { success: false, message: 'Ordinals must be adjacent (rightOrdinal = leftOrdinal + 1).' };
+          }
+          const points = kp.map(p => ({ input: p.input, output: p.output }));
+          // Ensure sorted by input
+          points.sort((a, b) => a.input - b.input);
+          const left = points[leftOrdinal - 1];
+          const right = points[rightOrdinal - 1];
+          const gap = 0.01;
+          if ((right.input - left.input) <= 2 * gap) {
+            return { success: false, message: `Not enough space to insert between ${left.input}% and ${right.input}%.` };
+          }
+          // Midpoint X by default
+          let x = (left.input + right.input) / 2;
+          x = Math.max(left.input + gap, Math.min(right.input - gap, x));
+          // Determine Y
+          let y;
+          if (typeof outputPercent === 'number') {
+            y = Math.max(0, Math.min(100, outputPercent));
+          } else {
+            const interpType = window.loadedQuadData?.keyPointsMeta?.[channelName]?.interpolationType || 'smooth';
+            const xs = points.map(p => p.input);
+            const ys = points.map(p => p.output);
+            if (interpType === 'linear') {
+              const x0 = left.input, x1 = right.input;
+              const y0 = left.output, y1 = right.output;
+              const t = (x - x0) / (x1 - x0);
+              y = y0 + t * (y1 - y0);
+            } else {
+              y = this._pchipInterpolate(xs, ys, x);
+            }
+          }
+          // Insert and persist
+          points.splice(leftOrdinal, 0, { input: x, output: y });
+          const interpPersist = window.loadedQuadData?.keyPointsMeta?.[channelName]?.interpolationType || 'smooth';
+          return this.setAIKeyPoints(channelName, points, interpPersist);
+        } catch (e) {
+          return { success: false, message: `Error inserting AI key point: ${e.message}` };
         }
       }
     }
@@ -4494,7 +4385,7 @@ ARCHITECTURAL NOTES:
       },
       {
         name: "generate_custom_curve", 
-        description: "Generate a curve from explicit numerical key points (not for natural language descriptions - use generate_curve_from_description instead)",
+        description: "Generate a curve from explicit numerical key points (single channel). Prefer set_ai_key_points for AI-driven curves.",
         parameters: {
           type: "object",
           properties: {
@@ -4537,6 +4428,152 @@ ARCHITECTURAL NOTES:
         }
       },
       {
+        name: "get_ai_key_points",
+        description: "Get stored AI key points (endpoints included). If channelName is omitted, uses the first enabled channel.",
+        parameters: {
+          type: "object",
+          properties: {
+            channelName: {
+              type: "string",
+              description: "Optional channel name. If omitted, the first enabled channel is used.",
+              enum: ["K", "C", "M", "Y", "LC", "LM", "LK", "LLK", "V", "MK"]
+            }
+          },
+          required: []
+        }
+      },
+      {
+        name: "set_ai_key_points",
+        description: "Replace AI key points and reapply the curve. If channelName is omitted, uses the first enabled channel.",
+        parameters: {
+          type: "object",
+          properties: {
+            channelName: {
+              type: "string",
+              description: "Optional channel name. If omitted, the first enabled channel is used.",
+              enum: ["K", "C", "M", "Y", "LC", "LM", "LK", "LLK", "V", "MK"]
+            },
+            keyPoints: {
+              type: "array",
+              description: "Array of {input, output} in 0-100%",
+              items: {
+                type: "object",
+                properties: {
+                  input: { type: "number", minimum: 0, maximum: 100 },
+                  output: { type: "number", minimum: 0, maximum: 100 }
+                },
+                required: ["input", "output"]
+              },
+              minItems: 2
+            },
+            interpolationType: {
+              type: "string",
+              enum: ["linear", "smooth"],
+              default: "smooth"
+            }
+          },
+          required: ["keyPoints"]
+        }
+      },
+      {
+        name: "adjust_ai_key_point_by_index",
+        description: "Adjust a single AI key point by ordinal (1-based, endpoints included). If channelName is omitted, uses the first enabled channel.",
+        parameters: {
+          type: "object",
+          properties: {
+            channelName: {
+              type: "string",
+              description: "Optional channel name. If omitted, the first enabled channel is used.",
+              enum: ["K", "C", "M", "Y", "LC", "LM", "LK", "LLK", "V", "MK"]
+            },
+            ordinal: {
+              type: "integer",
+              description: "1-based index of the key point (including endpoints)",
+              minimum: 1
+            },
+            inputPercent: {
+              type: "number",
+              description: "Absolute new input (X) in % (0-100)",
+              minimum: 0,
+              maximum: 100
+            },
+            outputPercent: {
+              type: "number",
+              description: "Absolute new output (Y) in % (0-100)",
+              minimum: 0,
+              maximum: 100
+            },
+            deltaInput: {
+              type: "number",
+              description: "Delta to add to input (X) in percentage points"
+            },
+            deltaOutput: {
+              type: "number",
+              description: "Delta to add to output (Y) in percentage points"
+            }
+          },
+          required: ["ordinal"]
+        }
+      },
+      {
+        name: "insert_ai_key_point_at",
+        description: "Insert a new AI key point at a given input (X). If output is omitted, sample current AI curve at X.",
+        parameters: {
+          type: "object",
+          properties: {
+            channelName: {
+              type: "string",
+              description: "Optional channel name. If omitted, the first enabled channel is used.",
+              enum: ["K", "C", "M", "Y", "LC", "LM", "LK", "LLK", "V", "MK"]
+            },
+            inputPercent: {
+              type: "number",
+              description: "Input position (X) in % (0-100)",
+              minimum: 0,
+              maximum: 100
+            },
+            outputPercent: {
+              type: "number",
+              description: "Optional output (Y) in % (0-100) — if omitted, sampled from current AI curve",
+              minimum: 0,
+              maximum: 100
+            }
+          },
+          required: ["inputPercent"]
+        }
+      },
+      {
+        name: "insert_ai_key_point_between",
+        description: "Insert a new AI key point between two adjacent ordinals. If output is omitted, sample at the midpoint.",
+        parameters: {
+          type: "object",
+          properties: {
+            channelName: {
+              type: "string",
+              description: "Optional channel name. If omitted, the first enabled channel is used.",
+              enum: ["K", "C", "M", "Y", "LC", "LM", "LK", "LLK", "V", "MK"]
+            },
+            leftOrdinal: {
+              type: "integer",
+              description: "Left ordinal (1-based)",
+              minimum: 1
+            },
+            rightOrdinal: {
+              type: "integer",
+              description: "Right ordinal (must be leftOrdinal+1)",
+              minimum: 2
+            },
+            outputPercent: {
+              type: "number",
+              description: "Optional output (Y) in % (0-100) — if omitted, sampled from current AI curve",
+              minimum: 0,
+              maximum: 100
+            }
+          },
+          required: ["leftOrdinal", "rightOrdinal"]
+        }
+      },
+      {
         name: "copy_curve_to_channel",
         description: "Copy a custom curve from one channel to another channel",
         parameters: {
@@ -4556,70 +4593,7 @@ ARCHITECTURAL NOTES:
           required: ["sourceChannel", "targetChannel"]
         }
       },
-      {
-        name: "generate_curve_from_description", 
-        description: "Generate curves from natural language descriptions. CRITICAL: If user doesn't specify channelName, use the FIRST ENABLED channel from current state (percentage > 0%). Do NOT overthink or analyze 'appropriate' channels.",
-        parameters: {
-          type: "object",
-          properties: {
-            channelName: {
-              type: "string",
-              description: "Channel name to apply curve to. If not specified by user, use first enabled channel from current state.",
-              enum: ["K", "C", "M", "Y", "LC", "LM", "LK", "LLK", "V", "MK"]
-            },
-            description: {
-              type: "string", 
-              description: "Natural language curve description: 'palladium curve', 'cyanotype curve', 'salt print curve', 'S-curve', 'lift shadows', 'drop highlights', 'gentle arc', 'roll off highlights', etc."
-            },
-            interpolationType: {
-              type: "string",
-              description: "Interpolation method between points",
-              enum: ["linear", "smooth"],
-              default: "smooth"
-            }
-          },
-          required: ["channelName", "description"]
-        }
-      },
-      {
-        name: "generate_global_curve_from_description",
-        description: "Generate curves from natural language descriptions for multiple channels simultaneously. Use when user specifies multiple specific channels (e.g., 'LK and MK channels', 'C, M, Y channels'). Creates single batch undo action.",
-        parameters: {
-          type: "object",
-          properties: {
-            description: {
-              type: "string", 
-              description: "Natural language curve description: 'palladium curve', 'cyanotype curve', 'salt print curve', 'S-curve', 'lift shadows', 'drop highlights', 'gentle arc', 'roll off highlights', etc."
-            },
-            interpolationType: {
-              type: "string",
-              description: "Interpolation method between points",
-              enum: ["linear", "smooth"],
-              default: "smooth"
-            },
-            channelFilter: {
-              oneOf: [
-                {
-                  type: "string",
-                  enum: ["all", "enabled"],
-                  description: "Predefined channel filters"
-                },
-                {
-                  type: "array",
-                  items: {
-                    type: "string",
-                    enum: ["K", "C", "M", "Y", "LC", "LM", "LK", "LLK", "V", "MK"]
-                  },
-                  description: "Array of specific channel names"
-                }
-              ],
-              description: "Which channels to apply to: 'all' (all printer channels), 'enabled' (only enabled channels), or array of specific channels like ['LK', 'MK']",
-              default: "enabled"
-            }
-          },
-          required: ["description"]
-        }
-      },
+      
       {
         name: "generate_global_custom_curve",
         description: "Generate curves from explicit numerical key points for multiple channels simultaneously. Creates single batch undo action.",
@@ -4673,26 +4647,7 @@ ARCHITECTURAL NOTES:
           required: ["keyPoints"]
         }
       },
-      {
-        name: "generate_global_linearization_from_description",
-        description: "Generate system-wide linearization curve from natural language description. Used for paper/process simulation and global tonal adjustments.",
-        parameters: {
-          type: "object",
-          properties: {
-            description: {
-              type: "string", 
-              description: "Natural language curve description: 'palladium correction', 'cyanotype correction', 'salt print correction', 'zone system curve', 'gentle S-curve for entire system', etc."
-            },
-            interpolationType: {
-              type: "string",
-              description: "Interpolation method between points",
-              enum: ["linear", "smooth"],
-              default: "smooth"
-            }
-          },
-          required: ["description"]
-        }
-      },
+      
       {
         name: "get_current_state",
         description: "Get the current state of all channels and app settings",
@@ -4969,41 +4924,13 @@ ARCHITECTURAL NOTES:
               parameters.interpolationType || 'smooth'
             );
           
-          case 'generate_curve_from_description':
-            // Use AI decision logic to determine application method
-            const applicationMethod = this.determineApplicationMethod(userMessage);
-            if (applicationMethod === 'global') {
-              return quadGenActions.generateGlobalLinearizationFromDescription(
-                parameters.description,
-                parameters.interpolationType || 'smooth'
-              );
-            } else {
-              return quadGenActions.generateCurveFromDescription(
-                parameters.channelName,
-                parameters.description,
-                parameters.interpolationType || 'smooth'
-              );
-            }
           
-          case 'generate_global_curve_from_description':
-            // AI has already chosen this function for multi-channel curves - respect that choice
-            return quadGenActions.generateGlobalCurveFromDescription(
-              parameters.description,
-              parameters.interpolationType || 'smooth',
-              parameters.channelFilter || 'enabled'
-            );
           
           case 'generate_global_custom_curve':
             return quadGenActions.generateGlobalCustomCurve(
               parameters.keyPoints,
               parameters.interpolationType || 'smooth',
               parameters.channelFilter || 'enabled'
-            );
-          
-          case 'generate_global_linearization_from_description':
-            return quadGenActions.generateGlobalLinearizationFromDescription(
-              parameters.description,
-              parameters.interpolationType || 'smooth'
             );
           
           case 'get_current_state':
@@ -5017,6 +4944,21 @@ ARCHITECTURAL NOTES:
           
           case 'copy_curve_to_channel':
             return quadGenActions.copyCurveToChannel(parameters.sourceChannel, parameters.targetChannel);
+          case 'get_ai_key_points':
+            return quadGenActions.getAIKeyPoints(parameters.channelName);
+          case 'set_ai_key_points':
+            return quadGenActions.setAIKeyPoints(parameters.channelName, parameters.keyPoints, parameters.interpolationType);
+          case 'adjust_ai_key_point_by_index':
+            return quadGenActions.adjustAIKeyPointByIndex(parameters.channelName, parameters.ordinal, {
+              inputPercent: parameters.inputPercent,
+              outputPercent: parameters.outputPercent,
+              deltaInput: parameters.deltaInput,
+              deltaOutput: parameters.deltaOutput
+            });
+          case 'insert_ai_key_point_at':
+            return quadGenActions.insertAIKeyPointAt(parameters.channelName, parameters.inputPercent, parameters.outputPercent);
+          case 'insert_ai_key_point_between':
+            return quadGenActions.insertAIKeyPointBetween(parameters.channelName, parameters.leftOrdinal, parameters.rightOrdinal, parameters.outputPercent);
           
           default:
             return {
@@ -5095,16 +5037,13 @@ P600-P800 (8 channels, K switchable), P700-P900 (10 channels, MK+V dedicated)
 • Linearization files (.cube/.txt/.acv) compensate for paper/ink characteristics
 • Users can PASTE LAB measurement data or .cube LUT file data directly into chat for instant linearization
 • Positive-only workflow: quadGEN operates in printer-space. EDN LUT/.acv are mapped for Positive orientation (reverse + invert). Work in positive space; invert your image when printing a digital negative. Measurement linearization unchanged.
-• Custom curve generation: Create curves from photography terminology (e.g., "S-curve", "lift shadows", "palladium curve")
-• Photography terms: lift/drop shadows/midtones/highlights, crush/blow, peak/bump, gentle arc, roll off, S-curve
+• Curve creation: Compute explicit numeric key points yourself based on the user’s intent (e.g., gentle S-curve, lift shadows) and apply them with set_ai_key_points. Do NOT rely on built-in presets or pre-defined curves.
+• You may interpret photography terms (lift/drop shadows/midtones/highlights, crush/blow, peak/bump, gentle arc, roll off, S-curve), but YOU must choose the actual numerical key points.
 • Alt-process terms: palladium/pt-pd curve, cyanotype density, salt print range, gum curve, zone system, block shadows, boost shadows, preserve highlights, contact printing density, UV blocking, exposure scale (ES)
-• Global curve generation: Apply same curve to multiple channels with single undo action
-  - generate_global_curve_from_description: Natural language curves for multiple channels
-    * Use when user specifies MULTIPLE specific channels like "LK and MK" or "C, M, Y channels"
-    * channelFilter: ['LK', 'MK'] for specific channels, 'enabled' for all enabled, 'all' for all printer channels
-  - generate_global_custom_curve: Numerical key point curves for multiple channels
+• Global curve generation: Apply same numeric key points to multiple channels with a single undo action
+  - Prefer generate_global_custom_curve when the user mentions multiple channels (e.g., 'LK and MK', or 'C, M, Y').
   - Single batch undo reverts all affected channels simultaneously
-  - CRITICAL: Use generate_global_curve_from_description (NOT generate_curve_from_description) when user mentions multiple specific channels
+  - Do NOT use generate_curve_from_description or generate_global_curve_from_description (deprecated)
 • To save/download: "download the quad file", "generate quad file", "export quad"
 • Generated files work with QuadToneRIP print driver for precise ink control
 
@@ -5297,27 +5236,22 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
           const { assistantMessage, functionResults, rateLimitHeaders } = result;
           let finalMessage = assistantMessage || '';
 
-          // If the model didn't produce a narrative, synthesize a concise action summary or guidance
+          // If the model didn't produce a narrative, synthesize a concise action summary for AI key point updates
           try {
-            const hasGenDesc = (functionResults || []).some(fr => fr.function === 'generate_curve_from_description');
-            if ((!finalMessage || finalMessage.trim().length === 0) && hasGenDesc) {
+            const hasSetAI = (functionResults || []).some(fr => fr.function === 'set_ai_key_points');
+            if ((!finalMessage || finalMessage.trim().length === 0) && hasSetAI) {
               const parts = [];
               for (const fr of functionResults) {
-                if (fr.function === 'generate_curve_from_description') {
+                if (fr.function === 'set_ai_key_points') {
                   const res = fr.result || {};
                   const d = res.details;
                   const msg = res.message || '';
-                  if (res.success === false && msg) {
-                    // Provide user-facing guidance when parsing failed (e.g., process-specific requests)
-                    parts.push(msg);
+                  const safeMsg = msg || 'Applied AI key points.';
+                  if (d && Array.isArray(d.keyPoints)) {
+                    const kpPreview = d.keyPoints.map(p => `${Math.round(p.input)}→${Math.round(p.output)}`).join(', ');
+                    parts.push(`Action: ${safeMsg}\n- Preview: ${kpPreview}`);
                   } else {
-                    const safeMsg = msg || 'Curve generated.';
-                    if (d) {
-                      const kpPreview = Array.isArray(d.keyPoints) ? d.keyPoints.map(p => `${p.input}→${p.output}`).join(', ') : '';
-                      parts.push(`Action: ${safeMsg}\n- Channel: ${d.channelName}\n- Interpolation: ${d.interpolationType} (PCHIP for smooth)\n- Key points: ${d.keyPointsCount}${kpPreview ? `\n- Preview: ${kpPreview}` : ''}`);
-                    } else {
-                      parts.push(`Action: ${safeMsg}`);
-                    }
+                    parts.push(`Action: ${safeMsg}`);
                   }
                 }
               }
@@ -5980,7 +5914,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       ctx.textAlign = 'center';
       ctx.font = '14px system-ui';
       ctx.fillStyle = '#000000';
-      ctx.fillText('Input Level Percent', width / 2, height - 10);
+      ctx.fillText('Input Level %', width / 2, height - 10);
       
       ctx.save();
       // Shift Y-axis title left; clamp to keep it inside canvas
@@ -5991,7 +5925,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       ctx.translate(yAxisTitleX, height / 2);
       ctx.rotate(-Math.PI / 2);
       ctx.fillStyle = '#000000';
-      ctx.fillText('Ink Limit Percent', 0, 0);
+      ctx.fillText('Output Ink Level %', 0, 0);
       ctx.restore();
       
       // Draw curves and collect label info
@@ -6106,6 +6040,83 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         
         ctx.stroke();
+        
+        // Lightweight overlay: draw small boxes at AI key point inputs (when < 21)
+        try {
+          const isAI = !!(window.loadedQuadData && window.loadedQuadData.sources && window.loadedQuadData.sources[channelName] === 'ai');
+          const aiPoints = window.loadedQuadData && window.loadedQuadData.keyPoints && window.loadedQuadData.keyPoints[channelName];
+          if (isAI && Array.isArray(aiPoints) && aiPoints.length > 0 && aiPoints.length < 21) {
+            const boxSize = 6;
+            const sortedPoints = [...aiPoints].sort((a, b) => (a.input || 0) - (b.input || 0));
+            ctx.save();
+            // Use colored stroke for boxes; numbers drawn above with small background
+            ctx.strokeStyle = inkColor;
+            ctx.lineWidth = 1.5;
+            ctx.font = '10px system-ui';
+            ctx.textBaseline = 'bottom';
+            sortedPoints.forEach((pt, i) => {
+              // Normalize x from input percent
+              const xNorm = Math.max(0, Math.min(1, (pt.input || 0) / 100));
+              const x = leftPadding + xNorm * chartWidth;
+              // Sample current displayed curve for y so markers align with the plotted line
+              const idx = Math.round(xNorm * (values.length - 1));
+              const valuePercent = (values[idx] / maxValue) * 100;
+              const y = height - padding - (valuePercent / 100) * chartHeight;
+              // Center the box on (x,y) with half-pixel alignment for crispness
+              const hx = boxSize / 2;
+              const hy = boxSize / 2;
+              ctx.fillStyle = 'rgba(255,255,255,0.95)';
+              ctx.fillRect(Math.round(x - hx) + 0.5, Math.round(y - hy) + 0.5, boxSize, boxSize);
+              ctx.strokeRect(Math.round(x - hx) + 0.5, Math.round(y - hy) + 0.5, boxSize, boxSize);
+              // Draw ordinal number near the box
+              const num = String(i + 1);
+              // Position directly above the box, centered
+              ctx.textAlign = 'center';
+              let labelX = x;
+              let labelY = y - hy - 2;
+              // Shift horizontally near extremes: near Y=0 (bottom) shift right; near Y=100 (top) shift left
+              if (valuePercent <= 5) labelX += 8;
+              if (valuePercent >= 95) labelX -= 8;
+              // Clamp label Y within chart area
+              const minY = padding + 8;
+              const maxY = height - padding - 2;
+              if (labelY < minY) labelY = minY;
+              if (labelY > maxY) labelY = maxY;
+              // Draw colored background (ink color) behind the number for readability
+              const metrics = ctx.measureText(num);
+              const bgPadX = 3, bgPadY = 2;
+              const bgW = Math.ceil(metrics.width) + bgPadX * 2;
+              const bgH = 12; // approximate height for 10px font
+              const bgX = Math.round(labelX - bgW / 2) + 0.5;
+              // Move background up by 1px for tighter alignment
+              const bgY = Math.round(labelY - bgH + 1) + 0.5;
+              // Background as channel ink color
+              ctx.fillStyle = inkColor;
+              ctx.fillRect(bgX, bgY, bgW, bgH);
+              // Subtle border for separation
+              ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+              ctx.lineWidth = 1;
+              ctx.strokeRect(bgX, bgY, bgW, bgH);
+              // Choose text color (black/white) based on ink color luminance
+              (function chooseReadableText() {
+                let r = 0, g = 0, b = 0;
+                const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})/i.exec(inkColor);
+                if (m) {
+                  r = parseInt(m[1], 16);
+                  g = parseInt(m[2], 16);
+                  b = parseInt(m[3], 16);
+                }
+                const yiq = (r * 299 + g * 587 + b * 114) / 1000; // 0-255 scale
+                ctx.fillStyle = yiq >= 140 ? '#000000' : '#FFFFFF';
+              })();
+              // Draw number on top
+              ctx.fillText(num, Math.round(labelX) + 0.5, Math.round(labelY) + 0.5);
+            });
+            ctx.restore();
+          }
+        } catch (e) {
+          console.warn('AI key point overlay failed:', e);
+        }
         
         // Store label info for later positioning
         const actualEndValue = values[values.length - 1];
@@ -6312,7 +6323,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       /**
        * Record individual channel action
        */
-      recordChannelAction(channelName, actionType, oldValue, newValue) {
+      recordChannelAction(channelName, actionType, oldValue, newValue, extras = null) {
         // Don't record actions during restore operations
         if (this.isRestoring) {
           return;
@@ -6326,6 +6337,9 @@ DOMAIN_MAX 1.0 1.0 1.0
           newValue: newValue,
           description: `${actionType} ${channelName}: ${oldValue} → ${newValue}`
         };
+        if (extras && typeof extras === 'object') {
+          Object.assign(action, extras);
+        }
         
         
         this.actionHistory.push(action);
@@ -6651,6 +6665,13 @@ DOMAIN_MAX 1.0 1.0 1.0
               if (window.loadedQuadData?.curves?.[action.channelName]) {
                 delete window.loadedQuadData.curves[action.channelName];
               }
+              // Also remove any stored AI key points/meta
+              if (window.loadedQuadData?.keyPoints?.[action.channelName]) {
+                delete window.loadedQuadData.keyPoints[action.channelName];
+              }
+              if (window.loadedQuadData?.keyPointsMeta?.[action.channelName]) {
+                delete window.loadedQuadData.keyPointsMeta[action.channelName];
+              }
               
               // Re-enable per-channel linearization UI when removing AI curve
               const perChannelToggle = tr.querySelector('.per-channel-toggle');
@@ -6666,6 +6687,16 @@ DOMAIN_MAX 1.0 1.0 1.0
                 window.loadedQuadData.curves = {};
               }
               window.loadedQuadData.curves[action.channelName] = [...action.oldValue];
+
+              // Restore old AI key points/meta if provided
+              if (action.oldKeyPoints && Array.isArray(action.oldKeyPoints)) {
+                if (!window.loadedQuadData.keyPoints) window.loadedQuadData.keyPoints = {};
+                window.loadedQuadData.keyPoints[action.channelName] = action.oldKeyPoints.map(p => ({ input: p.input, output: p.output }));
+              }
+              if (action.oldInterpolation) {
+                if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+                window.loadedQuadData.keyPointsMeta[action.channelName] = { interpolationType: action.oldInterpolation };
+              }
               
               // Disable per-channel linearization when restoring AI curve
               if (perChannelLinearization[action.channelName]) {
@@ -6743,6 +6774,13 @@ DOMAIN_MAX 1.0 1.0 1.0
               if (window.loadedQuadData?.curves?.[action.channelName]) {
                 delete window.loadedQuadData.curves[action.channelName];
               }
+              // Also remove any stored AI key points/meta
+              if (window.loadedQuadData?.keyPoints?.[action.channelName]) {
+                delete window.loadedQuadData.keyPoints[action.channelName];
+              }
+              if (window.loadedQuadData?.keyPointsMeta?.[action.channelName]) {
+                delete window.loadedQuadData.keyPointsMeta[action.channelName];
+              }
               
               // Re-enable per-channel linearization UI when removing AI curve
               const perChannelToggle = tr.querySelector('.per-channel-toggle');
@@ -6769,6 +6807,16 @@ DOMAIN_MAX 1.0 1.0 1.0
               if (perChannelToggle) {
                 perChannelToggle.disabled = true;
                 perChannelToggle.checked = false;
+              }
+
+              // Restore old AI key points/meta if provided
+              if (action.oldKeyPoints && Array.isArray(action.oldKeyPoints)) {
+                if (!window.loadedQuadData.keyPoints) window.loadedQuadData.keyPoints = {};
+                window.loadedQuadData.keyPoints[action.channelName] = action.oldKeyPoints.map(p => ({ input: p.input, output: p.output }));
+              }
+              if (action.oldInterpolation) {
+                if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+                window.loadedQuadData.keyPointsMeta[action.channelName] = { interpolationType: action.oldInterpolation };
               }
             }
             
@@ -7048,6 +7096,13 @@ DOMAIN_MAX 1.0 1.0 1.0
               if (window.loadedQuadData?.curves?.[action.channelName]) {
                 delete window.loadedQuadData.curves[action.channelName];
               }
+              // Remove AI key points/meta as well
+              if (window.loadedQuadData?.keyPoints?.[action.channelName]) {
+                delete window.loadedQuadData.keyPoints[action.channelName];
+              }
+              if (window.loadedQuadData?.keyPointsMeta?.[action.channelName]) {
+                delete window.loadedQuadData.keyPointsMeta[action.channelName];
+              }
               
               // Re-enable per-channel linearization UI when removing AI curve
               const perChannelToggle = tr.querySelector('.per-channel-toggle');
@@ -7074,6 +7129,16 @@ DOMAIN_MAX 1.0 1.0 1.0
               if (perChannelToggle) {
                 perChannelToggle.disabled = true;
                 perChannelToggle.checked = false;
+              }
+
+              // Restore new AI key points/meta if provided
+              if (action.newKeyPoints && Array.isArray(action.newKeyPoints)) {
+                if (!window.loadedQuadData.keyPoints) window.loadedQuadData.keyPoints = {};
+                window.loadedQuadData.keyPoints[action.channelName] = action.newKeyPoints.map(p => ({ input: p.input, output: p.output }));
+              }
+              if (action.newInterpolation) {
+                if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+                window.loadedQuadData.keyPointsMeta[action.channelName] = { interpolationType: action.newInterpolation };
               }
             }
             break;
