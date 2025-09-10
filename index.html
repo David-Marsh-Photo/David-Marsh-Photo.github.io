@@ -1391,7 +1391,7 @@ ARCHITECTURAL NOTES:
                     <button id="editPointRight" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold" title="Next point">▶</button>
                   </div>
                 </div>
-                <button id="editDeleteBtn" class="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded font-bold" title="Delete selected point">✖ Delete</button>
+                <button id="editDeleteBtn" class="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded font-bold" title="Delete selected point">✖︎ Delete</button>
               </div>
               <div class="flex items-center justify-center gap-2">
                 <button id="editNudgeYUp" class="px-2 py-1 text-xs rounded font-bold nudge-btn" title="Nudge Y up">△</button>
@@ -1613,7 +1613,21 @@ ARCHITECTURAL NOTES:
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
         </svg>
       </button>
-      <h2 class="text-xl font-bold mb-4">Help</h2>
+      <div class="flex items-center gap-3 mb-4">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 160 160" role="img">
+          <path d="M16 132H144" fill="none" stroke="#1A1A1A" stroke-width="8" stroke-linecap="round"/>
+          <rect x="20" y="90" width="20" height="40" rx="6" ry="6" fill="#00B5E2"/>
+          <rect x="52" y="70" width="20" height="60" rx="6" ry="6" fill="#FF2A8A"/>
+          <rect x="84" y="50" width="20" height="80" rx="6" ry="6" fill="#FFD400"/>
+          <rect x="116" y="22" width="20" height="110" rx="6" ry="6" fill="#1A1A1A"/>
+          <path d="M30 88 C 44 84, 50 72, 62 68 S 86 50, 94 48 S 118 28, 126 18" fill="none" stroke="#1A1A1A" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="30" cy="88" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
+          <circle cx="62" cy="68" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
+          <circle cx="94" cy="48" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
+          <circle cx="126" cy="18" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
+        </svg>
+        <h2 class="text-xl font-bold">quadGEN <span id="helpAppVersion" class="text-gray-400 text-base"></span></h2>
+      </div>
       <div id="helpContent" class="text-sm text-gray-700 space-y-4 max-h-[70vh] overflow-y-auto"></div>
     </div>
   </div>
@@ -1729,9 +1743,102 @@ ARCHITECTURAL NOTES:
     </div>
   </div>
 
+  <!-- Embedded README fallback for Help popup (used if fetch fails) -->
+  <script type="text/markdown" id="embeddedReadme">
+## 1. Overview  
+quadGEN is a free, browser‑based tool for generating and refining `.quad` files used with QuadToneRIP. It supports Smart Curves (formerly “AI curves”), LAB/LUT/ACV inputs, and an Edit Mode for precise, point‑based curve edits. Core features work fully offline; the optional AI assistant requires network access.  
+
+quadGEN is designed for photographers, printmakers, and alt‑process practitioners who create digital negatives or monochrome prints and need reliable tonal calibration.  
+
+### What is QuadToneRIP?  
+QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high‑quality monochrome printing using multi‑shade ink sets. QTR uses `.quad` files to determine how much ink each printer channel lays down at every input level. A `.quad` file contains 256‑sample curves (0–100% input) for each channel supported by the printer (e.g., K, C, M, Y, LC, LM, LK, LLK, OR, GR, etc.). When you select a `.quad` in your QTR workflow (often via Print‑Tool on macOS), QTR reads these curves and applies the specified per‑channel ink outputs to render your print. quadGEN’s role is to help you build and refine those `.quad` curves so QTR can produce linear, predictable output.
+
+—
+
+## 2. Installation and Access  
+- Online: open `quadgen.html` in a modern browser (Chrome, Firefox, Safari).  
+- Offline: download `quadgen.html` and open it locally (no install required).  
+- Platforms: macOS, Windows, Linux (desktop recommended).  
+- Network note: the AI assistant features require internet; all manual editing and exports do not.  
+
+—
+
+## 3. Quick Start (Beta v2.0)  
+1) Choose your printer and set ink limits (per channel).
+2) Start with Linear Ramp, or  
+3) Load data: `.quad` (inspect/correct), LAB `.txt`, LUT `.cube` (1D/3D), Photoshop `.acv`, or enter Manual L*.  
+4) Export the corrected `.quad`, print a step wedge target.
+5) Measure print and load data, repeat if necessary.  
+
+—
+
+## 4. Features (highlights)  
+- Supports most Epson printers.
+- Quickly export linear ramps with any single ink channel or combination of channels
+- Inputs: `.quad`, LAB `.txt`, LUT `.cube` (1D/3D), `.acv`, and manually entered L* values.
+- Support for evenly spaced or irregularly spaced targets.
+- Edit Mode: edit the graph data anytime. 
+- Undo/Redo: full history for insert/adjust/delete/recompute and Edit Mode toggles.   
+- Recompute key points: simplify/extract Smart key points from a loaded `.quad` with tolerance and max‑point controls.  
+- Lab Tech: AI-linked assistant that can answer questions or perform actions.
+
+—
+
+## 5. Usage Examples  
+- Digital negatives: calibrate for cyanotype, Pt/Pd, kallitype, polymer photogravure.  
+- Inkjet linearization: refine monochrome response for QTR printing.  
+- Curve editing: Enter Edit Mode, nudge the selected ordinal, and export.  
+- Conversion: load LAB/LUT/ACV, export .quad to integrate corrections.  
+
+—
+
+## 6. Best Practices  
+- If your process requires a negative, invert it in Photoshop or similar too before printing with your .quad
+- Measure the final positive print (not the negative).  
+- Keep endpoints anchored and curves monotonic for stable results.  
+- Use the ink limit to set where you get your best black (or white) 
+- Make incremental edits; use Undo/Redo to explore safely.  
+
+—
+
+## 7. Troubleshooting & FAQ  
+- Offline use: the Lab Tech assistant is unavailable offline; manual edits and exports still work.  
+- Looks different than Photoshop or other curve tools: quadGEN plots printer‑space input % (X) vs ink output % (Y) with 0% = white (no ink) at the origin. Many curve tools plot image tone with 0,0 = black, so the visual orientation differs. Compare shapes rather than absolute orientation when cross‑checking.  
+- Graph response expectations: with X = input level % and Y = ink output %, upward corrections add ink (darker output) and downward corrections reduce ink (lighter output). Example: If midtones are too light, expect the correction to rise in the mid‑range; if shadows are too dark, expect a downward adjustment in the shadow region.  
+
+—
+
+## 8. Contributing / Feedback  
+- For feedback or questions contact David Marsh - marshmonkey@gmail.com  
+
+—
+
+## 9. External References  
+
+- Easy Digital Negatives (EDN): framework for building correction LUTs used with digital negatives.
+  - How to use with quadGEN: export your EDN correction as a `.cube` LUT and load it via “Load LUT (.cube)” (global or per‑channel). quadGEN applies the LUT in positive space and plots the result. If further refinement is needed, convert to editable Smart key points, make changes in Edit Mode, then export a corrected `.quad`.
+  - Link: http://www.easydigitalnegatives.com/
+
+- QuadToneRIP (QTR): RIP used for monochrome inkjet printing and applying `.quad` curves.
+  - How to use with quadGEN: after exporting a `.quad` from quadGEN, install it in QTR’s quad folder for your printer, then select it when printing. Use QTR to print step wedges/targets that you later measure and feed back into quadGEN for iteration.
+  - Link: https://www.quadtonerip.com/
+
+- Print‑Tool (on the QuadToneRIP site): utility for printing images/targets through QTR on macOS with proper color‑management handling.
+  - How to use with quadGEN: print your step wedge/target through Print‑Tool with the chosen `.quad` to generate measurement prints for calibration. Ensure color management is off and that you select the intended `.quad`.
+  - Link: https://www.quadtonerip.com/html/QTRprinttool.html
+
+- Color Muse 2: handheld colorimeter used to capture LAB measurements from printed wedges/targets.
+  - How to use with quadGEN: measure your printed wedge and export LAB data as `.txt`. In quadGEN, choose “Load LAB (.txt)” to import. The expected format is a GRAY column (0–100) and LAB L*,A*,B* columns. Tip: quadGEN can generate a `LAB-Data.txt` template with the correct header for Color Muse workflows. Most accurate consumer-level way to measure for calibration.
+  - Link: https://amzn.to/45R8rof (affiliate link)
+
+- Clay Harmon’s target file: 21-step target for calibration.
+  - How to use with quadGEN: print the target via with Print‑Tool using your current `.quad`. Measure the print (e.g., with Color Muse 2) and import the LAB `.txt` into quadGEN. Export the corrected `.quad`, then reprint and iterate until linear.
+  - Link: https://clayharmonblog.com/downloads/25-step-ColorMuse-target.zip
+  </script>
+
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta v2.0';
+    const APP_VERSION = 'Beta v2.0.1';
     // Global debug logging toggle for non-AI logs
     var DEBUG_LOGS = false;
     // AI provider selection (code-level switch, no UI): 'anthropic' or 'openai'
@@ -1747,6 +1854,15 @@ ARCHITECTURAL NOTES:
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v2.0.1': {
+        date: '2025-09-09',
+        title: 'Help Window Uses Embedded README',
+        aboutDialog: [
+          { label: 'Help Content', desc: 'Help window now renders the embedded quadGEN README (Overview, Quick Start, Features, Troubleshooting, External References). No separate inline help to maintain.' },
+          { label: 'Header', desc: 'Help header matches the main app (logo + version).' },
+          { label: 'Docs Parity', desc: 'Help content mirrors quadGEN_README; small Markdown renderer added for headings/lists/links/code.' }
+        ]
+      },
       'v2.0': {
         date: '2025-09-09',
         title: 'Edit Mode, Smart Curves, Robust History',
@@ -14217,45 +14333,71 @@ DOMAIN_MAX 1.0 1.0 1.0
       originalConsoleWarn.apply(console, args);
     };
 
-    // Help popup content
-    function populateHelp() {
+    // Minimal Markdown renderer for Help popup
+    function renderMarkdown(md){
+      // Strip leading top-level title if it's just the app name
+      try { md = md.replace(/^\s*#\s*quadGEN\s*(?:\r?\n|$)/i, ''); } catch {}
+      function esc(s){
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+      function inline(s){
+        let t = esc(s);
+        t = t.replace(/`([^`]+)`/g,'<code>$1</code>');
+        t = t.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+        return t;
+      }
+      const lines = md.split(/\r?\n/);
+      const out = [];
+      let inUl = false, inOl = false;
+      const closeLists = () => { if (inUl){ out.push('</ul>'); inUl=false; } if (inOl){ out.push('</ol>'); inOl=false; } };
+      for (const raw of lines){
+        const line = raw; const trim = line.trim();
+        if (trim === '') { closeLists(); continue; }
+        if (/^#{1,6}\s/.test(trim)){
+          closeLists();
+          const level = Math.min((trim.match(/^#+/)[0] || '#').length + 1, 4); // map #->h2, ##->h3, etc.
+          const text = trim.replace(/^#+\s*/,'');
+          out.push(`<h${level}>${inline(text)}</h${level}>`);
+          continue;
+        }
+        if (/^[-—]{1,}\s*$/.test(trim)) { closeLists(); out.push('<hr>'); continue; }
+        if (/^\d+[).]\s+/.test(trim)){
+          if (!inOl){ closeLists(); out.push('<ol>'); inOl=true; }
+          out.push(`<li>${inline(trim.replace(/^\d+[).]\s+/,''))}</li>`);
+          continue;
+        }
+        if (/^-\s+/.test(trim)){
+          if (!inUl){ closeLists(); out.push('<ul>'); inUl=true; }
+          out.push(`<li>${inline(trim.replace(/^-\s+/,''))}</li>`);
+          continue;
+        }
+        closeLists();
+        out.push(`<p>${inline(line)}</p>`);
+      }
+      closeLists();
+      return out.join('\n');
+    }
+
+    async function loadReadmeText(){
+      // Read embedded README content from this HTML file (no external fetch)
+      try {
+        const embedded = document.getElementById('embeddedReadme');
+        if (embedded) return embedded.textContent || embedded.innerText || '';
+      } catch (e) {}
+      return '';
+    }
+
+    // Help popup content (reads quadGEN_README.md and renders it)
+    async function populateHelp() {
       const helpContent = document.getElementById('helpContent');
       if (!helpContent) return;
-      const html = `
-        <div class="space-y-6">
-          <div>
-            <p class="font-medium text-lg mb-2">Overview</p>
-            <p class="text-sm text-gray-600">quadGEN helps you build and refine .quad curves for QuadToneRIP. Load measurement data or curve files, preview the tonal response, adjust channel limits, and export a corrected .quad for printing.</p>
-            <div class="text-xs text-gray-600 mt-2">
-              Default channel behavior: if the selected printer has an <code>MK</code> channel, MK starts enabled at 100%. Otherwise, <code>K</code> starts enabled at 100%. All other channels start disabled.
-            </div>
-          </div>
-          <div>
-            <p class="font-medium text-lg mb-2">Plot Semantics</p>
-            <p class="text-sm text-gray-600">quadGEN plots ink mapping: Y = output ink level vs X = input ink level; Y = X means no correction. Too dark at input X → reduce ink → curve dips below diagonal; too light → add ink → curve rises above. Some tools mirror X (curves view) or plot luminance instead of ink, so features can appear at 1−X or on the opposite side of the diagonal.</p>
-          </div>
-          <div id="helpEditModeSection">
-            <p class="font-medium text-lg mb-2">Edit Mode</p>
-            <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
-              <li>Toggle in the Edit Curves panel: “Enter Edit Mode” (slate) / “End Edit Mode” (black). Off by default.</li>
-              <li>When ON: Selected channel draws on top; other enabled channels dim to 50%.</li>
-              <li>Only the selected channel shows key‑point markers and ordinal labels; unselected channels hide both.</li>
-              <li>Selected point label is bold and larger; marker outline matches the channel color.</li>
-              <li>When OFF: Edits are disabled, key‑point overlays are hidden, and smoothing is disabled.</li>
-            </ul>
-          </div>
-        </div>
-      `;
-      helpContent.innerHTML = html;
-      // Wire sample buttons
-      const helpLoadLab = document.getElementById('helpLoadSampleLab');
-      if (helpLoadLab) helpLoadLab.addEventListener('click', () => loadSampleData('labData'));
-      const helpLoadCube = document.getElementById('helpLoadSampleCube');
-      if (helpLoadCube) helpLoadCube.addEventListener('click', () => loadSampleData('cube'));
-      const helpDlLab = document.getElementById('helpDownloadSampleLab');
-      if (helpDlLab) helpDlLab.addEventListener('click', (e) => { e.preventDefault(); downloadFile(SAMPLE_DATA.colorMuse, 'LAB-Data-sample.txt', 'text/plain'); });
-      const helpDlCube = document.getElementById('helpDownloadSampleCube');
-      if (helpDlCube) helpDlCube.addEventListener('click', (e) => { e.preventDefault(); downloadFile(SAMPLE_DATA.gammaCube, 'LUT_sample.cube', 'text/plain'); });
+      helpContent.innerHTML = '<div class="text-xs text-gray-500">Loading README…</div>';
+      const md = await loadReadmeText();
+      if (md) {
+        helpContent.innerHTML = renderMarkdown(md);
+      } else {
+        helpContent.innerHTML = '<div class="text-sm text-red-600">README not available.</div>';
+      }
     }
 
     // Wire sample buttons in Global Correction Help popup
@@ -14437,6 +14579,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       document.title = `quadGEN ${APP_VERSION}`;
       document.getElementById('appVersion').textContent = APP_VERSION;
       document.getElementById('infoPopupTitle').textContent = `quadGEN ${APP_VERSION}`;
+      try { document.getElementById('helpAppVersion').textContent = APP_VERSION; } catch {}
     }
     
     // Initial setup with error handling
