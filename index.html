@@ -1139,6 +1139,10 @@ ARCHITECTURAL NOTES:
     #helpContent ul { list-style: disc; list-style-position: inside; }
     #helpContent ol { list-style: decimal; list-style-position: inside; }
     #helpContent li { margin: 0.125rem 0; }
+    /* Glossary definition list styling */
+    #helpContent dl { margin: 0.25rem 0 0.75rem 0; }
+    #helpContent dt { font-weight: 700; margin-top: 0.75rem; color: #111827; }
+    #helpContent dd { margin: 0.15rem 0 0.5rem 0.75rem; color: #374151; }
     #helpContent code { background: #f3f4f6; padding: 0 0.25rem; border-radius: 0.25rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     #helpContent a { color: #2563eb; text-decoration: underline; }
     #helpContent a:hover { color: #1d4ed8; }
@@ -1191,12 +1195,10 @@ ARCHITECTURAL NOTES:
                 <option value="P4-6-8000">P4-6-8000</option>
               </select>
               <p id="channelInfo" class="flex-1 text-xs text-gray-600 ml-1"></p>
-              <button id="helpBtn" class="text-xs text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 transition-colors ml-auto font-bold" title="Help and quick start">
+              <button id="helpBtn" class="text-xs bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1 transition-colors ml-auto font-bold" title="Help and quick start">
                 Help
               </button>
-              <button id="infoBtn" class="text-xs text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 transition-colors ml-2 font-bold" title="Version info">
-                About
-              </button>
+              
             </div>
           </div>
           
@@ -1513,22 +1515,7 @@ ARCHITECTURAL NOTES:
       </div>
     </section>
     
-  <!-- Info Popup -->
-  <div id="infoPopup" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] p-6 relative">
-        <button id="closeInfoBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
-        
-        <h2 id="infoPopupTitle" class="text-xl font-bold mb-4">quadGEN</h2>
-        
-        <div id="changelogContent" class="text-sm text-gray-700 space-y-4 max-h-[70vh] overflow-y-auto">
-          <!-- Changelog will be dynamically populated from main documentation -->
-        </div>
-      </div>
-    </div>
+  
   </main>
 
   <!-- Manual L* Entry Modal -->
@@ -1626,7 +1613,7 @@ ARCHITECTURAL NOTES:
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
         </svg>
       </button>
-      <div class="flex items-center gap-3 mb-4">
+      <div class="flex items-center gap-3 mb-2">
         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 160 160" role="img">
           <path d="M16 132H144" fill="none" stroke="#1A1A1A" stroke-width="8" stroke-linecap="round"/>
           <rect x="20" y="90" width="20" height="40" rx="6" ry="6" fill="#00B5E2"/>
@@ -1640,6 +1627,11 @@ ARCHITECTURAL NOTES:
           <circle cx="126" cy="18" r="6" fill="white" stroke="#1A1A1A" stroke-width="2"/>
         </svg>
         <h2 class="text-xl font-bold">quadGEN <span id="helpAppVersion" class="text-gray-400 text-base"></span></h2>
+      </div>
+      <div id="helpTabs" class="mb-2 border-b border-gray-200 flex items-center gap-2">
+        <button id="helpTabReadme" class="px-3 py-1 text-sm font-bold text-gray-800 border-b-2 border-slate-700">ReadMe</button>
+        <button id="helpTabGlossary" class="px-3 py-1 text-sm font-bold text-gray-500 hover:text-gray-700 border-b-2 border-transparent">Glossary</button>
+        <button id="helpTabHistory" class="px-3 py-1 text-sm font-bold text-gray-500 hover:text-gray-700 border-b-2 border-transparent ml-auto">Version History</button>
       </div>
       <div id="helpContent" class="text-sm text-gray-700 space-y-4 max-h-[70vh] overflow-y-auto"></div>
     </div>
@@ -1851,7 +1843,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta v2.0.1';
+    const APP_VERSION = 'Beta v2.0.2';
     // Global debug logging toggle for non-AI logs
     var DEBUG_LOGS = false;
     // AI provider selection (code-level switch, no UI): 'anthropic' or 'openai'
@@ -1867,13 +1859,22 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v2.0.2': {
+        date: '2025-09-10',
+        title: 'Tabbed Help + About Removed',
+        aboutDialog: [
+          { label: 'Help Tabs', desc: 'Help window now has ReadMe, Glossary, and Version History tabs.' },
+          { label: 'Version History', desc: 'Moved from the separate About dialog into Help → Version History.' },
+          { label: 'About Removed', desc: 'Removed the About button and popup; all info is available in Help.' }
+        ]
+      },
       'v2.0.1': {
         date: '2025-09-09',
-        title: 'Help Window Uses Embedded README',
+        title: 'Embedded Help Window',
         aboutDialog: [
-          { label: 'Help Content', desc: 'Help window now renders the embedded quadGEN README (Overview, Quick Start, Features, Troubleshooting, External References). No separate inline help to maintain.' },
+          { label: 'Help Content', desc: 'Help window now displays embedded documentation (Overview, Quick Start, Features, Troubleshooting, External References). No separate inline help to maintain.' },
           { label: 'Header', desc: 'Help header matches the main app (logo + version).' },
-          { label: 'Docs Parity', desc: 'Help content mirrors quadGEN_README; small Markdown renderer added for headings/lists/links/code.' }
+          { label: 'Formatting', desc: 'Help content is styled for readability; headings, lists, links, and code are preserved.' }
         ]
       },
       'v2.0': {
@@ -7224,15 +7225,15 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       notesContent: document.getElementById('notesContent'),
       notesChevron: document.getElementById('notesChevron'),
       helpBtn: document.getElementById('helpBtn'),
-      infoBtn: document.getElementById('infoBtn'),
-      infoPopup: document.getElementById('infoPopup'),
-      closeInfoBtn: document.getElementById('closeInfoBtn'),
       deltaSummary: document.getElementById('deltaSummary'),
       perChannelDeltaSelect: document.getElementById('perChannelDeltaSelect'),
       perChannelDeltaSummary: document.getElementById('perChannelDeltaSummary'),
       helpPopup: document.getElementById('helpPopup'),
       closeHelpBtn: document.getElementById('closeHelpBtn'),
       helpContent: document.getElementById('helpContent'),
+      helpTabReadme: document.getElementById('helpTabReadme'),
+      helpTabGlossary: document.getElementById('helpTabGlossary'),
+      helpTabHistory: document.getElementById('helpTabHistory'),
       globalCorrectionHelpBtn: document.getElementById('globalCorrectionHelpBtn'),
       globalCorrectionHelpPopup: document.getElementById('globalCorrectionHelpPopup'),
       closeGlobalCorrectionHelpBtn: document.getElementById('closeGlobalCorrectionHelpBtn'),
@@ -7249,7 +7250,6 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       loadSampleCube: document.getElementById('loadSampleCube'),
       pageTitle: document.getElementById('pageTitle'),
       appVersion: document.getElementById('appVersion'),
-      infoPopupTitle: document.getElementById('infoPopupTitle'),
       // Edit Curves panel
       editSmoothingSlider: document.getElementById('editSmoothingSlider'),
       editSmoothingValue: document.getElementById('editSmoothingValue'),
@@ -7382,7 +7382,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
     function initializeVersionNumbers() {
       elements.pageTitle.textContent = `quadGEN ${APP_VERSION}`;
       elements.appVersion.textContent = APP_VERSION;
-      elements.infoPopupTitle.textContent = `quadGEN ${APP_VERSION}`;
+      
     }
 
     // Initialize version numbers when DOM is ready
@@ -14299,28 +14299,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       downloadFile(content, filename, 'text/plain');
     });
     
-    // Function to populate changelog from main documentation
-    function populateChangelog() {
-      const changelogContent = document.getElementById('changelogContent');
-      if (!changelogContent) return;
-      
-      // Build a clean, scannable About layout
-      const licenseYear = new Date().getFullYear();
-      const changelogHtml = `
-        <div class="space-y-6">
-          <div class="text-xs text-gray-500">
-            MIT License — quadgen.html © ${licenseYear} David Marsh. HTML file only. Full text is in the page source.
-          </div>
-          <div>
-            <p class="font-medium text-lg mb-2">Version History</p>
-            ${generateAboutDialogVersionHistory()}
-          </div>
-        </div>
-      `;
-      
-      changelogContent.innerHTML = changelogHtml;
-      // About dialog shows version history and license notice.
-    }
+    // [removed] About/Changelog popup rendering now lives under Help → Version History tab
     
     // Log capturing system
     const logHistory = [];
@@ -14400,11 +14379,9 @@ DOMAIN_MAX 1.0 1.0 1.0
       return '';
     }
 
-    // Help popup content (embedded HTML section)
-    function populateHelp() {
-      const helpContent = document.getElementById('helpContent');
-      if (!helpContent) return;
-      helpContent.innerHTML = `
+    // Readme tab content (embedded HTML)
+    function getHelpReadmeHTML(){
+      return `
         <section class="prose prose-gray max-w-none p-6 bg-white rounded-2xl shadow">
           <h2 id="overview">1. Overview</h2>
           <p>
@@ -14509,6 +14486,141 @@ DOMAIN_MAX 1.0 1.0 1.0
       `;
     }
 
+    // Glossary tab content (embedded, single source of truth)
+    function getHelpGlossaryHTML(){
+      return `
+        <section class="prose prose-gray max-w-none p-6 bg-white rounded-2xl shadow">
+          <h2>quadGEN Glossary</h2>
+          <p>A concise, alphabetized reference to key terms used in quadGEN, QuadToneRIP, and related workflows.</p>
+          <dl>
+            <dt>ACV (Photoshop Curves)</dt>
+            <dd>Binary curve format used by Adobe Photoshop (<code>.acv</code>). In quadGEN: can be loaded as a global correction or per-channel adapter; anchors can seed editable Smart key points.</dd>
+
+            <dt>Channel</dt>
+            <dd>A printer ink channel (e.g., K, C, M, Y, LC, LM, LK, LLK, OR, GR, MK, V). Channels can be enabled/disabled and have independent End (ink limits).</dd>
+
+            <dt>Color Muse 2</dt>
+            <dd><a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Handheld colorimeter</a> for measuring LAB values from printed wedges/targets. Exports <code>.txt</code> files compatible with quadGEN.</dd>
+
+            <dt>Correction (curve)</dt>
+            <dd>Mapping that adjusts output ink levels versus input to achieve a target response. In quadGEN, plotted as Y (output ink %) vs X (input %).</dd>
+
+            <dt>EDN (Easy Digital Negatives)</dt>
+            <dd><a href="http://www.easydigitalnegatives.com/" target="_blank" rel="noopener">Workflow</a> to build correction LUTs for digital negatives. Export <code>.cube</code> LUTs from EDN for use as global/per-channel corrections in quadGEN.</dd>
+
+            <dt>Edit Mode</dt>
+            <dd>Gated state that enables key-point editing and shows overlays. Selected channel draws on top; unselected enabled channels dim.</dd>
+
+            <dt>End (ink limit)</dt>
+            <dd>Per-channel maximum ink level. Edits that require more ink can raise End when feasible; when End is effectively locked, edits that exceed it are blocked with status.</dd>
+
+            <dt>Gaussian Weighted Correction</dt>
+            <dd>LAB processing method that spreads each measurement’s influence smoothly across inputs; reduces artifacts versus naive inversion techniques.</dd>
+
+            <dt>Global correction</dt>
+            <dd>A correction that applies uniformly to all channels (e.g., LAB/LUT/ACV loaded as global data or computed from measurements).</dd>
+
+            <dt>Graph orientation</dt>
+            <dd>quadGEN plots printer-space ink mapping with 0% = white (no ink) at the origin. Photoshop/other “tone” tools often use 0,0 = black.</dd>
+
+            <dt>Input Level %</dt>
+            <dd>X-axis value representing the input level (0–100%) in printer space; corresponds to the source tone step being mapped.</dd>
+
+            <dt>Interpolation</dt>
+            <dd>Method to form a smooth curve between key points. quadGEN favors monotonic PCHIP for predictable, non-overshooting results.</dd>
+
+            <dt>Key point</dt>
+            <dd>An editable control point of a Smart Curve. Identified by ordinal (1-based). Insert/adjust/delete supported; endpoints often guarded. Coordinates are defined in printer space with the origin at (0,0), where X = input % (0–100) and Y = output ink % (0–100).</dd>
+
+            <dt>LAB data (<code>.txt</code>)</dt>
+            <dd>Text file with measured L*, A*, B* (quadGEN expects GRAY and LAB columns). Used to compute or validate corrections.</dd>
+
+            <dt>Lab Tech</dt>
+            <dd>The built-in assistant that can answer questions and perform actions (when networked). Optional; core editing/export features work offline.</dd>
+
+            <dt>Linearization</dt>
+            <dd>Process of adjusting printer output so that equal input steps (e.g., 0–100%) produce perceptually equal changes in print density or L*. In quadGEN and QuadToneRIP, linearization involves measuring printed step wedges, comparing them to the ideal response, and generating correction curves that enforce a near-linear relationship between input values and visual tone.</dd>
+
+            <dt>Linear ramp</dt>
+            <dd>Identity mapping (input % = output %) used as a neutral baseline for tests/export and certain workflows.</dd>
+
+            <dt>Max error %</dt>
+            <dd>Used for Smart curve Key point calculation. The largest deviation allowed from data file before a new Key point will be generated. Lower this number to create a tight fitting curve with more Key points. Raise this number to create a smoother curve with fewer Key points.</dd>
+
+            <dt>Max points</dt>
+            <dd>The upper limit on the number of Key points that quadGEN will generate when creating a Smart curve. Above this threshold, imported data (e.g., ACV/LUT/LAB) is simplified or interpolated to maintain performance and stability. Maximum is 25 points.</dd>
+
+            <dt>Output Ink Level %</dt>
+            <dd>Y-axis value representing the ink output (0–100%) after applying the curve and current End; higher values mean more ink (darker).</dd>
+
+            <dt>Smart curve</dt>
+            <dd>Adaptive curve model in quadGEN defined by editable key points and monotonic interpolation. Smart curves allow precise local edits while preserving smoothness and avoiding overshoot, enabling efficient linearization and correction workflows.</dd>
+
+            <dt>Target (21/25-step etc)</dt>
+            <dd>Printable step-wedge target used for iterative calibration. Measure the print (e.g., with Color Muse 2), import LAB <code>.txt</code>, refine, and reprint.</dd>
+
+            <dt>Print Tool</dt>
+            <dd><a href="https://www.quadtonerip.com/html/QTRprinttool.html" target="_blank" rel="noopener">Utility application</a> for macOS that enables color-managed printing from TIFF files while bypassing standard print driver limitations. Commonly used with QuadToneRIP workflows for printing digital negatives and monochrome images.</dd>
+
+            <dt>QuadToneRIP (QTR)</dt>
+            <dd><a href="https://www.quadtonerip.com/" target="_blank" rel="noopener">Specialized RIP/driver</a> for Epson printers designed for high-quality monochrome printing with multi-shade ink sets. QTR uses <code>.quad</code> files to control how much ink each channel lays down across the 0–100% input range, enabling precise tonal calibration and alternative process workflows such as digital negatives.</dd>
+
+            <dt>Recompute</dt>
+            <dd>Button in Edit Mode that regenerates Smart key points for the selected channel from the currently plotted curve using the configured <em>Max error %</em> and <em>Max points</em> settings—useful for simplifying or refreshing an editable set from a loaded <code>.quad</code>.</dd>
+          </dl>
+        </section>
+      `;
+    }
+
+    // Version History tab content (reuses existing generator)
+    function getHelpHistoryHTML(){
+      const licenseYear = new Date().getFullYear();
+      const inner = `
+        <div class="space-y-4">
+          <div class="text-xs text-gray-500">MIT License — quadgen.html © ${licenseYear} David Marsh. HTML file only. Full text is in the page source.</div>
+          <div>
+            <h3 class="text-base font-semibold mb-2">Version History</h3>
+            ${generateAboutDialogVersionHistory()}
+          </div>
+        </div>
+      `;
+      return `<section class="prose prose-gray max-w-none p-6 bg-white rounded-2xl shadow">${inner}</section>`;
+    }
+
+    function setHelpActiveTab(tab){
+      const readmeBtn = elements.helpTabReadme;
+      const glossaryBtn = elements.helpTabGlossary;
+      if (!readmeBtn || !glossaryBtn) return;
+      if (tab === 'glossary'){
+        glossaryBtn.classList.remove('text-gray-500','border-transparent');
+        glossaryBtn.classList.add('text-gray-800','border-slate-700');
+        readmeBtn.classList.remove('text-gray-800','border-slate-700');
+        readmeBtn.classList.add('text-gray-500','border-transparent');
+        if (elements.helpTabHistory){ elements.helpTabHistory.classList.remove('text-gray-800','border-slate-700'); elements.helpTabHistory.classList.add('text-gray-500','border-transparent'); }
+        elements.helpContent.innerHTML = getHelpGlossaryHTML();
+      } else if (tab === 'history') {
+        if (elements.helpTabHistory){ elements.helpTabHistory.classList.remove('text-gray-500','border-transparent'); elements.helpTabHistory.classList.add('text-gray-800','border-slate-700'); }
+        readmeBtn.classList.remove('text-gray-800','border-slate-700');
+        readmeBtn.classList.add('text-gray-500','border-transparent');
+        glossaryBtn.classList.remove('text-gray-800','border-slate-700');
+        glossaryBtn.classList.add('text-gray-500','border-transparent');
+        elements.helpContent.innerHTML = getHelpHistoryHTML();
+      } else {
+        readmeBtn.classList.remove('text-gray-500','border-transparent');
+        readmeBtn.classList.add('text-gray-800','border-slate-700');
+        glossaryBtn.classList.remove('text-gray-800','border-slate-700');
+        glossaryBtn.classList.add('text-gray-500','border-transparent');
+        if (elements.helpTabHistory){ elements.helpTabHistory.classList.remove('text-gray-800','border-slate-700'); elements.helpTabHistory.classList.add('text-gray-500','border-transparent'); }
+        elements.helpContent.innerHTML = getHelpReadmeHTML();
+      }
+    }
+
+    // Help popup content (initialize tabs and default content)
+    function populateHelp() {
+      try { document.getElementById('helpAppVersion').textContent = APP_VERSION; } catch {}
+      setHelpActiveTab('readme');
+    }
+
     // Wire sample buttons in Global Correction Help popup
     function wireGlobalHelpSamples() {
       const helpLoadLab = document.getElementById('helpLoadSampleLab');
@@ -14534,27 +14646,8 @@ DOMAIN_MAX 1.0 1.0 1.0
     }
 
     // Info popup functionality
-    elements.infoBtn.addEventListener('click', () => {
-      populateChangelog();
-      elements.infoPopup.classList.remove('hidden');
-    });
-    
-    elements.closeInfoBtn.addEventListener('click', () => {
-      elements.infoPopup.classList.add('hidden');
-    });
-    
-    // Close popup when clicking outside
-    elements.infoPopup.addEventListener('click', (e) => {
-      if (e.target === elements.infoPopup) {
-        elements.infoPopup.classList.add('hidden');
-      }
-    });
-    
     // Close popups with Escape key
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !elements.infoPopup.classList.contains('hidden')) {
-        elements.infoPopup.classList.add('hidden');
-      }
       if (e.key === 'Escape' && elements.helpPopup && !elements.helpPopup.classList.contains('hidden')) {
         elements.helpPopup.classList.add('hidden');
       }
@@ -14587,6 +14680,16 @@ DOMAIN_MAX 1.0 1.0 1.0
         populateHelp();
         if (elements.helpPopup) { elements.helpPopup.classList.remove('hidden'); lockBodyScroll(); }
       });
+    }
+    // Help tabs
+    if (elements.helpTabReadme) {
+      elements.helpTabReadme.addEventListener('click', () => setHelpActiveTab('readme'));
+    }
+    if (elements.helpTabGlossary) {
+      elements.helpTabGlossary.addEventListener('click', () => setHelpActiveTab('glossary'));
+    }
+    if (elements.helpTabHistory) {
+      elements.helpTabHistory.addEventListener('click', () => setHelpActiveTab('history'));
     }
     // Inline Edit Mode Help link under the Edit Curves panel
     const editModeHelpLink = document.getElementById('editModeHelpLink');
@@ -14687,7 +14790,7 @@ DOMAIN_MAX 1.0 1.0 1.0
     function updateVersionDisplays() {
       document.title = `quadGEN ${APP_VERSION}`;
       document.getElementById('appVersion').textContent = APP_VERSION;
-      document.getElementById('infoPopupTitle').textContent = `quadGEN ${APP_VERSION}`;
+      
       try { document.getElementById('helpAppVersion').textContent = APP_VERSION; } catch {}
     }
     
