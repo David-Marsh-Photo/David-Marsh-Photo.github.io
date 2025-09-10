@@ -1195,8 +1195,8 @@ ARCHITECTURAL NOTES:
                 <option value="P4-6-8000">P4-6-8000</option>
               </select>
               <p id="channelInfo" class="flex-1 text-xs text-gray-600 ml-1"></p>
-              <button id="helpBtn" class="text-xs bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1 transition-colors ml-auto font-bold" title="Help and quick start">
-                Help
+              <button id="helpBtn" class="text-sm bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-1 transition-colors ml-auto font-bold" title="Help and quick start">
+                📖 Help
               </button>
               
             </div>
@@ -1631,6 +1631,7 @@ ARCHITECTURAL NOTES:
       <div id="helpTabs" class="mb-2 border-b border-gray-200 flex items-center gap-2">
         <button id="helpTabReadme" class="px-3 py-1 text-sm font-bold text-gray-800 border-b-2 border-slate-700">ReadMe</button>
         <button id="helpTabGlossary" class="px-3 py-1 text-sm font-bold text-gray-500 hover:text-gray-700 border-b-2 border-transparent">Glossary</button>
+        <button id="helpTabWorkflow" class="px-3 py-1 text-sm font-bold text-gray-500 hover:text-gray-700 border-b-2 border-transparent">Detailed Workflow</button>
         <button id="helpTabHistory" class="px-3 py-1 text-sm font-bold text-gray-500 hover:text-gray-700 border-b-2 border-transparent ml-auto">Version History</button>
       </div>
       <div id="helpContent" class="text-sm text-gray-700 space-y-4 max-h-[70vh] overflow-y-auto"></div>
@@ -1843,7 +1844,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta v2.0.2';
+    const APP_VERSION = 'Beta v2.0.3';
     // Global debug logging toggle for non-AI logs
     var DEBUG_LOGS = false;
     // AI provider selection (code-level switch, no UI): 'anthropic' or 'openai'
@@ -1856,9 +1857,19 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
     const DEBUG_AI = false;
     // Temporary alias during terminology transition (AI → Smart)
     const DEBUG_SMART = DEBUG_AI;
+    // One-time guard to prevent logo animation on every chart redraw
+    let LOGO_ANIMATED_ONCE = false;
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v2.0.3': {
+        date: '2025-09-10',
+        title: 'Detailed Workflow Guide in Help',
+        aboutDialog: [
+          { label: 'Detailed Workflow', desc: 'Added a new Help tab with a step-by-step calibration guide (LAB and EDN workflows), including ink-limit verification and target printing.' },
+          { label: 'ReadMe/Help Polish', desc: 'Improved Installation links, Glossary entries, and formatting; Help button updated with icon.' }
+        ]
+      },
       'v2.0.2': {
         date: '2025-09-10',
         title: 'Tabbed Help + About Removed',
@@ -2134,7 +2145,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             'Quick reference documentation with function locations'
           ],
           ENHANCED: [
-            'AI curve generation with natural language descriptions ("palladium curve", "S-curve")',
+            'Smart Curve generation with natural language descriptions ("palladium curve", "S-curve")',
             'Undo system integration for AI-generated curves',
             'Visual state restoration for disabled channels'
           ],
@@ -2142,7 +2153,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             'Disabled channel transparency when Lab Tech adds curves',
             'Processing panel updates now immediate (no manual refresh needed)',
             'Channel iteration bug causing incorrect references',
-            'AI curve undo functionality integration'
+            'Smart Curve undo functionality integration'
           ]
         },
         aboutDialog: [
@@ -4616,7 +4627,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       }
 
       /**
-       * Insert a new AI key point at a specific input (X). If output (Y) omitted, sample current AI curve at X.
+       * Insert a new AI key point at a specific input (X). If output (Y) omitted, sample current Smart Curve at X.
        */
       insertAIKeyPointAt(channelName, inputPercent, outputPercent = null) {
         if (!window.EDIT_MODE_ENABLED) {
@@ -4719,7 +4730,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       }
 
       /**
-       * Insert a new AI key point between two adjacent ordinals. If output omitted, sample current AI curve at midpoint.
+       * Insert a new AI key point between two adjacent ordinals. If output omitted, sample current Smart Curve at midpoint.
        */
       insertAIKeyPointBetween(channelName, leftOrdinal, rightOrdinal, outputPercent = null) {
         if (!window.EDIT_MODE_ENABLED) {
@@ -5841,7 +5852,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       },
       {
         name: "insert_ai_key_point_at",
-        description: "Insert a new AI key point at a given input (X). If output is omitted, sample current AI curve at X. If no AI key points exist yet, they will be created from the current curve/data.",
+        description: "Insert a new AI key point at a given input (X). If output is omitted, sample current Smart Curve at X. If no AI key points exist yet, they will be created from the current curve/data.",
         parameters: {
           type: "object",
           properties: {
@@ -5858,7 +5869,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             },
             outputPercent: {
               type: "number",
-              description: "Optional output (Y) in % (0-100) — if omitted, sampled from current AI curve",
+              description: "Optional output (Y) in % (0-100) — if omitted, sampled from current Smart Curve",
               minimum: 0,
               maximum: 100
             }
@@ -5916,7 +5927,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             },
             outputPercent: {
               type: "number",
-              description: "Optional output (Y) in % (0-100) — if omitted, sampled from current AI curve",
+              description: "Optional output (Y) in % (0-100) — if omitted, sampled from current Smart Curve",
               minimum: 0,
               maximum: 100
             }
@@ -7233,6 +7244,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       helpContent: document.getElementById('helpContent'),
       helpTabReadme: document.getElementById('helpTabReadme'),
       helpTabGlossary: document.getElementById('helpTabGlossary'),
+      helpTabWorkflow: document.getElementById('helpTabWorkflow'),
       helpTabHistory: document.getElementById('helpTabHistory'),
       globalCorrectionHelpBtn: document.getElementById('globalCorrectionHelpBtn'),
       globalCorrectionHelpPopup: document.getElementById('globalCorrectionHelpPopup'),
@@ -8927,8 +8939,8 @@ DOMAIN_MAX 1.0 1.0 1.0
       }
     } catch {}
       
-      // Animate logo bars when chart is redrawn
-      animateLogoBars();
+      // Animate logo bars only once (avoid re-trigger on mousemove redraws)
+      if (!LOGO_ANIMATED_ONCE) { try { animateLogoBars(); } catch {} LOGO_ANIMATED_ONCE = true; }
     }
 
     // Cursor tooltip over the chart: show X,Y in percent (locks to selected channel in Edit Mode)
@@ -14399,15 +14411,16 @@ DOMAIN_MAX 1.0 1.0 1.0
             QTR uses <code>.quad</code> files to determine how much ink each printer channel lays down at every input level.  
             A <code>.quad</code> file contains 256-sample curves (0–100% input) for each channel supported by the printer (e.g., K, C, M, Y, LC, LM, LK, LLK, OR, GR, etc.).  
             When you select a <code>.quad</code> in your QTR workflow (often via Print-Tool on macOS), QTR reads these curves and applies the specified per-channel ink outputs to render your print.  
-            quadGEN’s role is to help you build and refine those <code>.quad</code> curves so QTR can produce linear, predictable output.
+            quadGEN’s role is to help you build and refine those <code>.quad</code> curves so QTR can produce linear, predictable output.  
+            See the <a href="https://www.quadtonerip.com/html/QTRoverview.html" target="_blank" rel="noopener">QuadToneRIP Overview</a> for more background.
           </p>
 
           <hr />
 
           <h2 id="install">2. Installation and Access</h2>
           <ul>
-            <li><strong>Online:</strong> open <code>quadgen.html</code> in Chrome, Firefox, or Safari.</li>
-            <li><strong>Offline:</strong> download <code>quadgen.html</code> and open locally (no install required).</li>
+            <li><strong>Online:</strong> visit <a href="https://david-marsh-photo.github.io/" target="_blank" rel="noopener">https://david-marsh-photo.github.io/</a>.</li>
+            <li><strong>Offline:</strong> right‑click and download this file: <a href="https://david-marsh-photo.github.io/index.html" target="_blank" rel="noopener">https://david-marsh-photo.github.io/index.html</a>, then open it locally (no install required).</li>
             <li><strong>Platforms:</strong> macOS, Windows, Linux (desktop recommended).</li>
             <li><strong>Network note:</strong> AI assistant features require internet; manual editing and exports do not.</li>
           </ul>
@@ -14587,30 +14600,170 @@ DOMAIN_MAX 1.0 1.0 1.0
       return `<section class="prose prose-gray max-w-none p-6 bg-white rounded-2xl shadow">${inner}</section>`;
     }
 
+    // Detailed Workflow tab content (based on docs/quadgen_workflow.md)
+    function getHelpWorkflowHTML(){
+      return `
+        <section class="prose prose-gray max-w-none p-6 bg-white rounded-2xl shadow">
+          <h2>quadGEN Workflow (Beta v2.0.2)</h2>
+          <h3>Purpose</h3>
+          <ul>
+            <li>Provide a concise, repeatable workflow to build and refine <code>.quad</code> curves for QuadToneRIP (QTR).</li>
+          </ul>
+          <h3>Prerequisites</h3>
+          <ul>
+            <li><a href="https://www.quadtonerip.com/" target="_blank" rel="noopener">QuadToneRIP</a> installed; know where your printer’s “quad” folder is.</li>
+            <li>Ability to print a step wedge/target via QTR (Print-Tool on macOS recommended).</li>
+            <li>Optional (but recommended): <a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Color Muse 2</a> or equivalent to capture LAB L*.</li>
+          </ul>
+          <h3>1) Choose Printer</h3>
+          <ul>
+            <li>At the top of the page, select your Epson printer model.</li>
+          </ul>
+          <h3>2) Export a starting <code>.quad</code></h3>
+          <ul>
+            <li>You can skip this step if you already have an existing <code>.quad</code> to refine. Otherwise, start with a single linear ramp of Black (K) — or Matte Black (MK) if available — using the default 100% ink limit.</li>
+            <li>Install the <code>.quad</code> into QTR’s quad folder for your printer.</li>
+          </ul>
+          <h3>3) Verify Ink Choice & Limits</h3>
+          <ul>
+            <li><strong>Digital negative processes</strong>: Find the lowest ink limit that still achieves paper white by printing a step target and determine the ink limit used at the first patch that matches your paper white.  Invert the target image in your editor before printing with your <code>.quad</code>. For example, if the first patch that matches your paper white occured on the 8th darkest patch of an evenly spaced 10 step negative (referring to the <i>positive</i> target image), you can use an ink limit of 80%</li>
+            <li><strong>Positive processes (e.g., polymer photogravure)</strong>: Find the maximum ink limit that <em>does not</em> cause open bite by printing an open‑bite target and increasing the ink limit until the first signs of open bite, then back off.</li>
+            <li>Once you’ve identified an ink limit, create a new .quad file with that limit and proceed to calibration.</li>
+          </ul>
+          <h3>4) Print a Calibration Target</h3>
+          <ul>
+            <li>
+              <p><strong>Option A — LAB workflow</strong></p>
+              <ul>
+                <li>Use QTR/Print‑Tool and the <code>.quad</code> from step 2/3 to print a 0–100% step wedge (or <a href="https://clayharmonblog.com/downloads" target="_blank" rel="noopener">Clay Harmon’s 21/25‑step target</a>).</li>
+                <li>Ensure color management is OFF in Print‑Tool.</li>
+              </ul>
+            </li>
+            <li>
+              <p><strong>Option B — EDN workflow</strong></p>
+              <ul>
+                <li>Visit <a href="http://www.easydigitalnegatives.com/" target="_blank" rel="noopener">Easy Digital Negatives</a> and download the appropriate target file.</li>
+                <li>Print the EDN target via QTR/Print‑Tool with color management OFF, using the <code>.quad</code> from step 2/3.</li>
+              </ul>
+            </li>
+          </ul>
+          <h3>5) Calibration: Measure the Print</h3>
+          <ul>
+            <li>
+              <p><strong>Option A — LAB workflow</strong></p>
+              <ol>
+                <li><strong>Set patch count</strong>: choose the number of patches/steps to match your printed target.</li>
+                <li><strong>Enter Patch % (X)</strong>: if your target is not evenly spaced, type the input position for each row (0–100). If evenly spaced, keep the defaults.</li>
+                <li><strong>Measure and enter L*</strong>: measure each printed patch with your device and enter L* (0–100) in the matching row.</li>
+                <li><strong>Apply or save</strong>: click “Generate Correction” to apply immediately, or “Save as .txt” to export the entries for later reuse.</li>
+              </ol>
+            </li>
+            <li>
+              <p><strong>Option B — EDN workflow</strong></p>
+              <ol>
+                <li>Follow the EDN instructions to scan and analyze your print result.</li>
+                <li>Download the EDN-generated <code>.acv</code> or <code>.cube</code> file.</li>
+              </ol>
+            </li>
+          </ul>
+          <h3>6) Load Data into quadGEN</h3>
+          <ul>
+            <li>
+              <p><strong>Option A — LAB workflow</strong></p>
+              <ol>
+                <li><strong>Load LAB (.txt)</strong>: If not already applied from the Manual L* Entry window, use the Load Data File in the Global Corrections panel to load your saved measurements.</li>
+                <li><strong>Interpretation</strong>: Y = output ink % vs X = input %; Y = X is “no correction”. Too dark at X → dip below diagonal; too light at X → rise above.</li>
+              </ol>
+            </li>
+            <li>
+              <p><strong>Option B — EDN workflow</strong></p>
+              <ol>
+                <li><strong>Load ACV/LUT</strong>: use the Load Data File in the Global Corrections panel to load the downloaded EDN <code>.acv</code> or <code>.cube</code>.</li>
+                <li><strong>Interpretation</strong>: same graph semantics — Y = output ink %, X = input %; dips lighten, humps darken.</li>
+              </ol>
+            </li>
+          </ul>
+          <h3>7) Export Corrected <code>.quad</code></h3>
+          <ul>
+            <li>Export the corrected <code>.quad</code> for general use.</li>
+          </ul>
+          <h3>8) Enter Edit Mode for Fine Tuning (optional)</h3>
+          <ul>
+            <li>Toggle Edit Mode ON in the Edit Curves panel to expose Smart key‑point edits.</li>
+            <li>Selected channel draws on top; others dim.</li>
+            <li>Use:</li>
+            <ul>
+              <li><strong>Recompute</strong>: regenerate Smart key points from the plotted curve using Max error % and Max points.</li>
+              <li><strong>XY input</strong>: type <code>X,Y</code> (Y is absolute after End). Up/Down adjusts absolute Y; Left/Right adjusts X.</li>
+              <li><strong>Insert/Delete</strong>: click to insert; delete non‑endpoints only.</li>
+            </ul>
+          </ul>
+          <h3>9) Iterate Until Linear (optional)</h3>
+          <ul>
+            <li>Repeat from step 5 until corrections become negligible.</li>
+            <li>There will be some noise in the measurements for both workflows. Expect diminishing returns on linearization.</li>
+          </ul>
+          <h3>Notes & Tips</h3>
+          <ul>
+            <li>Keep curves smooth, avoid kinks near endpoints.</li>
+            <li>For digital negatives, invert the image in your editor before printing with your <code>.quad</code>.</li>
+          </ul>
+          <h3>References</h3>
+          <ul>
+            <li><a href="https://www.quadtonerip.com/" target="_blank" rel="noopener">QuadToneRIP</a></li>
+            <li><a href="https://www.quadtonerip.com/html/QTRoverview.html" target="_blank" rel="noopener">QTR Overview</a></li>
+            <li><a href="https://www.quadtonerip.com/html/QTRprinttool.html" target="_blank" rel="noopener">Print‑Tool (macOS)</a></li>
+            <li><a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Color Muse 2</a></li>
+          </ul>
+        </section>
+      `;
+    }
+
     function setHelpActiveTab(tab){
       const readmeBtn = elements.helpTabReadme;
       const glossaryBtn = elements.helpTabGlossary;
-      if (!readmeBtn || !glossaryBtn) return;
+      const workflowBtn = elements.helpTabWorkflow;
+      const historyBtn = elements.helpTabHistory;
+      if (!readmeBtn || !glossaryBtn || !workflowBtn || !historyBtn) return;
       if (tab === 'glossary'){
         glossaryBtn.classList.remove('text-gray-500','border-transparent');
         glossaryBtn.classList.add('text-gray-800','border-slate-700');
         readmeBtn.classList.remove('text-gray-800','border-slate-700');
         readmeBtn.classList.add('text-gray-500','border-transparent');
-        if (elements.helpTabHistory){ elements.helpTabHistory.classList.remove('text-gray-800','border-slate-700'); elements.helpTabHistory.classList.add('text-gray-500','border-transparent'); }
+        workflowBtn.classList.remove('text-gray-800','border-slate-700');
+        workflowBtn.classList.add('text-gray-500','border-transparent');
+        historyBtn.classList.remove('text-gray-800','border-slate-700');
+        historyBtn.classList.add('text-gray-500','border-transparent');
         elements.helpContent.innerHTML = getHelpGlossaryHTML();
       } else if (tab === 'history') {
-        if (elements.helpTabHistory){ elements.helpTabHistory.classList.remove('text-gray-500','border-transparent'); elements.helpTabHistory.classList.add('text-gray-800','border-slate-700'); }
+        historyBtn.classList.remove('text-gray-500','border-transparent');
+        historyBtn.classList.add('text-gray-800','border-slate-700');
         readmeBtn.classList.remove('text-gray-800','border-slate-700');
         readmeBtn.classList.add('text-gray-500','border-transparent');
         glossaryBtn.classList.remove('text-gray-800','border-slate-700');
         glossaryBtn.classList.add('text-gray-500','border-transparent');
+        workflowBtn.classList.remove('text-gray-800','border-slate-700');
+        workflowBtn.classList.add('text-gray-500','border-transparent');
         elements.helpContent.innerHTML = getHelpHistoryHTML();
+      } else if (tab === 'workflow') {
+        workflowBtn.classList.remove('text-gray-500','border-transparent');
+        workflowBtn.classList.add('text-gray-800','border-slate-700');
+        readmeBtn.classList.remove('text-gray-800','border-slate-700');
+        readmeBtn.classList.add('text-gray-500','border-transparent');
+        glossaryBtn.classList.remove('text-gray-800','border-slate-700');
+        glossaryBtn.classList.add('text-gray-500','border-transparent');
+        historyBtn.classList.remove('text-gray-800','border-slate-700');
+        historyBtn.classList.add('text-gray-500','border-transparent');
+        elements.helpContent.innerHTML = getHelpWorkflowHTML();
       } else {
         readmeBtn.classList.remove('text-gray-500','border-transparent');
         readmeBtn.classList.add('text-gray-800','border-slate-700');
         glossaryBtn.classList.remove('text-gray-800','border-slate-700');
         glossaryBtn.classList.add('text-gray-500','border-transparent');
-        if (elements.helpTabHistory){ elements.helpTabHistory.classList.remove('text-gray-800','border-slate-700'); elements.helpTabHistory.classList.add('text-gray-500','border-transparent'); }
+        workflowBtn.classList.remove('text-gray-800','border-slate-700');
+        workflowBtn.classList.add('text-gray-500','border-transparent');
+        historyBtn.classList.remove('text-gray-800','border-slate-700');
+        historyBtn.classList.add('text-gray-500','border-transparent');
         elements.helpContent.innerHTML = getHelpReadmeHTML();
       }
     }
@@ -14687,6 +14840,9 @@ DOMAIN_MAX 1.0 1.0 1.0
     }
     if (elements.helpTabGlossary) {
       elements.helpTabGlossary.addEventListener('click', () => setHelpActiveTab('glossary'));
+    }
+    if (elements.helpTabWorkflow) {
+      elements.helpTabWorkflow.addEventListener('click', () => setHelpActiveTab('workflow'));
     }
     if (elements.helpTabHistory) {
       elements.helpTabHistory.addEventListener('click', () => setHelpActiveTab('history'));
