@@ -1129,6 +1129,19 @@ ARCHITECTURAL NOTES:
       font-weight: 600;
       color: #9ca3af;           /* subtle arrow on dark bg */
     }
+
+    /* Help content readability */
+    #helpContent h2 { font-size: 1.125rem; line-height: 1.5rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.5rem; color: #111827; }
+    #helpContent h3 { font-size: 1rem; line-height: 1.5rem; font-weight: 600; margin-top: 0.5rem; margin-bottom: 0.25rem; color: #111827; }
+    #helpContent p  { margin: 0.25rem 0 0.5rem 0; color: #374151; }
+    #helpContent hr { border: 0; border-top: 1px solid #e5e7eb; margin: 0.75rem 0; }
+    #helpContent ul, #helpContent ol { margin: 0.25rem 0 0.5rem 1.25rem; color: #374151; }
+    #helpContent ul { list-style: disc; list-style-position: inside; }
+    #helpContent ol { list-style: decimal; list-style-position: inside; }
+    #helpContent li { margin: 0.125rem 0; }
+    #helpContent code { background: #f3f4f6; padding: 0 0.25rem; border-radius: 0.25rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    #helpContent a { color: #2563eb; text-decoration: underline; }
+    #helpContent a:hover { color: #1d4ed8; }
   </style>
 </head>
 <body class="min-h-screen bg-gray-50 px-2 md:px-4 py-3">
@@ -14387,17 +14400,113 @@ DOMAIN_MAX 1.0 1.0 1.0
       return '';
     }
 
-    // Help popup content (reads quadGEN_README.md and renders it)
-    async function populateHelp() {
+    // Help popup content (embedded HTML section)
+    function populateHelp() {
       const helpContent = document.getElementById('helpContent');
       if (!helpContent) return;
-      helpContent.innerHTML = '<div class="text-xs text-gray-500">Loading README…</div>';
-      const md = await loadReadmeText();
-      if (md) {
-        helpContent.innerHTML = renderMarkdown(md);
-      } else {
-        helpContent.innerHTML = '<div class="text-sm text-red-600">README not available.</div>';
-      }
+      helpContent.innerHTML = `
+        <section class="prose prose-gray max-w-none p-6 bg-white rounded-2xl shadow">
+          <h2 id="overview">1. Overview</h2>
+          <p>
+            <strong>quadGEN</strong> is a free, browser-based tool for generating and refining <code>.quad</code> files used with QuadToneRIP.  
+            It supports Smart Curves (formerly “AI curves”), LAB/LUT/ACV inputs, and an Edit Mode for precise, point-based curve edits.  
+            Core features work fully offline; the optional AI assistant requires network access.
+          </p>
+          <p>
+            quadGEN is designed for photographers, printmakers, and alt-process practitioners who create digital negatives or monochrome prints and need reliable tonal calibration.
+          </p>
+
+          <h3>What is QuadToneRIP?</h3>
+          <p>
+            QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high-quality monochrome printing using multi-shade ink sets.  
+            QTR uses <code>.quad</code> files to determine how much ink each printer channel lays down at every input level.  
+            A <code>.quad</code> file contains 256-sample curves (0–100% input) for each channel supported by the printer (e.g., K, C, M, Y, LC, LM, LK, LLK, OR, GR, etc.).  
+            When you select a <code>.quad</code> in your QTR workflow (often via Print-Tool on macOS), QTR reads these curves and applies the specified per-channel ink outputs to render your print.  
+            quadGEN’s role is to help you build and refine those <code>.quad</code> curves so QTR can produce linear, predictable output.
+          </p>
+
+          <hr />
+
+          <h2 id="install">2. Installation and Access</h2>
+          <ul>
+            <li><strong>Online:</strong> open <code>quadgen.html</code> in Chrome, Firefox, or Safari.</li>
+            <li><strong>Offline:</strong> download <code>quadgen.html</code> and open locally (no install required).</li>
+            <li><strong>Platforms:</strong> macOS, Windows, Linux (desktop recommended).</li>
+            <li><strong>Network note:</strong> AI assistant features require internet; manual editing and exports do not.</li>
+          </ul>
+
+          <hr />
+
+          <h2 id="quickstart">3. Quick Start (Beta v2.0)</h2>
+          <ol>
+            <li>Choose your printer and set ink limits (per channel).</li>
+            <li>Start with Linear Ramp, or</li>
+            <li>Load data: <code>.quad</code>, LAB <code>.txt</code>, LUT <code>.cube</code> (1D/3D), Photoshop <code>.acv</code>, or Manual L*.</li>
+            <li>Export the corrected <code>.quad</code>, print a step wedge target.</li>
+            <li>Measure print and load data, repeat if necessary.</li>
+          </ol>
+
+          <hr />
+
+          <h2 id="features">4. Features (highlights)</h2>
+          <ul>
+            <li>Supports most Epson printers.</li>
+            <li>Quickly export linear ramps with any single ink channel or combination.</li>
+            <li>Inputs: <code>.quad</code>, LAB <code>.txt</code>, LUT <code>.cube</code>, <code>.acv</code>, Manual L*.</li>
+            <li>Evenly spaced or irregular targets supported.</li>
+            <li>Edit Mode: point-based edits at any time.</li>
+            <li>Undo/Redo: full history of edits and toggles.</li>
+            <li>Recompute key points: simplify Smart Curves with tolerance/max-point controls.</li>
+            <li>Lab Tech: AI assistant for Q&amp;A and automation.</li>
+          </ul>
+
+          <hr />
+
+          <h2 id="examples">5. Usage Examples</h2>
+          <ul>
+            <li>Digital negatives: cyanotype, Pt/Pd, kallitype, polymer photogravure.</li>
+            <li>Inkjet linearization: refine monochrome response for QTR printing.</li>
+            <li>Curve editing: enter Edit Mode, nudge an ordinal, export.</li>
+            <li>Conversion: load LAB/LUT/ACV and export <code>.quad</code>.</li>
+          </ul>
+
+          <hr />
+
+          <h2 id="best">6. Best Practices</h2>
+          <ul>
+            <li>If your process requires a negative, invert it before printing with your <code>.quad</code>.</li>
+            <li>Measure the final positive print (not the negative).</li>
+            <li>Anchor endpoints and keep curves monotonic.</li>
+            <li>Use ink limits to define deepest black (or cleanest white).</li>
+            <li>Make incremental edits; use Undo/Redo liberally.</li>
+          </ul>
+
+          <hr />
+
+          <h2 id="faq">7. Troubleshooting &amp; FAQ</h2>
+          <ul>
+            <li><strong>Offline use:</strong> Lab Tech is unavailable offline; manual functions work fully.</li>
+            <li><strong>Curve orientation:</strong> quadGEN plots input % (X) vs ink output % (Y), origin = white. Other tools may use tone curves with origin = black.</li>
+            <li><strong>Corrections:</strong> Upward curve = more ink (darker); downward = less ink (lighter). Example: raise mids if midtones are too light.</li>
+          </ul>
+
+          <hr />
+
+          <h2 id="feedback">8. Contributing / Feedback</h2>
+          <p>Contact David Marsh – <a href="mailto:marshmonkey@gmail.com">marshmonkey@gmail.com</a></p>
+
+          <hr />
+
+          <h2 id="refs">9. External References</h2>
+          <ul>
+            <li><a href="http://www.easydigitalnegatives.com/" target="_blank" rel="noopener">Easy Digital Negatives</a> – Export correction LUTs (<code>.cube</code>) and load into quadGEN.</li>
+            <li><a href="https://www.quadtonerip.com/" target="_blank" rel="noopener">QuadToneRIP</a> – RIP software using <code>.quad</code> files. Install/export from quadGEN to QTR’s quad folder.</li>
+            <li><a href="https://www.quadtonerip.com/html/QTRprinttool.html" target="_blank" rel="noopener">Print-Tool</a> – Utility for printing through QTR on macOS with color-management off.</li>
+            <li><a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Color Muse 2</a> – Handheld colorimeter for LAB measurement. Exports <code>.txt</code> for import into quadGEN.</li>
+            <li><a href="https://clayharmonblog.com/downloads/25-step-ColorMuse-target.zip" target="_blank" rel="noopener">Clay Harmon’s 21-step target</a> – Printable target for iterative calibration.</li>
+          </ul>
+        </section>
+      `;
     }
 
     // Wire sample buttons in Global Correction Help popup
