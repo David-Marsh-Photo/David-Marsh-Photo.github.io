@@ -754,6 +754,346 @@ ARCHITECTURAL NOTES:
   <!-- Version History notes guidance: keep entries concise, direct, factual, and short. See AGENTS.md and CLAUDE.md. -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* Theme tokens: light defaults */
+    :root {
+      color-scheme: light;            /* ensure light scrollbars/forms by default */
+      --bg: #f9fafb;                 /* page background */
+      --bg-elevated: #ffffff;        /* cards, panels */
+      --text: #111827;               /* primary text */
+      --muted: #374151;              /* secondary text */
+      --border: #e5e7eb;             /* borders, dividers */
+      --link: #374151;               /* link color (monochrome) */
+      --link-hover: #111827;         /* link hover (monochrome) */
+      --code-bg: #f3f4f6;            /* code/bg chips */
+      --code-text: #111827;
+      --accent: #374151;             /* primary accent (monochrome) */
+      --accent-contrast: #ffffff;
+      --tooltip-bg: #111111;         /* neutral tooltip background */
+      --tooltip-text: #ffffff;       /* tooltip text */
+      --scrollbar-track: var(--bg-elevated);
+      --scrollbar-thumb-border: var(--bg-elevated);
+      /* Console tokens */
+      --console-bg: #0a0a0a;         /* neutral console body */
+      --console-text: #f5f5f5;       /* console text */
+      --console-border: #262626;     /* neutral divider */
+      --console-resizer: rgba(115,115,115,0.35);     /* neutral-500 @35% */
+      --console-resizer-hover: rgba(163,163,163,0.55);/* neutral-400 @55% */
+      --console-grip: rgba(163,163,163,0.8);
+      --console-input-bg: #0a0a0a;
+      --console-input-border: #404040;
+      /* Chart tokens */
+      --chart-grid: #e5e7eb;
+      --chart-axis: #374151;
+      --chart-text: #000000;
+      --chart-helper-border: #9ca3af;
+      --chart-bg: transparent;
+    }
+
+    
+
+    /* Dark theme overrides */
+    [data-theme="dark"] {
+      color-scheme: dark;             /* enable dark-native scrollbars/forms */
+      --bg: #0a0a0a;                 /* neutral-950 (darkest shell) */
+      --bg-subtle: #111111;          /* intermediate surface level */
+      --bg-elevated: #171717;        /* neutral-900 (lighter panels) */
+      --bg-elevated-hover: #1f1f1f;  /* hover states for elevated surfaces */
+      --text: #e5e5e5;               /* neutral-200 */
+      --muted: #9ca3af;              /* gray-400 - better for secondary text */
+      --muted-subtle: #6b7280;       /* gray-500 - for very subtle text */
+      --border: #262626;             /* neutral-800 - standard borders */
+      --border-subtle: #1f1f1f;      /* barely visible borders */
+      --border-emphasis: #374151;    /* prominent borders */
+      --link: #60a5fa;               /* blue-400 - more visible links */
+      --link-hover: #93c5fd;         /* blue-300 - hover state */
+      --link-visited: #a78bfa;       /* violet-400 - visited links */
+      --code-bg: #0b1220;            /* near-bg, subtle */
+      --code-text: #e5e7eb;
+      --accent: #60a5fa;             /* blue-400 - more engaging */
+      --accent-contrast: #1e293b;    /* slate-800 - better contrast */
+      --accent-secondary: #8b5cf6;   /* violet-400 - secondary accent */
+      --interactive-hover: #1f2937;  /* gray-800 - subtle hover backgrounds */
+      --interactive-pressed: #111827; /* gray-900 - pressed state */
+      --focus-ring: #60a5fa;         /* blue-400 - focus indicators */
+      --success: #10b981;            /* emerald-500 */
+      --warning: #f59e0b;            /* amber-500 */
+      --error: #ef4444;              /* red-500 */
+      --tooltip-bg: #111111;
+      --tooltip-text: #ffffff;
+      --scrollbar-track: var(--bg-elevated);
+      --scrollbar-thumb-border: var(--bg-elevated);
+      --console-bg: #111111;        /* lighten console surfaces slightly */
+      --console-text: #e5e5e5;
+      --console-border: #262626;
+      --console-resizer: rgba(115,115,115,0.35);
+      --console-resizer-hover: rgba(163,163,163,0.55);
+      --console-grip: rgba(163,163,163,0.8);
+      --console-input-bg: #0a0a0a;
+      --console-input-border: #404040;
+      /* Dark-friendly chart with slightly lighter background */
+      --chart-grid: #404040;         /* neutral grid */
+      --chart-axis: #e5e5e5;         /* light axis lines */
+      --chart-text: #e5e5e5;         /* light labels */
+      --chart-helper-border: #525252;/* neutral helper borders */
+      --chart-bg: rgba(255,255,255,0.10); /* modest lightening */
+    }
+
+    /* Emphasize the Download .quad button in light mode */
+    #downloadBtn {
+      background: linear-gradient(135deg, #2563eb, #8b5cf6);
+      color: #ffffff;
+      border: 1px solid rgba(17,24,39,0.08);
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.15), 0 8px 14px rgba(0,0,0,0.12);
+      text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+    }
+    #downloadBtn:hover {
+      filter: brightness(1.05);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.25), 0 10px 16px rgba(0,0,0,0.16);
+    }
+    #downloadBtn:active {
+      transform: translateY(0.5px);
+      filter: brightness(0.98);
+    }
+    #downloadBtn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.35), 0 10px 18px rgba(0,0,0,0.18);
+    }
+
+    /* Emphasize the Download .quad button in dark mode */
+    [data-theme="dark"] #downloadBtn {
+      background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+      color: #ffffff;
+      border: 1px solid var(--border-emphasis);
+      box-shadow: 0 0 0 2px rgba(96,165,250,0.35), 0 8px 16px rgba(0,0,0,0.45);
+      text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+    }
+    [data-theme="dark"] #downloadBtn:hover {
+      filter: brightness(1.06);
+      box-shadow: 0 0 0 3px rgba(96,165,250,0.45), 0 10px 18px rgba(0,0,0,0.55);
+    }
+    [data-theme="dark"] #downloadBtn:active {
+      transform: translateY(0.5px);
+      filter: brightness(0.98);
+    }
+    [data-theme="dark"] #downloadBtn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(96,165,250,0.55), 0 10px 18px rgba(0,0,0,0.55);
+    }
+
+    /* Light-mode surfaces for Lab Tech, Preview, and Notes (not pure white) */
+    :root:not([data-theme="dark"]) #labTechConsole,
+    :root:not([data-theme="dark"]) #previewConsole {
+      background-color: #f7f7f9; /* default-light theme feel */
+      color: var(--text) !important;
+      border-color: #e5e7eb !important;
+    }
+    :root:not([data-theme="dark"]) #chatHistory {
+      color: var(--muted) !important;
+    }
+    :root:not([data-theme="dark"]) #aiInputCompact,
+    :root:not([data-theme="dark"]) #userNotes,
+    :root:not([data-theme="dark"]) #previewFull {
+      background-color: #fbfbfc;
+      color: var(--text) !important;
+      border-color: #d1d5db !important; /* gray-300 */
+    }
+    :root:not([data-theme="dark"]) #aiInputCompact:focus,
+    :root:not([data-theme="dark"]) #userNotes:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.25);
+      border-color: #93c5fd !important; /* blue-300 */
+    }
+    :root:not([data-theme="dark"]) #aiInputCompact::placeholder,
+    :root:not([data-theme="dark"]) #userNotes::placeholder {
+      color: color-mix(in srgb, var(--muted) 60%, var(--bg-elevated));
+    }
+    :root:not([data-theme="dark"]) #labTechResizer {
+      background-color: #e5e7eb !important; /* gray-200 */
+    }
+    :root:not([data-theme="dark"]) #labTechResizer:hover {
+      background-color: #d1d5db !important; /* gray-300 */
+    }
+
+    /* Console section headers in light mode: soft gradient and bottom border */
+    :root:not([data-theme="dark"]) .console-header {
+      background: linear-gradient(to bottom, #fafafa, #f3f4f6);
+      color: #374151 !important; /* gray-700 */
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    /* Dark-mode wrappers for consoles to keep parity */
+    [data-theme="dark"] #labTechConsole, [data-theme="dark"] #previewConsole {
+      background-color: var(--console-bg) !important;
+      color: var(--console-text) !important;
+      border-color: var(--console-border) !important;
+    }
+    [data-theme="dark"] #aiInputCompact:focus,
+    [data-theme="dark"] #userNotes:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(96,165,250,0.35);
+      border-color: var(--console-input-border) !important;
+    }
+
+    /* ===== .quad preview: lightweight syntax highlighting ===== */
+    /* Base tokens */
+    .quad-meta   { color: var(--link); font-weight: 600; }
+    .quad-comment{ color: #047857; }  /* emerald-800 for light */
+    [data-theme="dark"] .quad-comment { color: #34d399; } /* emerald-400 for dark */
+    .quad-number { color: var(--text); }
+    .quad-error  { color: #dc2626; font-weight: 700; }
+    .quad-emph   { font-weight: 700; }
+
+    /* Channel color in gutter provided via CSS variables set per line (--ln-bg, --ln-fg) */
+
+    /* Line numbers (visible, not copied) */
+    #previewFull { position: relative; counter-reset: quadline; --lnw: 3.2em; --lngap: 0.6em; }
+    #previewFull .quad-line { display: block; position: relative; padding-left: calc(var(--lnw) + var(--lngap)); }
+    #previewFull .quad-line::before {
+      counter-increment: quadline;
+      content: counter(quadline) " │ ";
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: var(--lnw); text-align: right;
+      color: var(--ln-fg, color-mix(in srgb, var(--muted) 35%, var(--bg)));
+      background: var(--ln-bg, transparent);
+      user-select: none; -webkit-user-select: none; pointer-events: none;
+      opacity: 0.55;
+      font-weight: 400;
+    }
+    #previewFull .quad-line[data-ch]::before { opacity: 1; }
+    [data-theme="dark"] #previewFull .quad-line::before {
+      color: var(--ln-fg, color-mix(in srgb, var(--muted) 45%, var(--bg)));
+      opacity: 0.5;
+    }
+    /* Ensure colored gutter stays fully opaque in dark mode */
+    [data-theme="dark"] #previewFull .quad-line[data-ch]::before { opacity: 1 !important; }
+
+    /* Lab Tech sample hint box: theme-aware, high-contrast */
+    :root:not([data-theme="dark"]) .labtech-sample {
+      background-color: #f3f4f6;         /* gray-100 */
+      border: 1px solid #e5e7eb;         /* gray-200 */
+      color: #374151 !important;         /* gray-700 */
+    }
+    :root:not([data-theme="dark"]) .labtech-sample strong { color: #111827; } /* gray-900 */
+    [data-theme="dark"] .labtech-sample {
+      background-color: #171717;         /* near console bg, slightly lifted */
+      border: 1px solid #262626;         /* neutral-800 */
+      color: #e5e5e5 !important;         /* light text */
+    }
+    [data-theme="dark"] .labtech-sample strong { color: #ffffff; }
+
+    /* Explicit light-mode scrollbar colors (WebKit) */
+    :root:not([data-theme="dark"]) #previewFull::-webkit-scrollbar-track,
+    :root:not([data-theme="dark"]) #chatHistory::-webkit-scrollbar-track,
+    :root:not([data-theme="dark"]) #helpContent::-webkit-scrollbar-track {
+      background: #f7f7f7;
+    }
+    :root:not([data-theme="dark"]) #previewFull::-webkit-scrollbar-thumb,
+    :root:not([data-theme="dark"]) #chatHistory::-webkit-scrollbar-thumb,
+    :root:not([data-theme="dark"]) #helpContent::-webkit-scrollbar-thumb {
+      background: #c7c7c7;
+      border-color: #ffffff;
+    }
+    /* Firefox scrollbar colors */
+    :root:not([data-theme="dark"]) #previewFull,
+    :root:not([data-theme="dark"]) #chatHistory,
+    :root:not([data-theme="dark"]) #helpContent { scrollbar-color: #c7c7c7 #f7f7f7; scrollbar-width: auto; }
+    [data-theme="dark"] #previewFull,
+    [data-theme="dark"] #chatHistory,
+    [data-theme="dark"] #helpContent { scrollbar-color: #4b5563 #111111; scrollbar-width: auto; }
+
+    /* Global color application (minimal override of Tailwind utility surfaces) */
+    body { background-color: var(--bg); color: var(--text); }
+    .bg-white { background-color: var(--bg-elevated) !important; }
+    .bg-gray-50 { background-color: var(--bg) !important; }
+    .bg-gray-100 { background-color: color-mix(in srgb, var(--bg-elevated) 92%, var(--text)) !important; }
+    
+    /* Override jarring light backgrounds in console headers for dark mode */
+    [data-theme="dark"] .bg-gray-100 { 
+      background-color: var(--console-border) !important; 
+      color: var(--console-text) !important; 
+    }
+    
+    /* Fix jarring console container backgrounds in dark mode */
+    [data-theme="dark"] .border.border-gray-200.rounded-xl { 
+      background-color: var(--console-bg) !important; 
+      border-color: var(--console-border) !important; 
+    }
+    .border-gray-200 { border-color: var(--border) !important; }
+    .border-gray-300 { border-color: var(--border) !important; }
+    .text-gray-700 { color: var(--muted) !important; }
+    .text-gray-600 { color: var(--muted) !important; }
+    .text-gray-500 { color: color-mix(in srgb, var(--muted) 80%, var(--bg)) !important; }
+    .text-gray-400 { color: color-mix(in srgb, var(--muted) 65%, var(--bg)) !important; }
+
+    /* Buttons using blue accents keep contrast in dark */
+    .bg-blue-600 { background-color: var(--accent) !important; color: var(--accent-contrast) !important; }
+    .hover\:bg-blue-700:hover { background-color: color-mix(in srgb, var(--accent) 85%, black) !important; }
+
+    /* Shell container: keep app frame darkest */
+    .app-shell { background-color: var(--bg) !important; border: 1px solid var(--border); }
+
+    /* Help/Markdown colors use theme tokens */
+    #helpContent h2 { font-size: 1.125rem; line-height: 1.5rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.5rem; color: var(--text); }
+    #helpContent h3 { font-size: 1rem; line-height: 1.5rem; font-weight: 600; margin-top: 0.5rem; margin-bottom: 0.25rem; color: var(--text); }
+    #helpContent p  { margin: 0.25rem 0 0.5rem 0; color: var(--muted); }
+    #helpContent hr { border: 0; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+    #helpContent ul, #helpContent ol { margin: 0.25rem 0 0.5rem 1.25rem; color: var(--muted); }
+    #helpContent ul { list-style: disc; list-style-position: inside; }
+    #helpContent ol { list-style: decimal; list-style-position: inside; }
+    #helpContent li { margin: 0.125rem 0; }
+    #helpContent dl { margin: 0.25rem 0 0.75rem 0; }
+    #helpContent dt { font-weight: 700; margin-top: 0.75rem; color: var(--text); }
+    #helpContent dd { margin: 0.15rem 0 0.5rem 0.75rem; color: var(--muted); }
+    #helpContent code { background: var(--code-bg); color: var(--code-text); padding: 0 0.25rem; border-radius: 0.25rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    #helpContent a { color: var(--link); text-decoration: underline; }
+    #helpContent a:hover { color: var(--link-hover); }
+
+    /* Help tabs: improve dark-mode selected contrast */
+    [data-theme="dark"] #helpTabs button { color: var(--muted) !important; border-bottom-color: transparent !important; }
+    [data-theme="dark"] #helpTabs button.text-gray-800 { color: #e5e7eb !important; }
+    [data-theme="dark"] #helpTabs button.border-slate-700 { border-bottom-color: #e5e7eb !important; }
+
+    /* Help popup: use same scrollbar style as chat/preview */
+    #helpContent::-webkit-scrollbar { width: 24px; }
+    #helpContent::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 10px; }
+    #helpContent::-webkit-scrollbar-thumb { background: #c7c7c7; border-radius: 10px; border: 3px solid var(--scrollbar-thumb-border); min-height: 60px; }
+    #helpContent::-webkit-scrollbar-thumb:hover { background: #b3b3b3; }
+    #helpContent::-webkit-scrollbar-thumb:active { background: #9a9a9a; }
+    [data-theme="dark"] #helpContent::-webkit-scrollbar-thumb { background: #4b5563; border-color: var(--console-bg); }
+    [data-theme="dark"] #helpContent::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    [data-theme="dark"] #helpContent::-webkit-scrollbar-track { background: var(--console-bg); }
+
+    /* Help popup container contrast in dark mode */
+    [data-theme="dark"] #helpPopup > div {
+      background-color: var(--bg-elevated) !important;
+      border: 1px solid var(--border-emphasis) !important;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+    }
+
+    /* Help overlay: ensure translucent backdrop in dark mode */
+    [data-theme="dark"] #helpPopup { background-color: rgba(0,0,0,0.5) !important; }
+    [data-theme="dark"] #globalCorrectionHelpPopup { background-color: rgba(0,0,0,0.5) !important; }
+
+    /* Help logo: apply dark-mode stroke/fill overrides like main logo */
+    [data-theme="dark"] #helpPopup svg [stroke="#1A1A1A"] { stroke: #e5e7eb !important; }
+    [data-theme="dark"] #helpPopup svg [fill="#1A1A1A"] { fill: #e5e5e5 !important; }
+
+    /* Dark-mode UI polish for Lab Tech + Notes */
+    [data-theme="dark"] .border-gray-800 { border-color: var(--border-subtle) !important; }
+    /* Match Clear button to Undo button styling in dark mode */
+    [data-theme="dark"] #clearChatBtn { 
+      background-color: #475569 !important; /* slate-600 */
+      color: #ffffff !important; 
+      border: 1px solid transparent !important; 
+    }
+    [data-theme="dark"] #clearChatBtn:hover { background-color: #374151 !important; /* gray-700 */ }
+    /* Lighten generic bg-black containers in dark mode (console areas) */
+    [data-theme="dark"] .bg-black { background-color: var(--bg-elevated) !important; color: var(--text) !important; }
+
+    /* Improve logo contrast in dark: override black strokes/fills */
+    [data-theme="dark"] #quadgenLogo [stroke="#1A1A1A"] { stroke: #e5e7eb !important; }
+    [data-theme="dark"] #quadgenLogo [fill="#1A1A1A"] { fill: #e5e7eb !important; }
+
     /* Always show number input arrows */
     input[type="number"]::-webkit-outer-spin-button,
     input[type="number"]::-webkit-inner-spin-button {
@@ -828,52 +1168,48 @@ ARCHITECTURAL NOTES:
       background-color: #f5f5f5;
     }
 
+    /* Dark mode overrides for toggle slider */
+    [data-theme="dark"] .slider {
+      background-color: var(--border) !important;         /* darker track when OFF */
+    }
+    [data-theme="dark"] input:checked + .slider {
+      background-color: var(--accent) !important;         /* muted accent when ON */
+    }
+    [data-theme="dark"] input:focus + .slider {
+      box-shadow: 0 0 0 2px #525252 !important;           /* soft gray focus ring */
+    }
+    [data-theme="dark"] .slider:before {
+      background-color: #e5e5e5 !important;               /* lighter knob for contrast */
+    }
+    [data-theme="dark"] input:disabled + .slider {
+      background-color: #1f1f1f !important;               /* dim disabled track */
+    }
+    [data-theme="dark"] input:disabled + .slider:before {
+      background-color: #3a3a3a !important;               /* dim disabled knob */
+    }
+
 
     /* Custom scrollbar styling for file preview */
-    #previewFull::-webkit-scrollbar {
-      width: 24px;
-    }
-
-    #previewFull::-webkit-scrollbar-track {
-      background: #2d3748;
-      border-radius: 12px;
-    }
-
-    #previewFull::-webkit-scrollbar-thumb {
-      background: #ffffff;
-      border-radius: 12px;
-      border: 3px solid #2d3748;
-      min-height: 60px;
-    }
-
-    #previewFull::-webkit-scrollbar-thumb:hover {
-      background: #f7fafc;
-    }
-
-    #previewFull::-webkit-scrollbar-thumb:active {
-      background: #e2e8f0;
-    }
+    #previewFull::-webkit-scrollbar { width: 24px; }
+    #previewFull::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 10px; }
+    #previewFull::-webkit-scrollbar-thumb { background: #c7c7c7; border-radius: 10px; border: 3px solid var(--scrollbar-thumb-border); min-height: 60px; }
+    #previewFull::-webkit-scrollbar-thumb:hover { background: #b3b3b3; }
+    #previewFull::-webkit-scrollbar-thumb:active { background: #9a9a9a; }
 
     /* Match Lab Tech console scrollbar to .quad File Preview */
-    #chatHistory::-webkit-scrollbar {
-      width: 24px;
-    }
-    #chatHistory::-webkit-scrollbar-track {
-      background: #2d3748;
-      border-radius: 12px;
-    }
-    #chatHistory::-webkit-scrollbar-thumb {
-      background: #ffffff;
-      border-radius: 12px;
-      border: 3px solid #2d3748;
-      min-height: 60px;
-    }
-    #chatHistory::-webkit-scrollbar-thumb:hover {
-      background: #f7fafc;
-    }
-    #chatHistory::-webkit-scrollbar-thumb:active {
-      background: #e2e8f0;
-    }
+    #chatHistory::-webkit-scrollbar { width: 24px; }
+    #chatHistory::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 10px; }
+    #chatHistory::-webkit-scrollbar-thumb { background: #c7c7c7; border-radius: 10px; border: 3px solid var(--scrollbar-thumb-border); min-height: 60px; }
+    #chatHistory::-webkit-scrollbar-thumb:hover { background: #b3b3b3; }
+    #chatHistory::-webkit-scrollbar-thumb:active { background: #9a9a9a; }
+
+    /* Dark mode scrollbar tweaks: darker, less contrasty */
+    [data-theme="dark"] #previewFull::-webkit-scrollbar-thumb,
+    [data-theme="dark"] #chatHistory::-webkit-scrollbar-thumb { background: #4b5563; border-color: var(--console-bg); }
+    [data-theme="dark"] #previewFull::-webkit-scrollbar-thumb:hover,
+    [data-theme="dark"] #chatHistory::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    [data-theme="dark"] #previewFull::-webkit-scrollbar-track,
+    [data-theme="dark"] #chatHistory::-webkit-scrollbar-track { background: var(--console-bg); }
 
     /* Instant tooltip for linearization buttons */
     .per-channel-btn, #globalLinearizationBtn {
@@ -886,8 +1222,8 @@ ARCHITECTURAL NOTES:
       bottom: 100%;
       left: 50%;
       transform: translateX(-50%);
-      background-color: #1f2937;
-      color: white;
+      background-color: var(--tooltip-bg);
+      color: var(--tooltip-text);
       padding: 4px 8px;
       border-radius: 4px;
       font-size: 12px;
@@ -907,7 +1243,7 @@ ARCHITECTURAL NOTES:
       height: 0;
       border-left: 4px solid transparent;
       border-right: 4px solid transparent;
-      border-top: 4px solid #1f2937;
+      border-top: 4px solid var(--tooltip-bg);
       z-index: 1000;
       pointer-events: none;
     }
@@ -1014,8 +1350,8 @@ ARCHITECTURAL NOTES:
     
     /* Compact chip container */
     .disabled-channels-compact {
-      background-color: #f9fafb;
-      border: 1px solid #e5e7eb;
+      background-color: var(--bg-elevated);
+      border: 1px solid var(--border);
       border-radius: 8px;
       padding: 8px 12px;
       margin: 8px 0;
@@ -1029,7 +1365,7 @@ ARCHITECTURAL NOTES:
     .disabled-channels-compact .compact-label {
       font-size: 11px;
       font-weight: 600;
-      color: #6b7280;
+      color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
       margin-bottom: 6px;
@@ -1048,32 +1384,32 @@ ARCHITECTURAL NOTES:
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      background-color: #ffffff;
+      background-color: var(--bg-elevated);
       border-radius: 6px;
       padding: 3px 8px;
       font-size: 12px;
-      color: #374151;
+      color: var(--muted);
       cursor: pointer;
       transition: all 0.15s ease-in-out;
       user-select: none;
     }
     
     .disabled-channel-chip:hover {
-      background-color: #f3f4f6;
+      background-color: color-mix(in srgb, var(--bg-elevated) 85%, var(--text));
       transform: translateY(-1px);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     
     .disabled-channel-chip.active {
-      background-color: #dbeafe;
-      color: #1d4ed8;
+      background-color: color-mix(in srgb, var(--accent) 15%, var(--bg-elevated));
+      color: var(--accent);
     }
     
     .disabled-channel-chip .channel-color {
       width: 12px;
       height: 12px;
       border-radius: 2px;
-      border: 1px solid rgba(0, 0, 0, 0.2);
+      border: 1px solid color-mix(in srgb, var(--border) 80%, var(--text));
       flex-shrink: 0;
       display: inline-block;
     }
@@ -1089,7 +1425,7 @@ ARCHITECTURAL NOTES:
     .disabled-channel-chip .channel-name {
       font-weight: 600;
       min-width: 20px;
-      color: #374151;
+      color: var(--muted);
       font-size: 12px;
     }
 
@@ -1114,43 +1450,160 @@ ARCHITECTURAL NOTES:
       overflow: hidden;
     }
 
-    /* Make assistant links in chat clearly clickable */
-    #chatHistory a {
-      color: #93c5fd;           /* light blue for dark bg */
-      text-decoration: underline;
-      font-weight: 600;
+    /* Terminal-style chat lines */
+    #chatHistory .chat-line { display: block; margin: 0 0 2px 0; white-space: pre-wrap; }
+    :root:not([data-theme="dark"]) #chatHistory .chat-line.assistant { color: #111827; }
+    :root:not([data-theme="dark"]) #chatHistory .chat-line.user { color: #065f46; font-weight: 600; }
+    :root:not([data-theme="dark"]) #chatHistory .chat-line.system { color: #6b7280; font-style: italic; }
+    [data-theme="dark"] #chatHistory .chat-line.assistant { color: #e5e5e5; }
+    [data-theme="dark"] #chatHistory .chat-line.user { color: #34d399; font-weight: 600; }
+    [data-theme="dark"] #chatHistory .chat-line.system { color: #9ca3af; font-style: italic; }
+    
+    #chatHistory a { color: var(--link); text-decoration: underline; font-weight: 600; }
+    #chatHistory a:hover { color: var(--link-hover); text-decoration: underline; }
+    #chatHistory a[target="_blank"]::after { content: ' ↗'; font-weight: 600; color: var(--muted); }
+    :root:not([data-theme="dark"]) #chatHistory .chat-line.user a { color: #15803d; }
+    :root:not([data-theme="dark"]) #chatHistory .chat-line.user a:hover { color: #16a34a; }
+
+    /* One Light-inspired theme for Lab Tech console (light mode) */
+    :root:not([data-theme="dark"]) #labTechConsole {
+      --onl-bg: #fafafa;        /* editor background */
+      --onl-fg: #383a42;        /* editor foreground */
+      --onl-muted: #a0a1a7;     /* comments/muted */
+      --onl-blue: #4078f2;      /* link/primary */
+      --onl-cyan: #0184bc;      /* info */
+      --onl-green: #50a14f;     /* success/user */
+      --onl-orange: #c18401;    /* warn */
+      --onl-pink: #a626a4;      /* accent */
+      --onl-red: #e45649;       /* error */
+      --onl-yellow: #986801;    /* emphasis */
+      background-color: var(--onl-bg) !important;
+      color: var(--onl-fg) !important;
+      border-color: #e6e6e6 !important;
     }
-    #chatHistory a:hover {
-      color: #bfdbfe;           /* lighter on hover */
-      text-decoration: underline;
+    :root:not([data-theme="dark"]) #labTechConsole #chatHistory .chat-line { color: var(--onl-fg); }
+    :root:not([data-theme="dark"]) #labTechConsole #chatHistory .chat-line.user { color: var(--onl-green); font-weight: 600; }
+    :root:not([data-theme="dark"]) #labTechConsole #chatHistory .chat-line.assistant { color: var(--onl-fg); }
+    :root:not([data-theme="dark"]) #labTechConsole #chatHistory .chat-line.system { color: var(--onl-muted); font-style: italic; }
+    :root:not([data-theme="dark"]) #labTechConsole #chatHistory .chat-line.system.error { color: var(--onl-red); font-style: normal; }
+    :root:not([data-theme="dark"]) #labTechConsole #chatHistory .chat-line.system.info { color: var(--onl-cyan); font-style: normal; }
+    :root:not([data-theme="dark"]) #labTechConsole #chatHistory a { color: var(--onl-blue); text-decoration: underline; font-weight: 600; }
+    :root:not([data-theme="dark"]) #labTechConsole #chatHistory a:hover { color: #6ea1ff; }
+
+    /* Input matches One Light */
+    :root:not([data-theme="dark"]) #labTechConsole #aiInputCompact {
+      background: var(--onl-bg) !important;
+      color: var(--onl-fg) !important;
+      border-color: #d0d0d0 !important;
     }
-    #chatHistory a[target="_blank"]::after {
-      content: ' ↗';
-      font-weight: 600;
-      color: #9ca3af;           /* subtle arrow on dark bg */
+    :root:not([data-theme="dark"]) #labTechConsole #aiInputCompact::placeholder { color: var(--onl-muted); }
+    :root:not([data-theme="dark"]) #labTechConsole #aiInputCompact:focus {
+      outline: none !important;
+      box-shadow: 0 0 0 2px rgba(64,120,242,0.25) !important;
+      border-color: #4078f2 !important;
+    }
+    :root:not([data-theme="dark"]) #labTechConsole #clearChatBtn {
+      background: #efefef !important;
+      color: var(--onl-fg) !important;
+      border: 1px solid #e2e2e2 !important;
+    }
+    :root:not([data-theme="dark"]) #labTechConsole #clearChatBtn:hover { background: #e7e7e7 !important; }
+
+    /* Neutralize Lab Tech and .quad preview console hues in dark mode */
+    [data-theme="dark"] #chatHistory,
+    [data-theme="dark"] #previewFull,
+    [data-theme="dark"] #userNotes,
+    [data-theme="dark"] #aiInputCompact {
+      background-color: var(--console-bg) !important;
+      color: var(--console-text) !important;
+      border-color: var(--console-input-border) !important;
+    }
+    /* Slightly lighten preview background in dark mode for better K gutter contrast */
+    [data-theme="dark"] #previewFull {
+      background-color: var(--bg-elevated-hover) !important; /* slightly lighter for gutter contrast */
+    }
+    [data-theme="dark"] #labTechResizer {
+      background-color: var(--console-resizer) !important;
+    }
+    [data-theme="dark"] #labTechResizer:hover {
+      background-color: var(--console-resizer-hover) !important;
+    }
+    [data-theme="dark"] #labTechResizer span,
+    [data-theme="dark"] #previewResizer span {
+      background-color: var(--console-grip) !important;
+    }
+    [data-theme="dark"] #previewResizer {
+      background-color: var(--console-resizer) !important;
+    }
+    [data-theme="dark"] #previewResizer:hover {
+      background-color: var(--console-resizer-hover) !important;
+    }
+    [data-theme="dark"] #userNotes::placeholder,
+    [data-theme="dark"] #aiInputCompact::placeholder {
+      color: #9a9a9a;
+    }
+    [data-theme="dark"] #userNotes {
+      border-color: var(--console-input-border) !important;
     }
 
-    /* Help content readability */
-    #helpContent h2 { font-size: 1.125rem; line-height: 1.5rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.5rem; color: #111827; }
-    #helpContent h3 { font-size: 1rem; line-height: 1.5rem; font-weight: 600; margin-top: 0.5rem; margin-bottom: 0.25rem; color: #111827; }
-    #helpContent p  { margin: 0.25rem 0 0.5rem 0; color: #374151; }
-    #helpContent hr { border: 0; border-top: 1px solid #e5e7eb; margin: 0.75rem 0; }
-    #helpContent ul, #helpContent ol { margin: 0.25rem 0 0.5rem 1.25rem; color: #374151; }
-    #helpContent ul { list-style: disc; list-style-position: inside; }
-    #helpContent ol { list-style: decimal; list-style-position: inside; }
-    #helpContent li { margin: 0.125rem 0; }
-    /* Glossary definition list styling */
-    #helpContent dl { margin: 0.25rem 0 0.75rem 0; }
-    #helpContent dt { font-weight: 700; margin-top: 0.75rem; color: #111827; }
-    #helpContent dd { margin: 0.15rem 0 0.5rem 0.75rem; color: #374151; }
-    #helpContent code { background: #f3f4f6; padding: 0 0.25rem; border-radius: 0.25rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    #helpContent a { color: #2563eb; text-decoration: underline; }
-    #helpContent a:hover { color: #1d4ed8; }
+    /* Dark-mode readability for channel inputs (percent and end) */
+    [data-theme="dark"] .percent-input,
+    [data-theme="dark"] .end-input {
+      background-color: var(--console-input-bg) !important; /* darker field */
+      color: var(--text) !important;                         /* light text */
+      border-color: var(--console-input-border) !important;  /* neutral border */
+    }
+    [data-theme="dark"] .percent-input::placeholder,
+    [data-theme="dark"] .end-input::placeholder {
+      color: #9a9a9a;                                       /* subtle placeholder */
+    }
+    [data-theme="dark"] .percent-input:focus,
+    [data-theme="dark"] .end-input:focus {
+      outline: 2px solid #737373;                           /* soft gray focus */
+      outline-offset: 0;
+      box-shadow: none !important;
+      border-color: #737373 !important;
+    }
+
+    /* Extend dark-mode readability to other text inputs/selects */
+    [data-theme="dark"] #filenameInput,
+    [data-theme="dark"] .standard-dropdown,
+    [data-theme="dark"] .lstar-input,
+    [data-theme="dark"] #editXYInput,
+    [data-theme="dark"] #aiInput,
+    [data-theme="dark"] #editMaxError,
+    [data-theme="dark"] #editMaxPoints,
+    [data-theme="dark"] #perChannelDeltaSelect {
+      background-color: var(--console-input-bg) !important;
+      color: var(--text) !important;
+      border-color: var(--console-input-border) !important;
+    }
+    [data-theme="dark"] #filenameInput::placeholder,
+    [data-theme="dark"] .lstar-input::placeholder,
+    [data-theme="dark"] #editXYInput::placeholder,
+    [data-theme="dark"] #aiInput::placeholder {
+      color: #9a9a9a;
+    }
+    [data-theme="dark"] #filenameInput:focus,
+    [data-theme="dark"] .standard-dropdown:focus,
+    [data-theme="dark"] .lstar-input:focus,
+    [data-theme="dark"] #editXYInput:focus,
+    [data-theme="dark"] #aiInput:focus,
+    [data-theme="dark"] #editMaxError:focus,
+    [data-theme="dark"] #editMaxPoints:focus,
+    [data-theme="dark"] #perChannelDeltaSelect:focus {
+      outline: 2px solid #737373;
+      outline-offset: 0;
+      box-shadow: none !important;
+      border-color: #737373 !important;
+    }
+
+    /* (moved above) Help content readability via theme tokens */
   </style>
 </head>
 <body class="min-h-screen bg-gray-50 px-2 md:px-4 py-3">
   <main class="mx-auto max-w-6xl">
-    <section class="bg-white rounded-2xl shadow-lg px-4 md:px-6 py-5 md:py-6">
+    <section class="app-shell bg-white rounded-2xl shadow-lg px-4 md:px-6 py-5 md:py-6">
       <header class="mb-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center mb-2">
           <div class="flex items-center gap-4 lg:col-span-3">
@@ -1198,6 +1651,7 @@ ARCHITECTURAL NOTES:
               <button id="helpBtn" class="text-sm bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-1 transition-colors ml-auto font-bold" title="Help and quick start">
                 📖 Help
               </button>
+              <button id="themeToggle" class="ml-2 text-sm rounded px-2 py-1 font-bold border border-gray-300 bg-white hover:bg-gray-50 transition-colors" title="Toggle dark mode" aria-pressed="false">🌙</button>
               
             </div>
           </div>
@@ -1208,7 +1662,7 @@ ARCHITECTURAL NOTES:
 
       <!-- Main Actions -->
       <div class="mb-4">
-        <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-xl p-4">
+              <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-xl p-4">
           <input type="file" id="quadFile" accept=".quad" class="hidden">
           <button id="undoBtn" class="px-4 py-2 text-sm bg-slate-600 text-white hover:bg-slate-700 rounded transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed" disabled title="No changes to undo">
             ↺ Undo
@@ -1235,12 +1689,7 @@ ARCHITECTURAL NOTES:
             <div class="bg-gray-50 rounded-lg p-2">
               <canvas id="inkChart" width="950" height="700" class="w-full h-auto max-h-none"></canvas>
               
-              <!-- Smoothing Note at bottom of canvas (with reserved space) -->
-              <div class="text-xs text-center h-[12px] flex items-center justify-center">
-                <span id="smoothingWarning" class="text-amber-800 opacity-0 invisible">
-                  ℹ️ Note: Smoothing allows departure of curves from loaded data
-                </span>
-              </div>
+              <!-- (Removed) Smoothing Note -->
             </div>
             <!-- Cursor tooltip for X,Y coordinates over the graph -->
             <div id="chartCursorTooltip" class="hidden absolute z-20 px-1.5 py-0.5 text-xs rounded bg-black text-white pointer-events-none shadow-md"></div>
@@ -1280,19 +1729,8 @@ ARCHITECTURAL NOTES:
                   
                 </div>
                 
-                <!-- Right Column: Data Point Smoothing -->
-                <div class="space-y-2">
-                  <!-- (Removed) Smoothing Method dropdown -->
-                  
-                  <!-- Smoothing Slider (inline label) -->
-                  <div class="flex items-center gap-2 mt-2 hidden">
-                    <span class="text-xs text-gray-700 whitespace-nowrap">Smoothing: <span id="smoothingValue" class="text-xs text-gray-700">0%</span></span>
-                    <input type="range" id="smoothingSlider" min="0" max="90" value="0" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" disabled>
-                    <span class="text-xs text-gray-500">90%</span>
-                  </div>
-
-                  <!-- (Removed) Key-Point Simplifier Controls under graph -->
-                </div>
+                <!-- Right Column (reserved) -->
+                <div class="space-y-2"></div>
               </div>
             </div>
           </div>
@@ -1319,6 +1757,7 @@ ARCHITECTURAL NOTES:
               <button id="manualLstarBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold">
                 ✏️ Enter L* Values Manually
               </button>
+              <button id="revertGlobalToMeasurementBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed" title="Revert to measurement source (global)" disabled>↺ Revert</button>
             </div>
             <p id="globalLinearizationHint" class="text-xs text-gray-500 mb-1">LUT (.cube), LAB data (.txt), or curves (.acv)</p>
             
@@ -1349,20 +1788,14 @@ ARCHITECTURAL NOTES:
           <!-- Edit Curves Panel -->
           <div class="bg-white border border-gray-200 rounded-xl p-3">
             <div class="flex items-center justify-between mb-2">
-              <button id="editModeToggleBtn" type="button" class="inline-flex text-sm font-bold px-3 py-2 rounded cursor-pointer relative z-10 text-white bg-slate-600 hover:bg-slate-700 border-0" aria-pressed="false" role="switch" aria-checked="false" title="Toggle edit mode">
+              <button id="editModeToggleBtn" type="button" class="inline-flex text-xs font-bold px-2.5 py-1.5 rounded cursor-pointer relative z-10 text-white bg-slate-600 hover:bg-slate-700 border-0" aria-pressed="false" role="switch" aria-checked="false" title="Toggle edit mode">
                 <span id="editModeLabel">⟐ Edit Mode: OFF</span>
               </button>
               <button id="editModeHelpBtn" class="text-xs text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 transition-colors font-bold" title="Edit Mode Help" aria-label="Edit Mode Help">?</button>
             </div>
             <div id="editPanelBody">
 
-            <!-- Row: smoothing only (key points visibility follows Edit Mode) -->
-            <div class="flex items-center gap-4 mb-3">
-              <div class="flex items-center gap-2 flex-1">
-                <span class="text-sm text-gray-700 whitespace-nowrap">Smoothing - <span id="editSmoothingValue">0%</span></span>
-                <input type="range" id="editSmoothingSlider" min="0" max="90" value="0" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
-              </div>
-            </div>
+            <!-- (Removed) Edit-panel smoothing: moved to Global Correction panel -->
 
             <!-- Calculate points -->
             <div class="border border-gray-200 rounded-lg p-3 mb-3 relative">
@@ -1375,7 +1808,7 @@ ARCHITECTURAL NOTES:
                   <input type="number" id="editMaxError" class="w-20 ml-1 px-2 py-1 text-xs border border-gray-300 rounded" min="0.05" max="5" step="0.05" value="0.25">
                 </label>
                 <label class="text-xs text-gray-700">Max points
-                  <input type="number" id="editMaxPoints" class="w-16 ml-1 px-2 py-1 text-xs border border-gray-300 rounded" min="2" max="21" step="1" value="16">
+                  <input type="number" id="editMaxPoints" class="w-16 ml-1 px-2 py-1 text-xs border border-gray-300 rounded" min="2" max="21" step="1" value="21">
                 </label>
               </div>
             </div>
@@ -1437,14 +1870,19 @@ ARCHITECTURAL NOTES:
 
       <!-- Channel table -->
       <div class="overflow-auto">
-        <table class="w-full text-sm border border-gray-200 rounded-xl overflow-hidden">
+        <table class="w-full text-sm border border-gray-200 rounded-xl overflow-hidden border-collapse">
           <thead>
             <tr class="bg-gray-50 text-gray-700 text-xs">
-              <th class="text-center px-1 py-2"></th>
-              <th class="text-left px-1 py-2">Channel</th>
-              <th class="text-left px-1 py-2" style="width: 140px;">Curve</th>
-              <th class="text-left px-1 py-2">Percent (0–100)</th>
-              <th class="text-left px-1 py-2">End (0–64,000)</th>
+              <th class="text-center p-0" style="width:0;"></th>
+              <th class="text-left px-1 py-2" style="width: 100px;">Channel</th>
+              <th class="text-center px-1 py-2" style="width: 250px;">Correction</th>
+              <th class="text-left px-1 py-2">Status</th>
+              <th class="text-right pr-0 py-2" style="width:120px;">
+                Percent <span class="font-normal text-gray-500">(0–100)</span>
+              </th>
+              <th class="text-right pl-0 py-2" style="width:120px;">
+                End <span class="font-normal text-gray-500">(0–64,000)</span>
+              </th>
             </tr>
           </thead>
           <tbody id="rows">
@@ -1454,8 +1892,8 @@ ARCHITECTURAL NOTES:
 
       <!-- Lab Tech (console-style, matches .quad File Preview framing) -->
       <div class="mt-3">
-        <div class="border border-gray-200 rounded-xl overflow-hidden">
-          <div class="bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 flex items-center justify-between">
+          <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <div class="console-header bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 flex items-center justify-between">
             <span><span id="labTechIcon" class="mr-1">💬</span>Lab Tech</span>
             <div class="flex items-center gap-3">
               <label class="flex items-center gap-1 text-xs text-gray-700 hidden" title="Show assistant status messages in chat">
@@ -1465,15 +1903,15 @@ ARCHITECTURAL NOTES:
               <button id="clearChatBtn" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded px-2 py-0.5 font-bold focus:outline-none focus:ring-0">Clear</button>
             </div>
           </div>
-          <div class="bg-black text-white font-mono p-2">
+          <div id="labTechConsole" class="font-mono p-2">
             <!-- Chat History -->
             <div id="chatHistory" class="overflow-y-auto text-xs leading-4 mb-2" style="height:224px;">
-              <div class="text-gray-300 px-2 py-1 border border-gray-800 rounded mb-2">
-                <strong class="text-gray-200">Try this:</strong> "Reduce all ink limits by 20%"<br>
-                <strong class="text-gray-200">or:</strong> "generate a curve with points 0,0 25,20 75,85 100,100"<br>
-                <strong class="text-gray-200">or:</strong> "apply a midtone lift"<br>
-                <strong class="text-gray-200">or:</strong> "delete the point near 25%"<br>
-                <strong class="text-gray-2 00">or:</strong> "delete point 2"
+              <div class="labtech-sample px-2 py-1 rounded mb-2">
+                <strong>Try this:</strong> "Reduce all ink limits by 20%"<br>
+                <strong>or:</strong> "generate a curve with points 0,0 25,20 75,85 100,100"<br>
+                <strong>or:</strong> "apply a midtone lift"<br>
+                <strong>or:</strong> "delete the point near 25%"<br>
+                <strong>or:</strong> "delete point 2"
               </div>
             </div>
             <!-- Resizer for Lab Tech console -->
@@ -1486,7 +1924,7 @@ ARCHITECTURAL NOTES:
             <!-- Bottom input area -->
             <div class="flex items-center gap-2">
               <input type="text" id="aiInputCompact" placeholder="Ask Lab Tech… (Enter to send)" 
-                     class="flex-1 min-w-0 rounded border border-gray-700 px-3 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-white/10 focus:border-gray-500 bg-black text-white placeholder-gray-400">
+                     class="flex-1 min-w-0 rounded border px-3 py-1 text-xs focus:outline-none focus:ring-2 placeholder-gray-400">
               <button id="sendMessageBtnCompact" class="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded font-bold focus:outline-none focus:ring-0" disabled>Send</button>
             </div>
           </div>
@@ -1497,14 +1935,14 @@ ARCHITECTURAL NOTES:
 
       <!-- Full Preview -->
       <div class="mt-5">
-        <div class="border border-gray-200 rounded-xl overflow-hidden">
-          <div class="bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700">📝 .quad File Preview</div>
+          <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <div class="console-header bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700">📝 .quad File Preview</div>
           <!-- Attached notes input styled like preview -->
-          <div class="bg-black text-white font-mono p-2 border-t border-gray-800">
+          <div id="previewConsole" class="font-mono p-2 border-t">
             <textarea id="userNotes" placeholder="Notes (saved as # comments in the .quad file)" rows="3"
-                      class="w-full bg-black text-white font-mono text-xs p-2 outline-none resize-y border border-gray-700 rounded-sm placeholder-gray-400"></textarea>
+                      class="w-full font-mono text-xs p-2 outline-none resize-y border rounded-sm placeholder-gray-400"></textarea>
           </div>
-          <pre id="previewFull" class="p-2 text-xs leading-4 overflow-auto bg-black text-white font-mono" style="max-height:224px;">–</pre>
+          <pre id="previewFull" class="p-2 text-xs leading-4 overflow-auto font-mono" style="max-height:224px;">–</pre>
           <div id="previewResizer" class="h-4 bg-gray-200 hover:bg-gray-300 cursor-row-resize relative" role="separator" aria-orientation="horizontal" title="Drag to resize">
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
               <span class="inline-block w-10 h-[2px] bg-gray-400 rounded"></span>
@@ -1769,7 +2207,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
 —
 
-## 3. Quick Start (Beta v2.0)  
+## 3. Quick Start (Beta v2.1)  
 1) Choose your printer and set ink limits (per channel).
 2) Start with Linear Ramp, or  
 3) Load data: `.quad` (inspect/correct), LAB `.txt`, LUT `.cube` (1D/3D), Photoshop `.acv`, or enter Manual L*.  
@@ -1844,7 +2282,9 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta v2.0.3';
+    const APP_VERSION = 'Beta v2.1.0';
+    // Dark mode feature flag
+    const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
     var DEBUG_LOGS = false;
     // AI provider selection (code-level switch, no UI): 'anthropic' or 'openai'
@@ -1862,6 +2302,77 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v2.1.0': {
+        date: '2025-09-13',
+        title: 'Edit Mode reliability, Revert fixes, channel-colored labels',
+        sections: {
+          FIXED: [
+            'Double-scaling eliminated when toggling Edit Mode OFF→ON on Smart-sourced channels',
+            'Ordinal labels no longer collapse to the X-axis when switching to a newly enabled channel',
+            'Revert to measurement clears lingering Smart source tags (no linear ramp fallback)',
+            'Revert preserves the selected channel in Edit Mode and redraws overlays/labels correctly'
+          ],
+          ADDED: [
+            '.quad Preview: lightweight syntax highlighting and non-copying line numbers',
+            '.quad Preview: per-line channel gutter tint with auto-contrast line numbers',
+            'Revert UI: added global and per-channel Revert buttons with integrated Undo/Redo',
+            'Help: new Detailed Workflow tab plus Version History moved into Help window',
+            'Lab Tech console (light mode): One Light–inspired text theme with terminal-style lines',
+            'Dark mode toggle: header button (🌙/☀️) to switch themes; remembers your choice and syncs with system preference'
+          ],
+          CHANGED: [
+            'Ordinal label chips now match the exact channel ink color with automatic black/white text for contrast',
+            'Edit channel selection instantly redraws overlays to reflect the selected channel',
+            'Dark mode polish: improved input/scrollbar contrast, help tab selection contrast, and preview readability'
+          ]
+        },
+        aboutDialog: [
+          { label: 'Edit Reliability', desc: 'No more double-apply on Smart curves when toggling Edit Mode.' },
+          { label: 'Revert UX', desc: 'Revert keeps your selected channel and restores measurement plotting.' },
+          { label: 'Channel-Colored Labels', desc: 'Ordinal labels use the exact plot color for the selected channel.' },
+          { label: '.quad Preview', desc: 'Syntax highlighting, line numbers, and channel-colored gutter.' },
+          { label: 'Lab Tech Theme', desc: 'Polished console theme (light mode) for readability.' },
+          { label: 'Dark Mode Toggle', desc: 'Added header toggle (🌙/☀️); remembers your choice and follows system preference.' }
+        ]
+      },
+      'v2.0.5': {
+        date: '2025-09-13',
+        title: 'Edit toggle double-scaling fix + stability',
+        sections: {
+          FIXED: [
+            'Edit toggle OFF→ON no longer double-applies global on Smart-sourced channels',
+            'Entering Edit Mode after load no longer reverts plotted curve to a linear ramp while key points stay at prior shape',
+            'Undo/Redo restore bakedGlobal meta with interpolation to keep plots/overlays aligned',
+            'Revert preserves selected channel in Edit Mode and clears Smart source tags so plots/labels reflect the measurement again'
+          ]
+        },
+        aboutDialog: [
+          { label: 'Edit Toggle', desc: 'No more double application when toggling Edit Mode; Smart-sourced channels are treated as baked.' },
+          { label: 'Plot Alignment', desc: 'Plot stays aligned to key points when entering Edit Mode after loading data.' },
+          { label: 'Revert UX', desc: 'Revert keeps your selected channel and restores measurement plotting (no MK fallback labels).' }
+        ]
+      },
+      'v2.0.4': {
+        date: '2025-09-11',
+        title: 'Edit Mode × Linearization Fixes + Dark Mode Polish',
+        sections: {
+          FIXED: [
+            'Global linearization applies even when Smart points exist (Edit Mode ON)',
+            'Recompute samples the current plotted curve (respects global/per-channel corrections and End)',
+            'Double-apply guard: recomputed Smart curves “bake” global correction once (no extra global on top)'
+          ],
+          CHANGED: [
+            'Near-linear detection tightened (0.5%→0.2%, 5→11 samples) to avoid collapsing lightly corrected curves',
+            'Dark mode: input fields (percent/end, filename, L*, edits) use darker backgrounds and clearer focus',
+            'Dark mode: toggle sliders use darker tracks and high-contrast knobs; key-point ordinal labels use theme text color'
+          ]
+        },
+        aboutDialog: [
+          { label: 'Global + Smart', desc: 'Global corrections now work with Edit Mode ON; recompute bakes global once to avoid double application.' },
+          { label: 'Recompute Source', desc: 'Recompute uses the currently plotted curve so points match what you see.' },
+          { label: 'Dark Mode', desc: 'Improved readability for inputs, toggles, and labels.' }
+        ]
+      },
       'v2.0.3': {
         date: '2025-09-10',
         title: 'Detailed Workflow Guide in Help',
@@ -2351,6 +2862,95 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             success: false,
             message: `Error setting channel value: ${error.message}`
           };
+        }
+      }
+
+      /**
+       * Revert all channels to the loaded global measurement (AI assistant callable)
+       */
+      revertGlobalToMeasurement() {
+        try {
+          const btn = document.getElementById('revertGlobalToMeasurementBtn');
+          if (!linearizationData) {
+            return { success: false, message: 'No global measurement loaded to revert to.' };
+          }
+          if (!btn) {
+            // Fallback: inline perform same logic as click handler
+            try { CurveHistory.captureState('Before: Revert Global to Measurement'); } catch {}
+            const savedSel = (isEditModeEnabled() && typeof EDIT !== 'undefined' && EDIT && EDIT.selectedChannel) ? EDIT.selectedChannel : null;
+            const chs = (getCurrentPrinter()?.channels || []).slice();
+            chs.forEach((ch) => {
+              try {
+                if (window.loadedQuadData?.curves?.[ch]) delete window.loadedQuadData.curves[ch];
+                if (window.loadedQuadData?.keyPoints?.[ch]) delete window.loadedQuadData.keyPoints[ch];
+                if (window.loadedQuadData?.keyPointsMeta?.[ch]) delete window.loadedQuadData.keyPointsMeta[ch];
+                if (window.loadedQuadData?.sources?.[ch]) delete window.loadedQuadData.sources[ch];
+              } catch {}
+            });
+            if (elements.globalLinearizationToggle) {
+              elements.globalLinearizationToggle.disabled = false;
+              elements.globalLinearizationToggle.checked = true;
+            }
+            try { linearizationData.edited = false; } catch {}
+            refreshGlobalLinearizationDisplay();
+            updateInterpolationControls();
+            updatePreview();
+            try { const chans = getCurrentPrinter().channels; chans.forEach((name)=> updateProcessingDetail(name)); } catch {}
+            showStatus('Reverted to measurement (global)');
+            updateRevertButtonsState();
+            try {
+              if (savedSel && isEditModeEnabled()) {
+                const row = Array.from(elements.rows.children).find(tr => tr.getAttribute('data-channel') === savedSel);
+                const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : 0;
+                if (endVal > 0) {
+                  if (elements.editChannelSelect) elements.editChannelSelect.value = savedSel;
+                  EDIT.selectedChannel = savedSel;
+                  edit_refreshState();
+                  updateInkChart();
+                }
+              }
+            } catch {}
+            return { success: true, message: 'Reverted to measurement (global)' };
+          }
+          btn.click();
+          return { success: true, message: 'Revert (global) triggered' };
+        } catch (e) {
+          return { success: false, message: `Global revert failed: ${e.message}` };
+        }
+      }
+
+      /**
+       * Revert a specific channel to its loaded per‑channel measurement (AI assistant callable)
+       */
+      revertChannelToMeasurement(channelName) {
+        try {
+          const tr = document.querySelector(`tr[data-channel="${channelName}"]`);
+          if (!tr) return { success: false, message: `Channel row not found for ${channelName}` };
+          const btn = tr.querySelector('.per-channel-revert');
+          if (!perChannelLinearization[channelName]) {
+            return { success: false, message: `No per‑channel measurement loaded for ${channelName}` };
+          }
+          if (btn) { btn.click(); return { success: true, message: `Reverted ${channelName} to measurement` }; }
+          // Fallback: inline logic
+          try { CurveHistory.captureState(`Before: Revert ${channelName} to Measurement`); } catch {}
+          try {
+            if (window.loadedQuadData?.curves?.[channelName]) delete window.loadedQuadData.curves[channelName];
+            if (window.loadedQuadData?.keyPoints?.[channelName]) delete window.loadedQuadData.keyPoints[channelName];
+            if (window.loadedQuadData?.keyPointsMeta?.[channelName]) delete window.loadedQuadData.keyPointsMeta[channelName];
+            if (window.loadedQuadData?.sources?.[channelName]) delete window.loadedQuadData.sources[channelName];
+          } catch {}
+          perChannelEnabled[channelName] = true;
+          const perToggle = tr.querySelector('.per-channel-toggle');
+          if (perToggle) { perToggle.disabled = false; perToggle.checked = true; }
+          try { perChannelLinearization[channelName].edited = false; } catch {}
+          refreshPerChannelLinearizationDisplay(channelName);
+          updateInterpolationControls();
+          updateProcessingDetail(channelName);
+          debouncedPreviewUpdate();
+          showStatus(`Reverted ${channelName} to measurement`);
+          return { success: true, message: `Reverted ${channelName} to measurement` };
+        } catch (e) {
+          return { success: false, message: `Channel revert failed: ${e.message}` };
         }
       }
 
@@ -2913,6 +3513,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             // Set per-channel linearization data (use the same variables as file loading)
             perChannelLinearization[channelName] = parseResult;
             perChannelEnabled[channelName] = true;
+            try { updateRevertButtonsState(); } catch {}
 
             // Update UI toggle for this channel
             const channelRow = document.querySelector(`tr[data-channel="${channelName}"]`);
@@ -3056,6 +3657,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             // Set per-channel linearization data (use the same variables as file loading)
             perChannelLinearization[channelName] = parseResult;
             perChannelEnabled[channelName] = true;
+            try { updateRevertButtonsState(); } catch {}
 
             // Update UI toggle for this channel
             const channelRow = document.querySelector(`tr[data-channel="${channelName}"]`);
@@ -3674,13 +4276,17 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
           // Apply curve to channel with key-point history extras
           const oldKP = window.loadedQuadData?.keyPoints?.[channelName] ? window.loadedQuadData.keyPoints[channelName].map(p => ({ input: p.input, output: p.output })) : null;
-          const oldInterp = window.loadedQuadData?.keyPointsMeta?.[channelName]?.interpolationType || 'smooth';
+          const oldMeta = window.loadedQuadData?.keyPointsMeta?.[channelName] || {};
+          const oldInterp = oldMeta.interpolationType || 'smooth';
+          const oldBaked = !!oldMeta.bakedGlobal;
           const newInterp = (interpolationType === 'linear' ? 'linear' : 'smooth');
           const extras = {
             oldKeyPoints: oldKP,
             newKeyPoints: normalizedPoints.map(p => ({ input: p.input, output: p.output })),
             oldInterpolation: oldInterp,
-            newInterpolation: newInterp
+            newInterpolation: newInterp,
+            oldBakedGlobal: oldBaked,
+            newBakedGlobal: !!(window.loadedQuadData?.keyPointsMeta?.[channelName]?.bakedGlobal)
           };
           CurveHistory.recordKeyPointsChange(channelName, extras.oldKeyPoints, extras.newKeyPoints, extras.oldInterpolation, extras.newInterpolation);
           const result = this._applyCurveToChannel(channelName, curve, extras);
@@ -4165,10 +4771,19 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
               } else {
                 const existingKP = window.loadedQuadData?.keyPoints?.[channelName];
                 if (existingKP) {
-                  extras = { oldKeyPoints: existingKP.map(p => ({ input: p.input, output: p.output })) };
+                  const meta = window.loadedQuadData?.keyPointsMeta?.[channelName] || {};
+                  extras = { oldKeyPoints: existingKP.map(p => ({ input: p.input, output: p.output })), oldInterpolation: meta.interpolationType, oldBakedGlobal: !!meta.bakedGlobal };
                 }
               }
             }
+            // Ensure bakedGlobal meta is captured for undo path
+            try {
+              const _existingMeta = window.loadedQuadData?.keyPointsMeta?.[channelName] || {};
+              if (extras && typeof extras === 'object' && typeof extras.oldBakedGlobal === 'undefined') {
+                extras.oldBakedGlobal = !!_existingMeta.bakedGlobal;
+              }
+            } catch {}
+
             // Attach source transition metadata for accurate undo/redo labeling
             if (!extras || typeof extras !== 'object') extras = {};
             const oldSource = window.loadedQuadData?.sources?.[channelName] || null;
@@ -4333,6 +4948,14 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           CurveHistory.recordKeyPointsChange(channelName, extras.oldKeyPoints, extras.newKeyPoints, extras.oldInterpolation, extras.newInterpolation);
           // Persist Smart key points BEFORE applying curve so downstream UI reflects latest counts
           ControlPoints.persist(channelName, norm, interpolationType);
+          try {
+            if (!window.loadedQuadData) window.loadedQuadData = {};
+            if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+            window.loadedQuadData.keyPointsMeta[channelName] = {
+              ...(window.loadedQuadData.keyPointsMeta[channelName] || {}),
+              interpolationType: (interpolationType === 'linear' ? 'linear' : 'smooth')
+            };
+          } catch {}
           const applied = this._applyCurveToChannel(channelName, curve, extras);
           if (!applied.success) return applied;
           // Mark any contributing linearization as edited for display
@@ -4361,14 +4984,34 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           channelName = this._resolveChannel(channelName);
           const row = document.querySelector(`tr[data-channel="${channelName}"]`);
           const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input').value) : TOTAL;
-          // Prefer raw loaded .quad curve if present; otherwise use displayed curve
-          let values = (window.loadedQuadData?.curves?.[channelName] && Array.isArray(window.loadedQuadData.curves[channelName]))
-            ? window.loadedQuadData.curves[channelName]
-            : make256(endVal, channelName, true);
+          // Always use the currently plotted curve so recompute respects global/per-channel corrections and End
+          const values = make256(endVal, channelName, true);
           const maxErrorPercent = Math.max(0.05, Math.min(5, options.maxErrorPercent || KP_SIMPLIFY.maxErrorPercent || 1.0));
       const maxPoints = Math.max(2, Math.min(21, options.maxPoints || KP_SIMPLIFY.maxPoints || 21));
           const keyPoints = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent, maxPoints });
-          return this.setAIKeyPoints(channelName, keyPoints, 'smooth');
+          const res = this.setAIKeyPoints(channelName, keyPoints, 'smooth');
+          // Mark Smart points as baked-from-global if a global correction is active at recompute time
+          try {
+            if (res && res.success && linearizationApplied && linearizationData) {
+              if (!window.loadedQuadData) window.loadedQuadData = {};
+              if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+              window.loadedQuadData.keyPointsMeta[channelName] = {
+                ...(window.loadedQuadData.keyPointsMeta[channelName] || {}),
+                bakedGlobal: true
+              };
+              // Also tag the most recent curve action for this channel so redo restores bakedGlobal
+              try {
+                for (let i = CurveHistory.actionHistory.length - 1; i >= 0; i--) {
+                  const a = CurveHistory.actionHistory[i];
+                  if (a && a.type === 'curve' && a.channelName === channelName) {
+                    a.newBakedGlobal = true;
+                    break;
+                  }
+                }
+              } catch {}
+            }
+          } catch {}
+          return res;
         } catch (e) {
           return { success: false, message: `Error simplifying Smart key points: ${e.message}` };
         }
@@ -4411,6 +5054,14 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
               // Generate curve and persist key points before applying (so UI counts are up to date)
               const curve = this._interpolateCurve(norm, interp);
               try { ControlPoints.persist(channelName, norm, interp); } catch (e) { console.warn('Persist KP (batch) failed:', channelName, e); }
+              try {
+                if (!window.loadedQuadData) window.loadedQuadData = {};
+                if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+                window.loadedQuadData.keyPointsMeta[channelName] = {
+                  ...(window.loadedQuadData.keyPointsMeta[channelName] || {}),
+                  interpolationType: (interp === 'linear' ? 'linear' : 'smooth')
+                };
+              } catch {}
 
               const extras = { oldKeyPoints: oldKP, newKeyPoints: norm.map(p => ({ input: p.input, output: p.output })), oldInterpolation: oldInterp, newInterpolation: interp };
               const applied = this._applyCurveToChannel(channelName, curve, extras);
@@ -5421,6 +6072,30 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             }
           },
           required: ["enabled"]
+        }
+      },
+      {
+        name: "revert_global_to_measurement",
+        description: "Revert all channels to the loaded global measurement source (clears Smart curves/points; undoable). Enabled only when a global measurement is loaded.",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: []
+        }
+      },
+      {
+        name: "revert_channel_to_measurement",
+        description: "Revert a specific channel to its loaded per‑channel measurement source (clears Smart curves/points; undoable). Enabled only when that channel has measurement loaded.",
+        parameters: {
+          type: "object",
+          properties: {
+            channelName: {
+              type: "string",
+              description: "Channel name to revert",
+              enum: ["K", "C", "M", "Y", "LC", "LM", "LK", "LLK", "V", "MK"]
+            }
+          },
+          required: ["channelName"]
         }
       },
       {
@@ -6521,6 +7196,10 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           
           case 'set_per_channel_linearization':
             return quadGenActions.setPerChannelLinearization(parameters.channelName, parameters.enabled);
+          case 'revert_global_to_measurement':
+            return quadGenActions.revertGlobalToMeasurement();
+          case 'revert_channel_to_measurement':
+            return quadGenActions.revertChannelToMeasurement(parameters.channelName);
           
           case 'set_interpolation_method':
             return quadGenActions.setInterpolationMethod(parameters.method);
@@ -7240,6 +7919,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       perChannelDeltaSelect: document.getElementById('perChannelDeltaSelect'),
       perChannelDeltaSummary: document.getElementById('perChannelDeltaSummary'),
       helpPopup: document.getElementById('helpPopup'),
+      themeToggle: document.getElementById('themeToggle'),
       closeHelpBtn: document.getElementById('closeHelpBtn'),
       helpContent: document.getElementById('helpContent'),
       helpTabReadme: document.getElementById('helpTabReadme'),
@@ -7300,6 +7980,36 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       labTechIcon: document.getElementById('labTechIcon'),
   };
 
+  // Enable/disable Revert buttons depending on loaded measurement data
+  function updateRevertButtonsState() {
+    try {
+      // Global revert: enable if any global measurement is loaded (robust check)
+      const globalBtn = document.getElementById('revertGlobalToMeasurementBtn');
+      if (globalBtn) {
+        const infoEl = document.getElementById('globalLinearizationInfo');
+        const fnameEl = elements && elements.globalLinearizationFilename;
+        const fdetEl = elements && elements.globalLinearizationDetails;
+        const btnEl = elements && elements.globalLinearizationBtn;
+        const tooltip = btnEl ? (btnEl.getAttribute('data-tooltip') || '') : '';
+        const infoVisible = !!(infoEl && !infoEl.classList.contains('hidden'));
+        const hasText = !!((fnameEl && fnameEl.textContent && fnameEl.textContent.trim().length > 0) || (fdetEl && fdetEl.textContent && fdetEl.textContent.trim().length > 0));
+        const isLoaded = !!linearizationData || infoVisible || hasText || /^Loaded:/i.test(tooltip);
+        if (isLoaded) { globalBtn.disabled = false; globalBtn.removeAttribute('disabled'); }
+        else { globalBtn.disabled = true; globalBtn.setAttribute('disabled','disabled'); }
+      }
+    } catch {}
+    try {
+      // Per-channel revert: enabled only if per-channel measurement is present
+      const rows = Array.from(elements.rows?.children || []);
+      rows.forEach(tr => {
+        const ch = tr && tr.getAttribute && tr.getAttribute('data-channel');
+        if (!ch) return;
+        const btn = tr.querySelector('.per-channel-revert');
+        if (btn) btn.disabled = !perChannelLinearization[ch];
+      });
+    } catch {}
+  }
+
   // No display orientation or Y semantics toggles in stable layout
 
     // Global defaults for key‑point simplifier
@@ -7354,6 +8064,10 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         const disp = getEditedDisplayName(base, !!linearizationData.edited);
         elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: ${disp}`);
         elements.globalLinearizationFilename.textContent = disp;
+        try {
+          const rev = document.getElementById('revertGlobalToMeasurementBtn');
+          if (rev) { rev.disabled = false; rev.removeAttribute('disabled'); }
+        } catch {}
       }
     }
 
@@ -7399,6 +8113,59 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
 
     // Initialize version numbers when DOM is ready
     initializeVersionNumbers();
+    // Observe global linearization UI changes to keep Revert state in sync
+    try {
+      const fnameEl = elements.globalLinearizationFilename;
+      const infoEl = elements.globalLinearizationInfo;
+      const detailsEl = elements.globalLinearizationDetails;
+      const targets = [fnameEl, infoEl, detailsEl].filter(Boolean);
+      if (targets.length > 0 && window.MutationObserver){
+        const mo = new MutationObserver(() => { try { updateRevertButtonsState(); } catch {} });
+        targets.forEach(t => mo.observe(t, { attributes: true, attributeFilter: ['class'], childList: true, characterData: true, subtree: true }));
+        // Initial sync
+        try { updateRevertButtonsState(); } catch {}
+      }
+    } catch {}
+
+    // Theme handling
+    const THEME_KEY = 'quadgen.theme';
+    function getSystemPrefersDark(){ try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch { return false; } }
+    function applyTheme(theme, persist = true){
+      try {
+        const root = document.documentElement;
+        if (theme === 'dark') root.setAttribute('data-theme', 'dark'); else root.removeAttribute('data-theme');
+        if (persist) localStorage.setItem(THEME_KEY, theme);
+        if (elements.themeToggle){
+          const isDark = theme === 'dark';
+          elements.themeToggle.textContent = isDark ? '☀️' : '🌙';
+          elements.themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+          elements.themeToggle.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+        }
+        try { updateInkChart(); } catch {}
+      } catch {}
+    }
+    (function initTheme(){
+      if (!ENABLE_DARK_MODE) return;
+      const saved = localStorage.getItem(THEME_KEY);
+      const initial = saved || (getSystemPrefersDark() ? 'dark' : 'light');
+      applyTheme(initial, false);
+      try {
+        const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+        if (mq && (mq.addEventListener || mq.addListener)){
+          const onChange = (e)=>{
+            const override = localStorage.getItem(THEME_KEY);
+            if (!override || override === 'system') applyTheme(e.matches ? 'dark' : 'light', false);
+          };
+          if (mq.addEventListener) mq.addEventListener('change', onChange); else mq.addListener(onChange);
+        }
+      } catch {}
+      if (elements.themeToggle){
+        elements.themeToggle.addEventListener('click', ()=>{
+          const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+          applyTheme(isDark ? 'light' : 'dark');
+        });
+      }
+    })();
 
     // (Removed) IndustryReferences bookmarks system — reverted to trusting the model
 
@@ -7531,6 +8298,10 @@ DOMAIN_MAX 1.0 1.0 1.0
             try {
               const existing = ControlPoints.get(ch)?.points;
               if (existing && existing.length >= 2) return; // already has AI points
+              // If a correction is already applied (global or per-channel), avoid applying Smart curve during priming
+              const hasGlobalApplied = !!(linearizationApplied && linearizationData);
+              const hasPerApplied = !!(perChannelLinearization[ch] && perChannelEnabled[ch]);
+              const applyInPrime = !(hasGlobalApplied || hasPerApplied);
               // ACV sources (per-channel or global): seed directly from anchors without simplification
               try {
                 const per = perChannelLinearization[ch];
@@ -7541,7 +8312,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                   if (anchors.length >= 2) {
                     const row = document.querySelector(`tr[data-channel="${ch}"]`);
                     const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : 0;
-                    if (endVal === 0) persistOnly.push({ channelName: ch, keyPoints: anchors, interpolationType: 'smooth' });
+                  if (!applyInPrime || endVal === 0) persistOnly.push({ channelName: ch, keyPoints: anchors, interpolationType: 'smooth' });
                     else entries.push({ channelName: ch, keyPoints: anchors, interpolationType: 'smooth' });
                     return;
                   }
@@ -7550,7 +8321,8 @@ DOMAIN_MAX 1.0 1.0 1.0
                 if (hasPerLAB) {
                   const row = document.querySelector(`tr[data-channel="${ch}"]`);
                   const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : TOTAL;
-                  const values = make256(endVal, ch, true);
+                  const sampleEnd = endVal > 0 ? endVal : TOTAL; // for disabled channels, sample at full scale
+                  const values = make256(sampleEnd, ch, true);
                   let kps;
                   if (per.originalData.length <= DIRECT_SEED_MAX_POINTS) {
                     const Nvals = values.length - 1;
@@ -7591,7 +8363,8 @@ DOMAIN_MAX 1.0 1.0 1.0
                 if (hasGlobalLAB) {
                   const row = document.querySelector(`tr[data-channel="${ch}"]`);
                   const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : TOTAL;
-                  const values = make256(endVal, ch, true);
+                  const sampleEnd = endVal > 0 ? endVal : TOTAL;
+                  const values = make256(sampleEnd, ch, true);
                   let kps;
                   if (linearizationData.originalData.length <= DIRECT_SEED_MAX_POINTS) {
                     const Nvals = values.length - 1;
@@ -7611,7 +8384,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                   if (Array.isArray(kps) && kps.length >= 2) {
                     const row2 = document.querySelector(`tr[data-channel="${ch}"]`);
                     const e2 = row2 ? InputValidator.clampEnd(row2.querySelector('.end-input')?.value || 0) : 0;
-                    if (e2 === 0) persistOnly.push({ channelName: ch, keyPoints: kps, interpolationType: 'smooth' });
+                    if (!applyInPrime || e2 === 0) persistOnly.push({ channelName: ch, keyPoints: kps, interpolationType: 'smooth' });
                     else entries.push({ channelName: ch, keyPoints: kps, interpolationType: 'smooth' });
                     return;
                   }
@@ -7623,14 +8396,15 @@ DOMAIN_MAX 1.0 1.0 1.0
                 : (function(){
                     const row = document.querySelector(`tr[data-channel="${ch}"]`);
                     const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : TOTAL;
-                    return make256(endVal, ch, true);
+                    const sampleEnd = endVal > 0 ? endVal : TOTAL;
+                    return make256(sampleEnd, ch, true);
                   })();
               if (!Array.isArray(values) || values.length < 2) return;
               const keyPoints = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
               if (Array.isArray(keyPoints) && keyPoints.length >= 2) {
                 const row = document.querySelector(`tr[data-channel="${ch}"]`);
                 const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : 0;
-                if (endVal === 0) persistOnly.push({ channelName: ch, keyPoints, interpolationType: 'smooth' });
+                if (!applyInPrime || endVal === 0) persistOnly.push({ channelName: ch, keyPoints, interpolationType: 'smooth' });
                 else entries.push({ channelName: ch, keyPoints, interpolationType: 'smooth' });
               }
             } catch {}
@@ -7642,7 +8416,48 @@ DOMAIN_MAX 1.0 1.0 1.0
           if (persistOnly.length > 0) {
             try { persistOnly.forEach(e => { ControlPoints.persist(e.channelName, e.keyPoints, e.interpolationType || 'smooth'); }); } catch {}
           }
+          // If a global correction is active, mark newly created Smart points as baked-from-global
+          try {
+            if (linearizationApplied && linearizationData) {
+              const setBaked = (ch) => {
+                if (!window.loadedQuadData) window.loadedQuadData = {};
+                if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+                const prev = window.loadedQuadData.keyPointsMeta[ch] || {};
+                window.loadedQuadData.keyPointsMeta[ch] = { ...prev, bakedGlobal: true };
+                // Also tag the latest curve action in history so redo restores bakedGlobal
+                try {
+                  for (let i = CurveHistory.actionHistory.length - 1; i >= 0; i--) {
+                    const a = CurveHistory.actionHistory[i];
+                    if (a && a.type === 'curve' && a.channelName === ch && typeof a.newBakedGlobal === 'undefined') {
+                      a.newBakedGlobal = true;
+                      break;
+                    }
+                  }
+                } catch {}
+              };
+              // Only mark channels where Smart curves were actually applied (entries),
+              // not those where we only persisted key points for overlay (persistOnly).
+              entries.forEach(e => setBaked(e.channelName));
+            }
+          } catch {}
           window.__EDIT_MODE_PRIMED = true;
+        }
+      } catch {}
+      // Defensive: when turning ON with a global correction active, ensure existing Smart points are marked baked
+      try {
+        if (on && linearizationApplied && linearizationData && window.loadedQuadData?.keyPoints) {
+          Object.keys(window.loadedQuadData.keyPoints).forEach((ch) => {
+            try {
+              // Only adjust Smart-sourced channels; skip file-loaded curves
+              if (isSmartCurve(ch)) {
+                const prev = (window.loadedQuadData.keyPointsMeta && window.loadedQuadData.keyPointsMeta[ch]) || {};
+                if (!prev.bakedGlobal) {
+                  if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+                  window.loadedQuadData.keyPointsMeta[ch] = { ...prev, bakedGlobal: true };
+                }
+              }
+            } catch {}
+          });
         }
       } catch {}
       // Enable/disable panel controls and refresh chart overlays
@@ -7889,13 +8704,14 @@ DOMAIN_MAX 1.0 1.0 1.0
       if (!isEditModeEnabled()) { showStatus('Edit mode is off'); return; }
       const ch = EDIT.selectedChannel; if (!ch) return;
       if (!edit_isChannelEnabled(ch)) { showStatus('Channel disabled – enable in Channels to recompute'); return; }
-      const maxError = Math.max(0.05, Math.min(5, parseFloat(elements.editMaxError?.value || '0.25')));
-      const maxPts = Math.max(2, Math.min(21, parseInt(elements.editMaxPoints?.value || '16', 10)));
+      const maxError = Math.max(0.05, Math.min(5, parseFloat(elements.editMaxError?.value || String(KP_SIMPLIFY.maxErrorPercent || 0.25))));
+      const maxPts = Math.max(2, Math.min(21, parseInt(elements.editMaxPoints?.value || String(KP_SIMPLIFY.maxPoints || 21), 10)));
       const res = quadGenActions.simplifySmartKeyPointsFromCurve(ch, { maxErrorPercent: maxError, maxPoints: maxPts });
       if (!res?.success){ showStatus(res?.message || 'Recompute failed'); return; }
       showStatus(`Recomputed ${ch} key points (${maxPts} max, ${maxError}% max error)`);
       EDIT.selectedOrdinal = Math.min(EDIT.selectedOrdinal, (ControlPoints.get(ch)?.points?.length || 1));
       edit_refreshPointIndex();
+      try { updateRevertButtonsState(); } catch {}
     }
 
     function edit_delete(){
@@ -7934,6 +8750,11 @@ DOMAIN_MAX 1.0 1.0 1.0
     }
 
     function initEditPanel(){
+      // Seed recompute defaults from KP_SIMPLIFY so UI matches silent-conversion settings
+      try {
+        if (elements.editMaxError) elements.editMaxError.value = String(KP_SIMPLIFY.maxErrorPercent);
+        if (elements.editMaxPoints) elements.editMaxPoints.value = String(KP_SIMPLIFY.maxPoints);
+      } catch {}
       // Channel select
       if (elements.editChannelSelect){
         elements.editChannelSelect.addEventListener('change', () => {
@@ -7941,6 +8762,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           EDIT.selectedChannel = elements.editChannelSelect.value || null;
           EDIT.selectedOrdinal = 1;
           edit_refreshState();
+          try { updateInkChart(); } catch {}
         });
       }
       // Channel cycle buttons
@@ -7954,6 +8776,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         EDIT.selectedChannel = sel.value || null;
         EDIT.selectedOrdinal = 1;
         edit_refreshState();
+        try { updateInkChart(); } catch {}
       }
       if (elements.editChannelPrev){ elements.editChannelPrev.addEventListener('click', ()=> edit_cycleChannel(-1)); }
       if (elements.editChannelNext){ elements.editChannelNext.addEventListener('click', ()=> edit_cycleChannel(+1)); }
@@ -8257,17 +9080,141 @@ DOMAIN_MAX 1.0 1.0 1.0
       updateProcessingDetailForce(channelName);
     }
 
-    function updatePreview() {
+    // Lightweight .quad preview highlighter
+    function escapeHTML(s){
+      try {
+        return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
+      } catch { return s; }
+    }
+    function hexToRgb(hex){
+      try {
+        let h = String(hex || '').trim();
+        if (h.startsWith('#')) h = h.slice(1);
+        if (h.length === 3) h = h.split('').map(c => c + c).join('');
+        const num = parseInt(h, 16);
+        if (isNaN(num) || h.length !== 6) return {r:0,g:0,b:0};
+        return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+      } catch { return {r:0,g:0,b:0}; }
+    }
+    function srgbToLinear(c){
+      const cs = c / 255;
+      return cs <= 0.04045 ? cs / 12.92 : Math.pow((cs + 0.055) / 1.055, 2.4);
+    }
+    function relativeLuminance(hex){
+      const {r,g,b} = hexToRgb(hex);
+      const R = srgbToLinear(r), G = srgbToLinear(g), B = srgbToLinear(b);
+      return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+    }
+    function pickGutterTextColor(hex){
+      // Choose black or white by WCAG contrast vs background
+      try {
+        const L = relativeLuminance(hex);
+        const contrastWhite = (1.0 + 0.05) / (L + 0.05);
+        const contrastBlack = (L + 0.05) / 0.05;
+        // Prefer higher contrast; use near-black token for black, white for white
+        return (contrastBlack >= contrastWhite) ? '#111827' : '#ffffff';
+      } catch { return '#111827'; }
+    }
+    function highlightQuad(text){
+      try {
+        const lines = String(text || '').split('\n');
+        let currentCh = null;       // active channel code (e.g., K, C, ...)
+        let chIndex = -1;           // index of numeric line within current channel
+        const fgCache = Object.create(null);
+        return lines.map((raw, i) => {
+          const t = raw.trim();
+          let inner;
+          let dataCh = null; // channel marker for this line (for colored bar)
+          if (t.length === 0) {
+            inner = '&nbsp;';
+          } else if (/^##\s/.test(t)) {
+            // Meta header (first line with channels, etc.)
+            inner = `<span class="quad-meta">${escapeHTML(raw)}</span>`;
+          } else if (/^#(?=\s|$)/.test(t)){
+            const m = t.match(/^#\s+([A-Z]{1,3})\s+curve$/);
+            if (m){
+              currentCh = m[1];
+              chIndex = -1; // reset index for next numeric line
+              inner = `<span class="quad-comment">${escapeHTML(raw)}</span>`; // uniform comment color
+            } else {
+              inner = `<span class="quad-comment">${escapeHTML(raw)}</span>`;
+            }
+          } else if (/^\d+$/.test(t)){
+            // Pure integers (curve rows)
+            const n = parseInt(t, 10);
+            const classes = ['quad-number'];
+            // Detect first/last numeric within channel block
+            let isFirst = false, isLast = false;
+            if (currentCh) {
+              dataCh = currentCh; // mark this line for channel bar
+              chIndex += 1;
+              isFirst = (chIndex === 0);
+              const next = (lines[i+1] || '').trim();
+              if (!next || /^#(?=\s|$)/.test(next)) {
+                isLast = true;
+                // reset for safety after last value
+                currentCh = null;
+                chIndex = -1;
+              }
+            }
+            if (isFirst || isLast) classes.push('quad-emph');
+            inner = `<span class="${classes.join(' ')}">${escapeHTML(raw)}</span>`;
+          } else {
+            // Anything unexpected in data area
+            inner = `<span class="quad-error">${escapeHTML(raw)}</span>`;
+          }
+          const attr = dataCh ? ` data-ch="${dataCh}"` : '';
+          const styleVars = dataCh ? (function(){
+            const bg = INK_COLORS && INK_COLORS[dataCh] ? INK_COLORS[dataCh] : '#666666';
+            const fg = fgCache[dataCh] || (fgCache[dataCh] = pickGutterTextColor(bg));
+            return ` style="--ln-bg: ${bg}; --ln-fg: ${fg};"`;
+          })() : '';
+          return `<span class="quad-line"${attr}${styleVars}>${inner}</span>`;
+        }).join('');
+      } catch { return escapeHTML(String(text || '')); }
+    }
+
+    function ensurePreviewCopyHandler(){
+      try {
+        const el = elements.previewFull;
+        if (!el || el.dataset.copyHandlerAttached === 'true') return;
+        el.addEventListener('copy', (e)=>{
+          try {
+            const raw = el.dataset.raw || el.textContent || '';
+            e.clipboardData.setData('text/plain', raw);
+            e.preventDefault();
+          } catch {}
+        });
+        el.dataset.copyHandlerAttached = 'true';
+      } catch {}
+    }
+
+    function updatePreview(options = {}) {
       requestAnimationFrame(() => {
         try {
           const fileText = buildFile();
-          elements.previewFull.textContent = fileText;
-          updateInkChart();
-          updateFilename(); // Update filename when preview updates
-          // Delta UI disabled; summaries are posted to Lab Tech chat instead
-          showStatus("Preview updated");
+          // render highlighted HTML but preserve raw for copy
+          if (elements.previewFull.dataset.raw !== fileText) {
+            elements.previewFull.dataset.raw = fileText;
+            elements.previewFull.innerHTML = highlightQuad(fileText);
+            // Adjust line-number gutter width based on line count
+            try {
+              const total = (fileText.match(/\n/g) || []).length + 1;
+              const digits = String(Math.max(1, total)).length;
+              elements.previewFull.style.setProperty('--lnw', `calc(${digits}ch + 2ch)`);
+              elements.previewFull.style.setProperty('--lngap', '1ch');
+            } catch {}
+          }
+          ensurePreviewCopyHandler();
+          if (!options.onlyNotes) {
+            updateInkChart();
+            updateFilename(); // Update filename when preview updates
+            // Delta UI disabled; summaries are posted to Lab Tech chat instead
+            showStatus("Preview updated");
+          }
+          try { updateRevertButtonsState(); } catch {}
         } catch (error) {
-      console.error('Preview update error:', error);
+          console.error('Preview update error:', error);
           showStatus("Error updating preview");
         }
       });
@@ -8338,7 +9285,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       // Show delta for LAB files and Manual L* generated corrections
       if (!(fmt.includes('LAB') || fmt.includes('MANUAL'))) { el.textContent = ''; return; }
       try {
-        const smoothingPercent = parseFloat(elements.smoothingSlider?.value || '0') || 0;
+      const smoothingPercent = 0;
         // Build normalized mapping 0..1 using current interpolation and smoothing
         let samples, lutX;
         if (typeof linearizationData.getSmoothingControlPoints === 'function') {
@@ -8413,7 +9360,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (!linearizationData || !linearizationApplied) return '';
         const fmt = String(linearizationData.format || '').toUpperCase();
         if (!(fmt.includes('LAB') || fmt.includes('MANUAL'))) return '';
-        const smoothingPercent = parseFloat(elements.smoothingSlider?.value || '0') || 0;
+      const smoothingPercent = 0;
         let samples, lutX;
         if (typeof linearizationData.getSmoothingControlPoints === 'function') {
           const cp = linearizationData.getSmoothingControlPoints(smoothingPercent);
@@ -8525,6 +9472,14 @@ DOMAIN_MAX 1.0 1.0 1.0
       const ctx = canvas.getContext('2d');
       const width = canvas.width;
       const height = canvas.height;
+      // Resolve theme colors for chart elements
+      const styles = getComputedStyle(document.documentElement);
+      const COLOR_GRID = (styles.getPropertyValue('--chart-grid') || '#e5e7eb').trim();
+      const COLOR_AXIS = (styles.getPropertyValue('--chart-axis') || '#374151').trim();
+      const COLOR_TEXT = (styles.getPropertyValue('--chart-text') || '#000000').trim();
+      const COLOR_HELPER = (styles.getPropertyValue('--chart-helper-border') || '#9ca3af').trim();
+      const COLOR_BORDER = (styles.getPropertyValue('--border') || '#e5e7eb').trim();
+      const COLOR_BG = (styles.getPropertyValue('--chart-bg') || 'transparent').trim();
       
       // Clear canvas
       ctx.clearRect(0, 0, width, height);
@@ -8535,6 +9490,14 @@ DOMAIN_MAX 1.0 1.0 1.0
       const rightPadding = padding + 6; // Maintain total width
       const chartWidth = width - leftPadding - rightPadding;
       const chartHeight = height - 2 * padding;
+
+      // Lighten/differentiate chart area background per theme
+      if (COLOR_BG && COLOR_BG !== 'transparent') {
+        ctx.save();
+        ctx.fillStyle = COLOR_BG;
+        ctx.fillRect(leftPadding, padding, chartWidth, chartHeight);
+        ctx.restore();
+      }
 
       // Determine how many ink channels are currently enabled (selected)
       const activeEnabledCount = Array.from(elements.rows.children).reduce((count, row) => {
@@ -8560,12 +9523,11 @@ DOMAIN_MAX 1.0 1.0 1.0
       
       // No additional status messaging; overlays are user-togglable via the toggle
       
-      // Check conditions for showing original curve overlay
-      const smoothingPercent = parseFloat(elements.smoothingSlider.value) || 0;
-      const shouldShowOriginal = smoothingPercent > 0;
+      // Check conditions for showing original curve overlay (smoothing deprecated)
+      const shouldShowOriginal = false;
       
       // Draw grid
-      ctx.strokeStyle = '#e5e7eb';
+      ctx.strokeStyle = COLOR_GRID;
       ctx.lineWidth = 1;
       
       // Vertical grid lines (every 10%)
@@ -8587,7 +9549,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       }
       
       // Draw axes
-      ctx.strokeStyle = '#374151';
+      ctx.strokeStyle = COLOR_AXIS;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(leftPadding, padding);
@@ -8596,7 +9558,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       ctx.stroke();
       
       // Draw axis labels
-      ctx.fillStyle = '#374151';
+      ctx.fillStyle = COLOR_TEXT;
       ctx.font = '12px system-ui';
       ctx.textAlign = 'center';
       
@@ -8611,8 +9573,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         grad.addColorStop(1, '#ffffff'); // bottom = 0% ink = white
         ctx.fillStyle = grad;
         ctx.fillRect(gradientX, padding, gradientWidth, chartHeight);
-        // subtle border for visibility
-        ctx.strokeStyle = '#9ca3af';
+        // subtle border using theme border color
+        ctx.strokeStyle = COLOR_BORDER;
         ctx.lineWidth = 1;
         ctx.strokeRect(gradientX, padding, gradientWidth, chartHeight);
       })();
@@ -8628,14 +9590,14 @@ DOMAIN_MAX 1.0 1.0 1.0
         grad.addColorStop(1, '#000000');
         ctx.fillStyle = grad;
         ctx.fillRect(leftPadding, gradientY, chartWidth, gradientHeight);
-        // subtle border for visibility on light backgrounds
-        ctx.strokeStyle = '#9ca3af';
+        // subtle border for visibility on light/dark backgrounds (theme border)
+        ctx.strokeStyle = COLOR_BORDER;
         ctx.lineWidth = 1;
         ctx.strokeRect(leftPadding, gradientY, chartWidth, gradientHeight);
       })();
       
-      // Ensure text labels are solid black regardless of prior fills
-      ctx.fillStyle = '#000000';
+      // Ensure text labels use theme text color regardless of prior fills
+      ctx.fillStyle = COLOR_TEXT;
       
       // X-axis labels (0% to 100%)
       for (let i = 0; i <= 10; i++) {
@@ -8653,7 +9615,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       
       // Y-axis labels (0% to 100%)
       ctx.textAlign = 'right';
-      ctx.fillStyle = '#000000';
+      ctx.fillStyle = COLOR_TEXT;
       // Nudge labels left to account for the vertical gradient width (10px) + 1px gap + ~1px margin
       // Nudge slightly more to the right for spacing
       const yAxisLabelX = leftPadding - (10 /* gradient */ + 1 /* gap */ + 10 /* original offset */ + 1 /* margin */) + 4;
@@ -8672,7 +9634,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       // Axis titles
       ctx.textAlign = 'center';
       ctx.font = '14px system-ui';
-      ctx.fillStyle = '#000000';
+      ctx.fillStyle = COLOR_TEXT;
       ctx.fillText('Input Level %', width / 2, height - 10);
       
       ctx.save();
@@ -8683,7 +9645,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       const yAxisTitleX = Math.max(11, yAxisTitleBaseX - yAxisTitleShift);
       ctx.translate(yAxisTitleX, height / 2);
       ctx.rotate(-Math.PI / 2);
-      ctx.fillStyle = '#000000';
+      ctx.fillStyle = COLOR_TEXT;
       ctx.fillText('Output Ink Level %', 0, 0);
       ctx.restore();
 
@@ -8836,8 +9798,15 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         // Lightweight overlay: key points visibility follows Edit Mode
         // Prefer explicit AI key points when available; otherwise show adapter overlays (ACV/LUT/LAB)
-        const aiPts = window.loadedQuadData?.keyPoints?.[channelName];
-        const hasAIKeyPoints = Array.isArray(aiPts) && aiPts.length > 0;
+        let hasAIKeyPoints = false;
+        try {
+          const cp = (typeof ControlPoints !== 'undefined' && ControlPoints && ControlPoints.get) ? ControlPoints.get(channelName) : null;
+          hasAIKeyPoints = !!(cp && Array.isArray(cp.points) && cp.points.length > 0);
+        } catch {}
+        if (!hasAIKeyPoints) {
+          const aiPts = window.loadedQuadData?.keyPoints?.[channelName];
+          hasAIKeyPoints = Array.isArray(aiPts) && aiPts.length > 0;
+        }
         if (hasAIKeyPoints && isEdit) {
           const showAIlabels = !!isSelectedChannel; // hide ordinal labels on unselected channels
           const showMarkers = !!isSelectedChannel; // hide point boxes on unselected channels
@@ -8895,26 +9864,41 @@ DOMAIN_MAX 1.0 1.0 1.0
           // Store adjusted position
           labels[i].adjustedY = labelY;
           
-          // Draw the label with background for better readability
+          // Draw the label with theme-aware background and ink color chip
           const labelText = `${labels[i].channelName} (${labels[i].percent}%)`;
           const textMetrics = ctx.measureText(labelText);
-          const textWidth = textMetrics.width;
+          const chipW = 8, chipH = 12, pad = 6;
           const textHeight = 18; // Background height for 12px text with padding
-          
-          // Draw solid white background
-          ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
-          ctx.fillRect(endX, labelY - textHeight + 2, textWidth + 4, textHeight + 2);
-          
-          // Calculate centered text position within the background
-          const textCenterY = labelY - (textHeight / 2) + 2 + (textHeight / 2);
-          
-          // Draw text shadow first
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-          ctx.fillText(labelText, endX + 3, textCenterY + 1);
-          
-          // Draw the text
+          const bgW = chipW + pad + Math.ceil(textMetrics.width) + pad; // chip + gap + text + pad
+          const bgH = textHeight + 2;
+          const bgX = endX;
+          const bgY = labelY - textHeight + 2;
+
+          // Read theme colors
+          const labelBG = (styles.getPropertyValue('--bg-elevated') || '#ffffff').trim();
+          const labelBorder = (styles.getPropertyValue('--border') || '#e5e7eb').trim();
+          const labelTextColor = (styles.getPropertyValue('--text') || '#111827').trim();
+
+          // Background + border
+          ctx.fillStyle = labelBG;
+          ctx.fillRect(bgX, bgY, bgW, bgH);
+          ctx.strokeStyle = labelBorder;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(bgX + 0.5, bgY + 0.5, bgW - 1, bgH - 1);
+
+          // Ink color chip
+          const chipX = bgX + pad/2;
+          const chipY = bgY + Math.round((bgH - chipH)/2);
           ctx.fillStyle = labels[i].inkColor;
-        ctx.fillText(labelText, endX + 2, textCenterY);
+          ctx.fillRect(Math.round(chipX) + 0.5, Math.round(chipY) + 0.5, chipW, chipH);
+          ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+          ctx.strokeRect(Math.round(chipX) + 0.5, Math.round(chipY) + 0.5, chipW, chipH);
+
+          // Text
+          const textX = bgX + chipW + pad;
+          const textCenterY = bgY + Math.round(bgH/2) + 5 - 2; // vertical align tweak
+          ctx.fillStyle = labelTextColor;
+          ctx.fillText(labelText, textX, textCenterY);
       }
     }
 
@@ -8932,7 +9916,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             ctx.save();
             // Ensure full opacity for topmost labels
             ctx.globalAlpha = 1.0;
-            renderAIKeyPointOverlay(ctx, selCh, values, TOTAL, { leftPadding, chartWidth, padding, height }, inkColor, { showLabels: true, drawMarkers: false });
+            renderAIKeyPointOverlay(ctx, selCh, values, TOTAL, { leftPadding, chartWidth, padding, height }, inkColor, { showLabels: true, drawMarkers: false, requireExplicit: true });
             ctx.restore();
           }
         }
@@ -9085,10 +10069,19 @@ DOMAIN_MAX 1.0 1.0 1.0
       const { leftPadding, chartWidth, padding, height } = geom;
       const showLabels = options.showLabels !== false;
       const drawMarkers = options.drawMarkers !== false; // allow hiding square markers
+      const requireExplicit = options.requireExplicit === true; // if true, do not synthesize fallback points
       try {
-        // Prefer explicit AI key points if available
-        const aiPoints = window.loadedQuadData?.keyPoints?.[channelName];
-        let points = Array.isArray(aiPoints) ? aiPoints.slice() : [];
+        // Prefer explicit Smart key points if available (use ControlPoints store first)
+        let points = [];
+        try {
+          const cp = (typeof ControlPoints !== 'undefined' && ControlPoints && ControlPoints.get) ? ControlPoints.get(channelName) : null;
+          if (cp && Array.isArray(cp.points) && cp.points.length > 0) points = cp.points.slice();
+        } catch {}
+        if (!points || points.length === 0) {
+          const aiPoints = window.loadedQuadData?.keyPoints?.[channelName];
+          if (Array.isArray(aiPoints) && aiPoints.length > 0) points = aiPoints.slice();
+        }
+        if (requireExplicit && (!points || points.length === 0)) return;
 
         // Determine current End scaling so pre-scale key-point outputs map to absolute Y on the chart
         let scale = 1.0;
@@ -9100,7 +10093,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         } catch {}
 
         // Fallback: if no explicit points, derive marker positions from current curve
-        if (!points || points.length === 0) {
+        if ((!points || points.length === 0) && !requireExplicit) {
           // Detect linear ramp from provided values; if linear, collapse to 2 markers at 0 and 100
           let useTwo = false;
           const last = values[values.length - 1];
@@ -9147,8 +10140,19 @@ DOMAIN_MAX 1.0 1.0 1.0
           const xNorm = Math.max(0, Math.min(1, (pt.input || 0) / 100));
           const x = leftPadding + xNorm * chartWidth;
           // Convert pre‑scale stored output (0..100) to absolute chart percent using current End scale
-          const pre = Math.max(0, Math.min(100, Number(pt.output || 0)));
-          const valuePercent = Math.max(0, Math.min(100, pre * scale));
+          let valuePercent;
+          if (typeof pt.output === 'number' && isFinite(pt.output)) {
+            const pre = Math.max(0, Math.min(100, Number(pt.output)));
+            valuePercent = Math.max(0, Math.min(100, pre * scale));
+          } else {
+            // Fallback: sample absolute Y from the plotted curve values
+            const t = xNorm * (values.length - 1);
+            const i0 = Math.floor(t);
+            const i1 = Math.min(values.length - 1, i0 + 1);
+            const a = t - i0;
+            const v = (1 - a) * values[i0] + a * values[i1];
+            valuePercent = Math.max(0, Math.min(100, (v / maxValue) * 100));
+          }
           const y = height - padding - (valuePercent / 100) * (height - 2 * padding);
           const hx = boxSize / 2;
           const hy = boxSize / 2;
@@ -9193,23 +10197,21 @@ DOMAIN_MAX 1.0 1.0 1.0
           const bgX = Math.round(labelX - bgW / 2) + 0.5;
           const bgY = Math.round(labelY - bgH + 1) + 0.5;
 
-          // Colored background uses channel ink color (selected and unselected)
+          // Ordinal label colors: use the exact channel ink color for the chip, like index203.html
+          // Compute text color (black/white) using YIQ for readability
+          let r = 0, g = 0, b = 0;
+          try {
+            const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})/i.exec(String(inkColor));
+            if (m) { r = parseInt(m[1], 16); g = parseInt(m[2], 16); b = parseInt(m[3], 16); }
+          } catch {}
+          const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+          const labelTextColor = yiq >= 140 ? '#000000' : '#FFFFFF';
           ctx.fillStyle = inkColor;
           ctx.fillRect(bgX, bgY, bgW, bgH);
           ctx.strokeStyle = 'rgba(0,0,0,0.2)';
           ctx.lineWidth = 1;
-          ctx.strokeRect(bgX, bgY, bgW, bgH);
-
-          // Dynamic text color for readability
-          let r = 0, g = 0, b = 0;
-          const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})/i.exec(inkColor);
-          if (m) {
-            r = parseInt(m[1], 16);
-            g = parseInt(m[2], 16);
-            b = parseInt(m[3], 16);
-          }
-          const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-          ctx.fillStyle = (yiq >= 140 ? '#000000' : '#FFFFFF');
+          ctx.strokeRect(bgX + 0.5, bgY + 0.5, bgW - 1, bgH - 1);
+          ctx.fillStyle = labelTextColor;
           ctx.fillText(num, Math.round(labelX) + 0.5, Math.round(labelY) + 0.5);
           // Reset font to default for next iterations
           ctx.font = defaultFont;
@@ -9266,24 +10268,19 @@ DOMAIN_MAX 1.0 1.0 1.0
           const bgX = Math.round(labelX - bgW / 2) + 0.5;
           const bgY = Math.round(labelY - bgH + 1) + 0.5;
 
-          // Colored background same as AI (use channel ink color)
-          ctx.fillStyle = color;
-          ctx.fillRect(bgX, bgY, bgW, bgH);
-          ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(bgX, bgY, bgW, bgH);
+          // Adapter overlay labels: match ordinal inversion per theme
+          const isDarkTheme = (document.documentElement.getAttribute('data-theme') === 'dark');
+          const labelBG = isDarkTheme ? '#e5e7eb' : '#1f2937';
+          const labelBorder = isDarkTheme ? '#d1d5db' : '#111827';
+          const labelTextColor = isDarkTheme ? '#111827' : '#ffffff';
+      ctx.fillStyle = labelBG;
+      ctx.fillRect(bgX, bgY, bgW, bgH);
+      ctx.strokeStyle = labelBorder;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bgX + 0.5, bgY + 0.5, bgW - 1, bgH - 1);
 
-          // Choose text color (black/white) based on background luminance
-          let r = 0, g = 0, b = 0;
-          const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})/i.exec(color);
-          if (m) {
-            r = parseInt(m[1], 16);
-            g = parseInt(m[2], 16);
-            b = parseInt(m[3], 16);
-          }
-          const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-          ctx.fillStyle = yiq >= 140 ? '#000000' : '#FFFFFF';
-          ctx.fillText(num, Math.round(labelX) + 0.5, Math.round(labelY) + 0.5);
+      ctx.fillStyle = labelTextColor;
+      ctx.fillText(num, Math.round(labelX) + 0.5, Math.round(labelY) + 0.5);
         }
       });
       ctx.restore();
@@ -9501,7 +10498,8 @@ DOMAIN_MAX 1.0 1.0 1.0
       const hasLinearization = hasAnyLinearization();
       elements.curveSmoothingMethod.disabled = !hasLinearization;
       elements.catmullTension.disabled = !hasLinearization;
-      elements.smoothingSlider.disabled = (!hasLinearization) || (!isEditModeEnabled());
+      // Enable smoothing whenever a linearization source exists; do not gate on Edit Mode
+      if (elements.smoothingSlider) elements.smoothingSlider.disabled = true;
       if (elements.simplificationMethod) elements.simplificationMethod.disabled = !hasLinearization;
       
       // Update visual styling for disabled state
@@ -9516,12 +10514,8 @@ DOMAIN_MAX 1.0 1.0 1.0
       const showTension = hasLinearization && method === 'catmull';
       elements.catmullTensionContainer.style.display = showTension ? 'block' : 'none';
       
-      // Update smoothing warning visibility
-      const smoothingPercent = parseFloat(elements.smoothingSlider.value) || 0;
-      const showWarning = hasLinearization && smoothingPercent > 0;
-      if (showWarning) {
-        elements.smoothingWarning.classList.remove('opacity-0', 'invisible');
-      } else {
+      // Update smoothing warning visibility (smoothing deprecated)
+      if (elements.smoothingWarning) {
         elements.smoothingWarning.classList.add('opacity-0', 'invisible');
       }
       
@@ -10008,7 +11002,10 @@ DOMAIN_MAX 1.0 1.0 1.0
               }
               if (action.oldInterpolation) {
                 if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
-                window.loadedQuadData.keyPointsMeta[action.channelName] = { interpolationType: action.oldInterpolation };
+                // Restore interpolation and bakedGlobal meta if present to avoid double-application
+                const __meta = { interpolationType: action.oldInterpolation };
+                if (typeof action.oldBakedGlobal !== 'undefined') __meta.bakedGlobal = !!action.oldBakedGlobal;
+                window.loadedQuadData.keyPointsMeta[action.channelName] = __meta;
               }
               // Restore previous source tag if available; otherwise clear AI tag
               if (action.oldSource !== undefined) {
@@ -10020,9 +11017,10 @@ DOMAIN_MAX 1.0 1.0 1.0
               }
               
               // Disable per-channel linearization when restoring Smart Curve (keep metadata for UI display)
-              if (perChannelLinearization[action.channelName]) {
-                perChannelEnabled[action.channelName] = false;
-              }
+          if (perChannelLinearization[action.channelName]) {
+            perChannelEnabled[action.channelName] = false;
+            try { updateRevertButtonsState(); } catch {}
+          }
               
               const perChannelToggle = tr.querySelector('.per-channel-toggle');
               if (perChannelToggle) {
@@ -10120,9 +11118,10 @@ DOMAIN_MAX 1.0 1.0 1.0
               window.loadedQuadData.curves[action.channelName] = [...action.oldValue];
               
               // Disable per-channel linearization when restoring Smart Curve (keep metadata for UI display)
-              if (perChannelLinearization[action.channelName]) {
-                perChannelEnabled[action.channelName] = false;
-              }
+          if (perChannelLinearization[action.channelName]) {
+            perChannelEnabled[action.channelName] = false;
+            try { updateRevertButtonsState(); } catch {}
+          }
               
               const perChannelToggle = tr.querySelector('.per-channel-toggle');
               if (perChannelToggle) {
@@ -10137,7 +11136,10 @@ DOMAIN_MAX 1.0 1.0 1.0
               }
               if (action.oldInterpolation) {
                 if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
-                window.loadedQuadData.keyPointsMeta[action.channelName] = { interpolationType: action.oldInterpolation };
+                // Restore interpolation and bakedGlobal meta if present to avoid double-application
+                const __meta = { interpolationType: action.oldInterpolation };
+                if (typeof action.oldBakedGlobal !== 'undefined') __meta.bakedGlobal = !!action.oldBakedGlobal;
+                window.loadedQuadData.keyPointsMeta[action.channelName] = __meta;
               }
               // Restore previous source tag if available; otherwise clear AI tag
               if (action.oldSource !== undefined) {
@@ -10227,7 +11229,10 @@ DOMAIN_MAX 1.0 1.0 1.0
                   if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
                   window.loadedQuadData.keyPoints[action.channelName] = action.newKeyPoints.map(p => ({ input: p.input, output: p.output }));
                   if (action.newInterpolation) {
-                    window.loadedQuadData.keyPointsMeta[action.channelName] = { interpolationType: action.newInterpolation };
+                    // Restore interpolation and bakedGlobal meta on redo to prevent double-application
+                    const __meta = { interpolationType: action.newInterpolation };
+                    if (typeof action.newBakedGlobal !== 'undefined') __meta.bakedGlobal = !!action.newBakedGlobal;
+                    window.loadedQuadData.keyPointsMeta[action.channelName] = __meta;
                   }
                   // Recompute curve from key points and apply via internal path (no history during restore)
                   const interp = (action.newInterpolation === 'linear' ? 'linear' : 'smooth');
@@ -10249,9 +11254,10 @@ DOMAIN_MAX 1.0 1.0 1.0
               }
               
               // Disable per-channel linearization when restoring Smart Curve (keep metadata for UI display)
-              if (perChannelLinearization[action.channelName]) {
-                perChannelEnabled[action.channelName] = false;
-              }
+          if (perChannelLinearization[action.channelName]) {
+            perChannelEnabled[action.channelName] = false;
+            try { updateRevertButtonsState(); } catch {}
+          }
               
               const perChannelToggle = tr.querySelector('.per-channel-toggle');
               if (perChannelToggle) {
@@ -10499,9 +11505,10 @@ DOMAIN_MAX 1.0 1.0 1.0
               window.loadedQuadData.curves[action.channelName] = [...action.newValue];
               
               // Disable per-channel linearization when restoring Smart Curve
-              if (perChannelLinearization[action.channelName]) {
-                delete perChannelLinearization[action.channelName];
-              }
+          if (perChannelLinearization[action.channelName]) {
+            delete perChannelLinearization[action.channelName];
+            try { updateRevertButtonsState(); } catch {}
+          }
               perChannelEnabled[action.channelName] = false;
               
               const perChannelToggle = tr.querySelector('.per-channel-toggle');
@@ -10517,7 +11524,10 @@ DOMAIN_MAX 1.0 1.0 1.0
               }
               if (action.newInterpolation) {
                 if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
-                window.loadedQuadData.keyPointsMeta[action.channelName] = { interpolationType: action.newInterpolation };
+                // Restore interpolation and bakedGlobal meta on redo to prevent double-application
+                const __meta = { interpolationType: action.newInterpolation };
+                if (typeof action.newBakedGlobal !== 'undefined') __meta.bakedGlobal = !!action.newBakedGlobal;
+                window.loadedQuadData.keyPointsMeta[action.channelName] = __meta;
               }
             }
             break;
@@ -10598,20 +11608,37 @@ DOMAIN_MAX 1.0 1.0 1.0
         setTimeout(() => updateCompactChannelsList(), 50);
         
         // Restore global linearization
-        if (elements.globalLinearizationToggle) {
-          elements.globalLinearizationToggle.checked = state.globalLinearization.enabled;
-        }
-        if (elements.globalLinearizationFilename) {
-          elements.globalLinearizationFilename.textContent = state.globalLinearization.filename;
-        }
-        if (state.globalLinearization.data) {
-          linearizationData = {...state.globalLinearization.data};
+        if (state.globalLinearization && state.globalLinearization.data) {
+          linearizationData = { ...state.globalLinearization.data };
+          linearizationApplied = !!state.globalLinearization.applied;
+          // UI: enable toggle and show info
+          if (elements.globalLinearizationToggle) {
+            elements.globalLinearizationToggle.disabled = false;
+            elements.globalLinearizationToggle.checked = !!state.globalLinearization.enabled;
+          }
+          const baseName = state.globalLinearization.filename || (linearizationData.filename || '');
+          const disp = getEditedDisplayName(baseName, !!linearizationData.edited);
+          if (elements.globalLinearizationFilename) elements.globalLinearizationFilename.textContent = disp;
+          if (elements.globalLinearizationDetails) elements.globalLinearizationDetails.textContent = ` - ${getBasePointCountLabel(linearizationData)} (${(linearizationData.format||'').toString().split(' ')[0] || ''})`;
+          if (elements.globalLinearizationInfo) elements.globalLinearizationInfo.classList.remove('hidden');
+          if (elements.globalLinearizationHint) elements.globalLinearizationHint.classList.add('hidden');
+          if (elements.globalLinearizationBtn) elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: ${disp}`);
         } else {
           linearizationData = null;
+          linearizationApplied = false;
+          // UI: disable toggle and hide info
+          if (elements.globalLinearizationToggle) {
+            elements.globalLinearizationToggle.disabled = true;
+            elements.globalLinearizationToggle.checked = false;
+          }
+          if (elements.globalLinearizationFilename) elements.globalLinearizationFilename.textContent = '';
+          if (elements.globalLinearizationDetails) elements.globalLinearizationDetails.textContent = '';
+          if (elements.globalLinearizationInfo) elements.globalLinearizationInfo.classList.add('hidden');
+          if (elements.globalLinearizationHint) elements.globalLinearizationHint.classList.remove('hidden');
+          if (elements.globalLinearizationBtn) elements.globalLinearizationBtn.setAttribute('data-tooltip', 'Load LUT.cube, LABdata.txt, or .acv curve files');
         }
-        linearizationApplied = state.globalLinearization.applied || false;
-        // Refresh edited display state for global filename
-        refreshGlobalLinearizationDisplay();
+        // Refresh edited display state for global filename (idempotent)
+        try { refreshGlobalLinearizationDisplay(); } catch {}
         
         // Restore per-channel linearization
         Object.assign(perChannelLinearization, state.perChannelLinearization);
@@ -10831,7 +11858,12 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (!window.loadedQuadData.keyPoints) window.loadedQuadData.keyPoints = {};
         if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
         window.loadedQuadData.keyPoints[channelName] = points.map(p => ({ input: p.input, output: p.output }));
-        window.loadedQuadData.keyPointsMeta[channelName] = { interpolationType: (interpolation === 'linear' ? 'linear' : 'smooth') };
+        // Preserve existing metadata (e.g., bakedGlobal) and update interpolation only
+        const prevMeta = window.loadedQuadData.keyPointsMeta[channelName] || {};
+        window.loadedQuadData.keyPointsMeta[channelName] = {
+          ...prevMeta,
+          interpolationType: (interpolation === 'linear' ? 'linear' : 'smooth')
+        };
       },
       // Sample Y at X using current points and interpolation
       sampleY(points, interpolation, x) {
@@ -10914,11 +11946,12 @@ DOMAIN_MAX 1.0 1.0 1.0
         const y = Math.max(0, Math.min(100, (values[i] / peak) * 100));
         pts[i] = { x, y };
       }
-      // Detect near-linear ramp (within tolerance across a few samples)
+      // Detect near-linear ramp conservatively (across 11 evenly spaced samples)
       let isLinear = false;
-      const samples = [0, Math.floor((N - 1) * 0.25), Math.floor((N - 1) * 0.5), Math.floor((N - 1) * 0.75), (N - 1)];
-      const EPS = 0.005; // 0.5%
-      isLinear = samples.every(idx => {
+      const EPS = 0.002; // 0.2% tolerance to avoid false positives
+      const samplesIdx = [];
+      for (let k = 0; k <= 10; k++) samplesIdx.push(Math.round((N - 1) * (k / 10)));
+      isLinear = samplesIdx.every(idx => {
         const expected = (idx / (N - 1));
         const actual = (values[idx] / peak);
         return Math.abs(actual - expected) <= EPS;
@@ -10959,14 +11992,16 @@ DOMAIN_MAX 1.0 1.0 1.0
               // Too many anchors — sample plotted curve and simplify
               const row = document.querySelector(`tr[data-channel="${channelName}"]`);
               const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : TOTAL;
-              const values = make256(endVal, channelName, true);
+              const sampleEnd = endVal > 0 ? endVal : TOTAL;
+              const values = make256(sampleEnd, channelName, true);
               candidate = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
             }
           } else if ((fmt.includes('LAB') || fmt.includes('MANUAL')) && Array.isArray(per.samples) && per.samples.length >= 2) {
             // LAB/Manual: when few measurements, seed at measured Patch % positions; else simplify plotted curve
             const row = document.querySelector(`tr[data-channel="${channelName}"]`);
             const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : TOTAL;
-            const values = make256(endVal, channelName, true);
+            const sampleEnd = endVal > 0 ? endVal : TOTAL;
+            const values = make256(sampleEnd, channelName, true);
             const orig = Array.isArray(per.originalData) ? per.originalData : null;
             if (orig && orig.length > 0 && orig.length <= DIRECT_SEED_MAX_POINTS) {
               // Seed at measured Patch % positions by sampling the plotted mapping
@@ -11008,7 +12043,8 @@ DOMAIN_MAX 1.0 1.0 1.0
             } else {
               const row = document.querySelector(`tr[data-channel="${channelName}"]`);
               const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : TOTAL;
-              const values = make256(endVal, channelName, true);
+              const sampleEnd = endVal > 0 ? endVal : TOTAL;
+              const values = make256(sampleEnd, channelName, true);
               candidate = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
             }
           } else if ((fmtG.includes('LAB') || fmtG.includes('MANUAL')) && Array.isArray(linearizationData.samples) && linearizationData.samples.length >= 2) {
@@ -11050,7 +12086,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (candidate.length < 2) {
           const row = document.querySelector(`tr[data-channel="${channelName}"]`);
           const e = row ? InputValidator.clampEnd(row.querySelector('.end-input').value) : TOTAL;
-          const values = make256(e, channelName, true);
+          const sampleEnd = e > 0 ? e : TOTAL;
+          const values = make256(sampleEnd, channelName, true);
           // Use adaptive simplification (RDP) to create a compact, edit-friendly set
           candidate = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
         }
@@ -12076,8 +13113,8 @@ DOMAIN_MAX 1.0 1.0 1.0
 
     const debouncedPreviewUpdate = debounce(updatePreview, 300);
 
-    // Optimized 256 value generation with optional linearization
-    function make256(endValue, channelName, applyLinearization = false) {
+  // Optimized 256 value generation with optional linearization
+  function make256(endValue, channelName, applyLinearization = false) {
       if (endValue === 0) return new Array(N).fill(0);
       
       if (DEBUG_LOGS) console.log('DEBUG: make256() called:', {
@@ -12136,16 +13173,25 @@ DOMAIN_MAX 1.0 1.0 1.0
       }
       
       const interpolationType = elements.curveSmoothingMethod.value;
-      const smoothingPercent = parseFloat(elements.smoothingSlider.value) || 0;
+      const smoothingPercent = 0; // Smoothing slider deprecated; always off for computation
       
       // Step 2: Apply per-channel linearization on top of base curve
-      if (channelName && perChannelLinearization[channelName] && perChannelEnabled[channelName]) {
+      // Skip only when a Smart Curve was actually applied (source tagged as 'smart'),
+      // not merely when Smart key points exist for overlay.
+      const smartApplied = (typeof isSmartCurve === 'function') ? isSmartCurve(channelName) : false;
+      if (channelName && perChannelLinearization[channelName] && perChannelEnabled[channelName] && !smartApplied) {
         arr = apply1DLUT(arr, perChannelLinearization[channelName], perChannelLinearization[channelName].domainMin, perChannelLinearization[channelName].domainMax, endValue, interpolationType, smoothingPercent);
       }
       
-      // Step 3: Apply global linearization on top of everything (skip when channel has a Smart Curve)
-      const isAICurve = isSmartCurve(channelName);
-      if (applyLinearization && linearizationData && linearizationApplied && !isAICurve) {
+      // Step 3: Apply global linearization on top of everything
+      // Guard against double application with Smart curves: if a Smart curve is applied (source tag)
+      // we treat it as already representing the plotted mapping. In that case, skip global unless
+      // we explicitly know it wasn't baked.
+      const meta = window.loadedQuadData?.keyPointsMeta?.[channelName] || {};
+      const bakedGlobal = !!meta.bakedGlobal;
+      // Reuse smartApplied computed above (Step 2)
+      const shouldSkipGlobal = bakedGlobal || smartApplied;
+      if (applyLinearization && linearizationData && linearizationApplied && !shouldSkipGlobal) {
           if (DEBUG_LOGS) console.log('DEBUG: Applying global linearization in make256:', {
           linearizationDataStructure: {
             hasSamples: !!linearizationData.samples,
@@ -12198,18 +13244,16 @@ DOMAIN_MAX 1.0 1.0 1.0
       tr.className = "border-t border-gray-200 channel-row";
       tr.setAttribute('data-channel', name);
       tr.innerHTML = `
-        <td class=\"px-1 pt-2 pb-1 text-center\">
+        <td class=\"p-0 text-center\" style=\"width:0;\">
         </td>
-        <td class=\"px-1 pt-2 pb-1 font-medium align-middle text-left\">
+        <td class=\"px-1 pt-2 pb-1 font-medium align-middle text-left\" style=\"width: 100px;\">
           <span class=\"flex items-center gap-2 w-full\">
             <span class=\"inline-block w-3.5 h-3.5 rounded-sm border border-black/10 flex-shrink-0\" style=\"background-color: ${INK_COLORS[name] || '#000'}\"></span>
             <span class=\"w-8 channel-name\">${name}</span>
             <span class=\"text-xs text-gray-500 invisible\" data-disabled>(disabled)</span>
-            <span class=\"text-sm text-blue-600 ml-2\" title=\"Processing details\">ⓘ</span>
-            <span class=\"processing-label italic font-normal text-xs text-gray-600 ml-2 flex-1 min-w-0\" data-channel=\"${name}\" style=\"white-space: pre-wrap; word-break: break-word;\"></span>
           </span>
         </td>
-        <td class="px-1 pt-2 pb-1">
+        <td class="px-1 pt-2 pb-1 text-center" style="width: 250px;">
           <div class="inline-flex items-center gap-2">
             <input type="file" id="perChannel_${name}" accept=".cube,.txt,.acv" class="hidden per-channel-file">
             <button class="per-channel-btn px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-channel="${name}" data-tooltip="Load LUT.cube, LABdata.txt, or .acv curve files">load file</button>
@@ -12219,11 +13263,17 @@ DOMAIN_MAX 1.0 1.0 1.0
             </label>
           </div>
         </td>
-        <td class="px-1 pt-2 pb-1">
-          <input type="number" step="1" min="0" max="100" value="${defaultPercent}" class="percent-input w-20 rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <td class="px-1 pt-2 pb-1 align-middle text-left">
+          <span class="inline-flex items-center">
+            <span class="text-sm text-blue-600 mr-1" title="Processing details">ⓘ</span>
+            <span class="processing-label italic font-normal text-xs text-gray-600 min-w-0" data-channel="${name}" style="white-space: pre-wrap; word-break: break-word;"></span>
+          </span>
         </td>
-        <td class="px-1 pt-2 pb-1">
-          <input type="number" step="1" min="0" max="64000" value="${defaultEndValue}" class="end-input w-20 rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <td class="pr-0 pt-2 pb-1 text-right" style="width:120px;">
+          <input type="number" step="1" min="0" max="100" value="${defaultPercent}" class="percent-input w-20 m-0 rounded-lg border border-gray-300 px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </td>
+        <td class="pl-0 pt-2 pb-1 text-right" style="width:120px;">
+          <input type="number" step="1" min="0" max="64000" value="${defaultEndValue}" class="end-input w-20 m-0 rounded-lg border border-gray-300 px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
         </td>
       `;
       
@@ -12254,6 +13304,55 @@ DOMAIN_MAX 1.0 1.0 1.0
       const perChannelFile = tr.querySelector('.per-channel-file');
       const perChannelToggle = tr.querySelector('.per-channel-toggle');
       const channelName = tr.dataset.channel;
+
+      // Add per-channel Revert button next to the Load button if not present
+      try {
+        const btnGroup = perChannelBtn?.parentElement;
+        if (btnGroup && !btnGroup.querySelector('.per-channel-revert')){
+          const btn = document.createElement('button');
+          btn.className = 'per-channel-revert px-2 py-1 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed';
+          btn.textContent = 'Revert';
+          btn.title = `Revert ${channelName} to measurement source`;
+          btn.addEventListener('click', () => {
+            const savedSel = (isEditModeEnabled() && typeof EDIT !== 'undefined' && EDIT && EDIT.selectedChannel) ? EDIT.selectedChannel : null;
+            try { CurveHistory.captureState(`Before: Revert ${channelName} to Measurement`); } catch {}
+            // Clear Smart curve and points for this channel
+            try {
+              if (window.loadedQuadData?.curves?.[channelName]) delete window.loadedQuadData.curves[channelName];
+              if (window.loadedQuadData?.keyPoints?.[channelName]) delete window.loadedQuadData.keyPoints[channelName];
+              if (window.loadedQuadData?.keyPointsMeta?.[channelName]) delete window.loadedQuadData.keyPointsMeta[channelName];
+              if (window.loadedQuadData?.sources?.[channelName]) delete window.loadedQuadData.sources[channelName];
+            } catch {}
+            // Re-enable per-channel measurement if available
+            if (perChannelLinearization[channelName]) {
+              perChannelEnabled[channelName] = true;
+              if (perChannelToggle) { perChannelToggle.disabled = false; perChannelToggle.checked = true; }
+              try { perChannelLinearization[channelName].edited = false; } catch {}
+              refreshPerChannelLinearizationDisplay(channelName);
+            }
+            updateInterpolationControls();
+            updateProcessingDetail(channelName);
+            debouncedPreviewUpdate();
+            showStatus(`Reverted ${channelName} to measurement`);
+            // Restore prior selection if still enabled
+            try {
+              if (savedSel && isEditModeEnabled()) {
+                const row = Array.from(elements.rows.children).find(tr => tr.getAttribute('data-channel') === savedSel);
+                const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : 0;
+                if (endVal > 0) {
+                  if (elements.editChannelSelect) elements.editChannelSelect.value = savedSel;
+                  EDIT.selectedChannel = savedSel;
+                  edit_refreshState();
+                  updateInkChart();
+                }
+              }
+            } catch {}
+          });
+          // Initialize disabled state based on whether a measurement is loaded for this channel
+          try { btn.disabled = !perChannelLinearization[channelName]; } catch {}
+          btnGroup.appendChild(btn);
+        }
+      } catch {}
 
       function refreshDisplay() {
         const endVal = InputValidator.clampEnd(endInput.value);
@@ -12576,9 +13675,9 @@ DOMAIN_MAX 1.0 1.0 1.0
         noChannelsRow.id = 'noChannelsRow';
         noChannelsRow.className = 'hidden border-t border-gray-200';
         noChannelsRow.innerHTML = `
-          <td class="px-1 pt-2 pb-1 text-center">
+          <td class="p-0 text-center" style="width:0;">
           </td>
-          <td class="px-1 pt-2 pb-1 font-medium">
+          <td class="px-1 pt-2 pb-1 font-medium" style="width: 100px;">
             <span class="inline-flex items-center gap-2 invisible">
               <span class="inline-block w-3.5 h-3.5 rounded-sm border border-black/10"></span>
               <span class="w-8 channel-name">XX</span>
@@ -12586,7 +13685,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             </span>
             <div class="text-center text-gray-500 italic" style="margin-top: -24px;">No channels enabled</div>
           </td>
-          <td class="px-1 pt-2 pb-1" style="width: 140px;">
+          <td class="px-1 pt-2 pb-1 text-center" style="width: 250px;">
             <div class="inline-flex items-center gap-2 invisible">
               <input type="file" class="hidden per-channel-file">
               <button class="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors font-bold">
@@ -12595,14 +13694,18 @@ DOMAIN_MAX 1.0 1.0 1.0
               <span class="text-xs text-gray-500">No file</span>
             </div>
           </td>
-          <td class="px-1 pt-2 pb-1">
-            <input type="number" step="1" min="0" max="100" value="100" class="percent-input w-20 rounded-lg border border-gray-300 px-2 py-1 invisible" disabled>
+          <td class="px-1 pt-2 pb-1 text-left">
+            <span class="text-xs text-gray-500 invisible">—</span>
           </td>
-          <td class="px-1 pt-2 pb-1">
-            <input type="number" step="1" min="0" max="64000" value="64000" class="end-input w-20 rounded-lg border border-gray-300 px-2 py-1 invisible" disabled>
+          <td class="pr-0 pt-2 pb-1 text-right" style="width:120px;">
+            <input type="number" step="1" min="0" max="100" value="100" class="percent-input w-20 m-0 rounded-lg border border-gray-300 px-2 py-1 text-right invisible" disabled>
+          </td>
+          <td class="pl-0 pt-2 pb-1 text-right" style="width:120px;">
+            <input type="number" step="1" min="0" max="64000" value="64000" class="end-input w-20 m-0 rounded-lg border border-gray-300 px-2 py-1 text-right invisible" disabled>
           </td>
         `;
         elements.rows.appendChild(noChannelsRow);
+        try { updateRevertButtonsState(); } catch {}
         
         // Setup event listeners after DOM update
         Array.from(elements.rows.children).forEach(tr => {
@@ -12821,8 +13924,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       }
     });
 
-    // Note: No auto-smoothing. Wedgie-style inversion provides the base correction curve.
-    // Optional smoothing can be applied via the slider, independent of data source.
+    // Note: Smoothing slider deprecated. Measurement reconstruction + decimation provide stable curves; fidelity is controlled via Recompute.
 
     // Sample data loading functions
     function loadSampleData(type) {
@@ -12861,6 +13963,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: ${filename}`);
         elements.globalLinearizationToggle.disabled = false;
         elements.globalLinearizationToggle.checked = true;
+        try { updateRevertButtonsState(); } catch {}
+        try { const rev = document.getElementById('revertGlobalToMeasurementBtn'); if (rev) { rev.disabled = false; rev.removeAttribute('disabled'); } } catch {}
         
         // Show file info
         elements.globalLinearizationInfo.classList.remove('hidden');
@@ -12878,7 +13982,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           elements.globalLinearizationDetails.textContent = ` - ${ptsLabel} (${typeLabel})`;
         })();
         
-        // Note: No auto-smoothing; base samples come from the chosen source. Smoothing is optional via slider.
+        // Note: Smoothing control deprecated. Base samples come from the chosen source; fidelity controlled via Recompute.
         
         // Update interpolation controls
         updateInterpolationControls();
@@ -12946,9 +14050,59 @@ DOMAIN_MAX 1.0 1.0 1.0
     
     
     // Global linearization button click
-    elements.globalLinearizationBtn.addEventListener('click', () => {
-      elements.linearizationFile.click();
-    });
+      elements.globalLinearizationBtn.addEventListener('click', () => {
+        elements.linearizationFile.click();
+      });
+
+    // Revert to measurement (global): clear Smart curves/points and re-enable global correction
+    const revertGlobalBtn = document.getElementById('revertGlobalToMeasurementBtn');
+    if (revertGlobalBtn){
+      revertGlobalBtn.addEventListener('click', () => {
+        const savedSel = (isEditModeEnabled() && typeof EDIT !== 'undefined' && EDIT && EDIT.selectedChannel) ? EDIT.selectedChannel : null;
+        try {
+          CurveHistory.captureState('Before: Revert Global to Measurement');
+        } catch {}
+        const chs = (getCurrentPrinter()?.channels || []).slice();
+        chs.forEach((ch) => {
+          try {
+            if (window.loadedQuadData?.curves?.[ch]) delete window.loadedQuadData.curves[ch];
+            if (window.loadedQuadData?.keyPoints?.[ch]) delete window.loadedQuadData.keyPoints[ch];
+            if (window.loadedQuadData?.keyPointsMeta?.[ch]) delete window.loadedQuadData.keyPointsMeta[ch];
+            if (window.loadedQuadData?.sources?.[ch]) delete window.loadedQuadData.sources[ch];
+          } catch {}
+        });
+        if (elements.globalLinearizationToggle) {
+          elements.globalLinearizationToggle.disabled = false;
+          elements.globalLinearizationToggle.checked = true;
+        }
+        // Clear edited flag on global measurement (we are reverting to the loaded source)
+        if (linearizationData) { try { linearizationData.edited = false; } catch {} }
+        linearizationApplied = !!linearizationData;
+        updateInterpolationControls();
+        // Refresh filename/details to drop the Edited prefix
+        try { refreshGlobalLinearizationDisplay(); } catch {}
+        updatePreview();
+        try {
+          const chans = getCurrentPrinter().channels;
+          chans.forEach((name)=> updateProcessingDetail(name));
+        } catch {}
+        showStatus('Reverted to measurement (global)');
+        updateRevertButtonsState();
+        // Restore prior Edit selection to avoid defaulting to MK
+        try {
+          if (savedSel && isEditModeEnabled()) {
+            const row = Array.from(elements.rows.children).find(tr => tr.getAttribute('data-channel') === savedSel);
+            const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : 0;
+            if (endVal > 0) {
+              if (elements.editChannelSelect) elements.editChannelSelect.value = savedSel;
+              EDIT.selectedChannel = savedSel;
+              edit_refreshState();
+              updateInkChart();
+            }
+          }
+        } catch {}
+      });
+    }
 
     elements.linearizationFile.addEventListener('change', async (e) => {
       const file = e.target.files[0];
@@ -12982,6 +14136,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: ${file.name} (${getBasePointCountLabel(parsed)})`);
         elements.globalLinearizationToggle.disabled = false;
         elements.globalLinearizationToggle.checked = true;
+        try { updateRevertButtonsState(); } catch {}
+        try { const rev = document.getElementById('revertGlobalToMeasurementBtn'); if (rev) { rev.disabled = false; rev.removeAttribute('disabled'); } } catch {}
         
         // Show file info below Data Source label
         // Set base filename and refresh display with edited prefix logic
@@ -13001,7 +14157,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.globalLinearizationInfo.classList.remove('hidden');
         if (elements.globalLinearizationHint) elements.globalLinearizationHint.classList.add('hidden');
         
-        // Note: No auto-smoothing; base samples come from the chosen source. Smoothing is optional via slider.
+        // Note: Smoothing control deprecated. Base samples come from the chosen source; fidelity controlled via Recompute.
         
         // Update interpolation controls
         updateInterpolationControls();
@@ -13034,6 +14190,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.globalLinearizationBtn.setAttribute('data-tooltip', 'Load LUT.cube, LABdata.txt, or .acv curve files');
         elements.globalLinearizationToggle.disabled = true;
         elements.globalLinearizationToggle.checked = false;
+        try { updateRevertButtonsState(); } catch {}
         
         // Hide file info and show hint again
         elements.globalLinearizationInfo.classList.add('hidden');
@@ -13079,6 +14236,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         updateFilename();
         
         debouncedPreviewUpdate();
+        try { updateRevertButtonsState(); } catch {}
       }
     });
 
@@ -13110,29 +14268,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       }
     });
     
-    // Smoothing slider functionality
-    elements.smoothingSlider.addEventListener('input', (e) => {
-      if (hasAnyLinearization()) {
-        const smoothingPercent = Math.round(e.target.value);
-        elements.smoothingValue.textContent = `${smoothingPercent}%`;
-        
-        // Update warning visibility
-        const showWarning = smoothingPercent > 0;
-        if (showWarning) {
-        elements.smoothingWarning.classList.remove('opacity-0', 'invisible');
-      } else {
-        elements.smoothingWarning.classList.add('opacity-0', 'invisible');
-      }
-        
-        // Update status and preview
-        if (smoothingPercent > 0) {
-          showStatus(`Data point smoothing: ${smoothingPercent}%`);
-        } else {
-          showStatus(`Data point smoothing: off`);
-        }
-        debouncedPreviewUpdate(); // Update preview with new smoothing setting
-      }
-    });
+    // (Removed) Smoothing slider functionality — smoothing deprecated
 
     // Simplifier controls listeners
     // Legacy key-point simplifier listeners removed; replaced by Edit Curves panel
@@ -13151,12 +14287,11 @@ DOMAIN_MAX 1.0 1.0 1.0
       });
     }
 
-    // Live-preview user notes into the .quad File Preview
+    // Live-preview user notes into the .quad File Preview (debounced, notes-only)
+    function debounce(fn, wait = 200){ let t; return (...args)=>{ clearTimeout(t); t = setTimeout(() => fn(...args), wait); }; }
     if (elements.userNotes) {
-      elements.userNotes.addEventListener('input', () => {
-        // Debounce not necessary; buildFile is cheap. Keep UI snappy.
-        updatePreview();
-      });
+      const updatePreviewNotes = debounce(() => updatePreview({ onlyNotes: true }), 200);
+      elements.userNotes.addEventListener('input', updatePreviewNotes);
     }
 
     // Lab Tech functionality (always visible console-style; no collapse/expand)
@@ -13383,29 +14518,33 @@ DOMAIN_MAX 1.0 1.0 1.0
     }
 
     function addChatMessage(role, message) {
-      const messageDiv = document.createElement('div');
-      // Tighten spacing to match .quad File Preview line height
-      messageDiv.className = `${role === 'user' ? 'text-right' : ''} mb-0`;
-      
-      const bubble = document.createElement('div');
-      const roleClass = (role === 'user') ? 'ml-auto' : (role === 'system') ? 'italic text-gray-400' : '';
-      bubble.className = `inline-block px-1 py-0 rounded text-xs max-w-[80%] whitespace-pre-line font-mono text-white ${roleClass}`;
-      
-      // Convert basic markdown-style formatting to HTML for assistant messages
+      const line = document.createElement('div');
+      line.className = `chat-line ${role}`;
+
+      // Prefix user prompts like a terminal
+      const prefix = role === 'user' ? '> ' : '';
+
       if (role === 'assistant') {
-        let formattedMessage = message
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **bold**
-          .replace(/\*(.*?)\*/g, '<em>$1</em>') // *italic*
-          .replace(/^- (.+)$/gm, '• $1') // Convert "- item" to bullet points
-          .replace(/^\* (.+)$/gm, '• $1') // Convert "* item" to bullet points
-          .replace(/^(\d+\.\s)/gm, '$1'); // Preserve numbered lists
-        bubble.innerHTML = formattedMessage;
+        // Minimal formatting for readability; keep console feel
+        let formatted = message
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/^- (.+)$/gm, '• $1')
+          .replace(/^\* (.+)$/gm, '• $1')
+          .replace(/^(\d+\.\s)/gm, '$1');
+        line.innerHTML = formatted;
       } else {
-        bubble.textContent = message;
+        line.textContent = prefix + message;
       }
-      messageDiv.appendChild(bubble);
-      
-      elements.chatHistory.appendChild(messageDiv);
+
+      // Tag system messages as error/info when applicable (for theming)
+      if (role === 'system') {
+        const t = String(message || '');
+        if (/^\s*error\s*:/i.test(t)) line.classList.add('error');
+        else if (/^\s*assistant\s*:/i.test(t) || /processing request/i.test(t)) line.classList.add('info');
+      }
+
+      elements.chatHistory.appendChild(line);
       elements.chatHistory.scrollTop = elements.chatHistory.scrollHeight;
       try {
         if (role === 'system' && typeof claudeAssistant?.addSystemContext === 'function') {
@@ -14259,6 +15398,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: Manual L* (${getBasePointCountLabel(correctionData)})`);
         elements.globalLinearizationToggle.disabled = false;
         elements.globalLinearizationToggle.checked = true;
+        try { updateRevertButtonsState(); } catch {}
         
         // Show file info
         elements.globalLinearizationInfo.classList.remove('hidden');
@@ -14427,7 +15567,7 @@ DOMAIN_MAX 1.0 1.0 1.0
 
           <hr />
 
-          <h2 id="quickstart">3. Quick Start (Beta v2.0)</h2>
+          <h2 id="quickstart">3. Quick Start (Beta v2.1)</h2>
           <ol>
             <li>Choose your printer and set ink limits (per channel).</li>
             <li>Start with Linear Ramp, or</li>
@@ -14578,6 +15718,9 @@ DOMAIN_MAX 1.0 1.0 1.0
             <dt>QuadToneRIP (QTR)</dt>
             <dd><a href="https://www.quadtonerip.com/" target="_blank" rel="noopener">Specialized RIP/driver</a> for Epson printers designed for high-quality monochrome printing with multi-shade ink sets. QTR uses <code>.quad</code> files to control how much ink each channel lays down across the 0–100% input range, enabling precise tonal calibration and alternative process workflows such as digital negatives.</dd>
 
+            <dt>Revert (to measurement)</dt>
+            <dd>Buttons that return curves to the loaded measurement source for iteration. <strong>Per‑channel Revert</strong> clears Smart curves/points and re‑enables that channel’s measurement (enabled only when measurement data is loaded for that channel). <strong>Global Revert</strong> clears Smart curves/points across all channels and re‑enables the global measurement (enabled only when a global file is loaded and the global toggle is ON). Both actions are undoable.</dd>
+
             <dt>Recompute</dt>
             <dd>Button in Edit Mode that regenerates Smart key points for the selected channel from the currently plotted curve using the configured <em>Max error %</em> and <em>Max points</em> settings—useful for simplifying or refreshing an editable set from a loaded <code>.quad</code>.</dd>
           </dl>
@@ -14604,7 +15747,7 @@ DOMAIN_MAX 1.0 1.0 1.0
     function getHelpWorkflowHTML(){
       return `
         <section class="prose prose-gray max-w-none p-6 bg-white rounded-2xl shadow">
-          <h2>quadGEN Workflow (Beta v2.0.2)</h2>
+          <h2>quadGEN Workflow</h2>
           <h3>Purpose</h3>
           <ul>
             <li>Provide a concise, repeatable workflow to build and refine <code>.quad</code> curves for QuadToneRIP (QTR).</li>
@@ -14878,12 +16021,11 @@ DOMAIN_MAX 1.0 1.0 1.0
       });
     }
     
-    // Global Correction Help popup functionality
-    if (elements.globalCorrectionHelpBtn && elements.globalCorrectionHelpPopup) {
+    // Global Correction Help button: open main Help with Detailed Workflow tab
+    if (elements.globalCorrectionHelpBtn) {
       elements.globalCorrectionHelpBtn.addEventListener('click', () => {
-        wireGlobalHelpSamples();
-        elements.globalCorrectionHelpPopup.classList.remove('hidden');
-        lockBodyScroll();
+        try { setHelpActiveTab('workflow'); } catch {}
+        if (elements.helpPopup) { elements.helpPopup.classList.remove('hidden'); lockBodyScroll(); }
       });
     }
     if (elements.closeGlobalCorrectionHelpBtn && elements.globalCorrectionHelpPopup) {
