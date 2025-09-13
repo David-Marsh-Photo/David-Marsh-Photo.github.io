@@ -121,7 +121,7 @@ LINEARIZATION DATA PROCESSING:
 - Global LAB data: Applied uniformly to all ink channels via single correction curve
 - Per-channel LAB data: Individual correction curves per ink channel for precise control
 - 3D LUT processing: Neutral axis extraction (R=G=B diagonal) via trilinear interpolation
-- LAB data processing: Wedgie-style inversion to a linear target (Target X% = Measured X%, Target L* = 100→0)
+- LAB data processing: CIE density mapping + Gaussian local-σ reconstruction (Target density = position)
 - ACV curve processing: Binary format parsing with cubic spline interpolation of control points
 - File processing: parseLinearizationFile() routes files through appropriate parsers (text/binary detection)
 - 3D LUT extraction: Samples 256 points along neutral axis, ignores color information
@@ -2207,7 +2207,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
 —
 
-## 3. Quick Start (Beta v2.1)  
+## 3. Quick Start (Beta v2.2)  
 1) Choose your printer and set ink limits (per channel).
 2) Start with Linear Ramp, or  
 3) Load data: `.quad` (inspect/correct), LAB `.txt`, LUT `.cube` (1D/3D), Photoshop `.acv`, or enter Manual L*.  
@@ -2282,7 +2282,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta v2.1.0';
+    const APP_VERSION = 'Beta v2.2.0';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2302,6 +2302,28 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v2.2.0': {
+        date: '2025-09-13',
+        title: 'Local-σ LAB reconstruction, Manual L* parity, console clarity',
+        sections: {
+          FIXED: [
+            'Manual L* and LAB status lines clarified: Δ vs linear now labels positions as % input; removed duplicate method note',
+            'Preview update ReferenceError fixed in LAB smoothing provider (removed stale radius reference)'
+          ],
+          CHANGED: [
+            'LAB/Manual L* mapping now uses CIE luminance → density (−log10(Y)) with Dmax normalization (replaces min/max L* normalization); improves shadow convergence; existing .quad files unaffected',
+            'LAB reconstruction now uses Gaussian-weighted regression with a local adaptive bandwidth based on median neighbor spacing (robust to uneven spacing and dense datasets)',
+            'Manual L* now uses the same CIE density + local-σ Gaussian reconstruction as LAB (full parity)'
+          ],
+          ADDED: []
+        },
+        aboutDialog: [
+          { label: 'CIE Density Mapping', desc: 'LAB/Manual L* now use CIE luminance → density (−log10(Y)) for corrections; better shadow handling, stable highlights.' },
+          { label: 'Local-σ Reconstruction', desc: 'Gaussian weights now adapt to local patch spacing for smoother, robust LAB curves.' },
+          { label: 'Manual L* Parity', desc: 'Manual L* uses the same reconstruction as LAB for consistent results.' },
+          { label: 'Console Clarity', desc: 'Δ vs linear shows “% input”; method note appears once on load/apply.' }
+        ]
+      },
       'v2.1.0': {
         date: '2025-09-13',
         title: 'Edit Mode reliability, Revert fixes, channel-colored labels',
@@ -9344,9 +9366,9 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         const fmtPct = (v)=> (v>=0?'+':'') + v.toFixed(1) + '%';
         const kind = (v)=> v>0 ? 'add ink' : (v<0 ? 'reduce ink' : 'no change');
-        const maxLabel = `${fmtPct(maxDelta)} (${kind(maxDelta)}) @ ${(maxIdx/(N-1)*100).toFixed(1)}%`;
-        const minLabel = `${fmtPct(minDelta)} (${kind(minDelta)}) @ ${(minIdx/(N-1)*100).toFixed(1)}%`;
-        const zeroLabel = zeroAt!=null ? `, zero ≈ ${(zeroAt*100).toFixed(1)}%` : '';
+        const maxLabel = `${fmtPct(maxDelta)} (${kind(maxDelta)}) @ ${(maxIdx/(N-1)*100).toFixed(1)}% input`;
+        const minLabel = `${fmtPct(minDelta)} (${kind(minDelta)}) @ ${(minIdx/(N-1)*100).toFixed(1)}% input`;
+        const zeroLabel = zeroAt!=null ? `, zero ≈ ${(zeroAt*100).toFixed(1)}% input` : '';
         el.textContent = `Δ vs linear: ${maxLabel}, ${minLabel}${zeroLabel}`;
         el.title = 'Delta computed from current LAB mapping and interpolation';
       } catch (e) {
@@ -9411,9 +9433,9 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         const fmtPct = (v)=> (v>=0?'+':'') + v.toFixed(1) + '%';
         const kind = (v)=> v>0 ? 'add ink' : (v<0 ? 'reduce ink' : 'no change');
-        const maxLabel = `${fmtPct(maxDelta)} (${kind(maxDelta)}) @ ${(maxIdx/(N-1)*100).toFixed(1)}%`;
-        const minLabel = `${fmtPct(minDelta)} (${kind(minDelta)}) @ ${(minIdx/(N-1)*100).toFixed(1)}%`;
-        const zeroLabel = zeroAt!=null ? `, zero ≈ ${(zeroAt*100).toFixed(1)}%` : '';
+        const maxLabel = `${fmtPct(maxDelta)} (${kind(maxDelta)}) @ ${(maxIdx/(N-1)*100).toFixed(1)}% input`;
+        const minLabel = `${fmtPct(minDelta)} (${kind(minDelta)}) @ ${(minIdx/(N-1)*100).toFixed(1)}% input`;
+        const zeroLabel = zeroAt!=null ? `, zero ≈ ${(zeroAt*100).toFixed(1)}% input` : '';
         return `Δ vs linear: ${maxLabel}, ${minLabel}${zeroLabel}`;
       } catch { return ''; }
     }
@@ -12254,6 +12276,25 @@ DOMAIN_MAX 1.0 1.0 1.0
     }
 
     // LAB processing summary: see docs/LAB_LINEARIZATION_WORKFLOW.md
+    // CIE helpers for L* → Y → optical density
+    function lstarToY_CIE(L) {
+      const l = Math.max(0, Math.min(100, Number(L)));
+      if (l > 8) {
+        const f = (l + 16) / 116;
+        return f * f * f;
+      } else {
+        return l / 903.3;
+      }
+    }
+    function log10_safe(x) {
+      const v = Math.max(1e-6, Math.min(1, x));
+      return Math.log(v) / Math.LN10; // avoids older Math.log10 browser gaps
+    }
+    function cieDensityFromLstar(L) {
+      // Unnormalized optical density from L*
+      const Y = lstarToY_CIE(L);
+      return -log10_safe(Y);
+    }
     /**
      * Parse a LAB measurement data file (tab-separated format)
      * Expected format:
@@ -12291,15 +12332,14 @@ DOMAIN_MAX 1.0 1.0 1.0
       dataPoints.sort((a, b) => a.input - b.input);
       const originalDataPoints = [...dataPoints];
 
-      // Build Gaussian Weighted Correction in printer space (density)
+      // Build Gaussian Weighted Correction in printer space using CIE-exact density mapping
       const labValues = dataPoints.map(p => p.lab);
-      const minLab = Math.min(...labValues);
-      const maxLab = Math.max(...labValues);
-      const labRange = Math.max(1e-9, maxLab - minLab);
+      const D_values = labValues.map(L => cieDensityFromLstar(L));
+      const Dmax = Math.max(...D_values, 1e-6);
 
       const correctionPoints = dataPoints.map(point => {
         const pos = Math.max(0, Math.min(1, point.input / 100));
-        const actualDensity = 1.0 - ((point.lab - minLab) / labRange); // 0..1
+        const actualDensity = cieDensityFromLstar(point.lab) / Dmax; // normalized 0..1
         const expectedDensity = pos; // linear target
         return {
           position: pos,
@@ -12310,17 +12350,49 @@ DOMAIN_MAX 1.0 1.0 1.0
         };
       });
 
-      // Base influence radius; can be widened by smoothing control
-      const influenceRadius = 0.15; // 15% of range
+      // Local adaptive bandwidth (σ) for Gaussian weights
+      // σ(t) = clamp(floor=0.02, alpha * s_local(t), ceil=0.15)
+      // s_local(t): median distance to K nearest measured positions (handles uneven spacing)
+      const positionsOnly = correctionPoints.map(p => p.position);
+      const K_NEIGHBORS = 6;
+      const SIGMA_FLOOR = 0.02;
+      const SIGMA_CEIL = 0.15;
+      const SIGMA_ALPHA = 3.0;
+      function localSigmaAt(t) {
+        const n = positionsOnly.length;
+        if (n <= 1) return SIGMA_CEIL; // fallback
+        // Binary search to find insertion index
+        let lo = 0, hi = n;
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (positionsOnly[mid] < t) lo = mid + 1; else hi = mid;
+        }
+        // Gather K nearest distances from neighbors around index
+        const dists = [];
+        let L = lo - 1, R = lo;
+        while ((L >= 0 || R < n) && dists.length < K_NEIGHBORS) {
+          const dl = (L >= 0) ? Math.abs(t - positionsOnly[L]) : Infinity;
+          const dr = (R < n) ? Math.abs(t - positionsOnly[R]) : Infinity;
+          if (dl <= dr) { if (isFinite(dl)) dists.push(dl); L--; } else { if (isFinite(dr)) dists.push(dr); R++; }
+        }
+        if (dists.length === 0) return SIGMA_CEIL;
+        dists.sort((a,b)=>a-b);
+        const mid = dists.length >> 1;
+        const med = (dists.length % 2 === 0) ? 0.5*(dists[mid-1]+dists[mid]) : dists[mid];
+        const sigma = Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, SIGMA_ALPHA * med));
+        return sigma;
+      }
 
       const samples = [];
       for (let i = 0; i < 256; i++) {
         const position = i / 255;
         let weightedCorrection = 0;
         let totalWeight = 0;
+        const sigma = localSigmaAt(position);
+        const denom = 2 * sigma * sigma;
         for (let j = 0; j < correctionPoints.length; j++) {
           const d = Math.abs(position - correctionPoints[j].position);
-          const w = Math.exp(-(d * d) / (2 * influenceRadius * influenceRadius));
+          const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
           weightedCorrection += correctionPoints[j].correction * w;
           totalWeight += w;
         }
@@ -12341,19 +12413,20 @@ DOMAIN_MAX 1.0 1.0 1.0
         originalData: originalDataPoints,
         format: 'LAB Data',
         getSmoothingControlPoints: function(smoothingPercent) {
-          // Dynamic radius: 0% => tight; 90% => wide
-          const baseRadius = 0.08;
-          const maxRadius = 0.25;
+          // Local adaptive σ widened by smoothingPercent
           const sp = Math.max(0, Math.min(90, Number(smoothingPercent) || 0));
-          const radius = baseRadius + (sp / 100) * (maxRadius - baseRadius);
+          const widen = 1 + (sp / 100);
           const dyn = new Array(256);
           for (let i = 0; i < 256; i++) {
             const position = i / 255;
             let weightedCorrection = 0;
             let totalWeight = 0;
+            const sigmaLocal = localSigmaAt(position) * widen;
+            const sigma = Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, sigmaLocal));
+            const denom = 2 * sigma * sigma;
             for (let j = 0; j < correctionPoints.length; j++) {
               const d = Math.abs(position - correctionPoints[j].position);
-              const w = Math.exp(-(d * d) / (2 * radius * radius));
+              const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
               weightedCorrection += correctionPoints[j].correction * w;
               totalWeight += w;
             }
@@ -12375,7 +12448,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           }
         // Apply dual-axis transformation after interpolation to match industry-standard plot orientation
         // Signal to apply1DLUT() to perform horizontal + vertical flips on the final mapping
-          return { samples: cpY, xCoords: cpX, controlPointCount, needsDualTransformation: false, influenceRadius: radius };
+          return { samples: cpY, xCoords: cpX, controlPointCount, needsDualTransformation: false, influenceRadius: null };
         }
       };
     }
@@ -13591,7 +13664,15 @@ DOMAIN_MAX 1.0 1.0 1.0
           if (parsed.is3DLUT) {
             showStatus(`Loaded 3D LUT and extracted ${parsed.samples.length} neutral axis points for ${channelName} (${parsed.lutSize}³ grid)`);
           } else {
-          showStatus(`Loaded per-channel correction for ${channelName}: ${parsed.samples.length} points`);
+          // Append small method note for LAB/Manual L* datasets
+          let methodNote = '';
+          try {
+            const fmtLower = String(parsed.format || '').toLowerCase();
+            if (fmtLower.includes('lab') || fmtLower.includes('manual')) {
+              methodNote = ' (CIE density; Gaussian-weighted reconstruction with PCHIP interpolation)';
+            }
+          } catch {}
+          showStatus(`Loaded per-channel correction for ${channelName}: ${parsed.samples.length} points${methodNote}`);
           }
           debouncedPreviewUpdate();
           // No intent mismatch warning (Positive-only workflow)
@@ -13997,7 +14078,8 @@ DOMAIN_MAX 1.0 1.0 1.0
           updateProcessingDetail(channelName);
         });
         
-      showStatus(`Loaded sample data as a global correction: ${filename}`);
+      // Status note: CIE density; Gaussian-weighted reconstruction with PCHIP interpolation (LAB sample)
+      showStatus(`Loaded sample data as a global correction: ${filename} (CIE density; Gaussian-weighted reconstruction with PCHIP interpolation)`);
         
       } catch (error) {
         console.error('Error loading sample data:', error);
@@ -14167,7 +14249,15 @@ DOMAIN_MAX 1.0 1.0 1.0
           showStatus(`Loaded 3D LUT and extracted ${parsed.samples.length} neutral axis points as a global correction from ${file.name} (${parsed.lutSize}³ grid)`);
           try { postGlobalDeltaChatSummary(); } catch {}
       } else {
-          showStatus(`Loaded and applied ${parsed.samples.length} data points as a global correction from ${file.name}`);
+          // Append small method note for LAB/Manual L* datasets
+          let methodNote = '';
+          try {
+            const fmtLower = String(parsed.format || '').toLowerCase();
+            if (fmtLower.includes('lab') || fmtLower.includes('manual')) {
+              methodNote = ' (CIE density; Gaussian-weighted reconstruction with PCHIP interpolation)';
+            }
+          } catch {}
+          showStatus(`Loaded and applied ${parsed.samples.length} data points as a global correction from ${file.name}${methodNote}`);
           try { postGlobalDeltaChatSummary(); } catch {}
       }
         debouncedPreviewUpdate(); // Update preview to show the applied linearization
@@ -15171,7 +15261,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         hasErrors = true;
         // No user-facing message; keep the button disabled without showing the old text
       }
-      // Require all L* values to be provided for wedgie-like inversion
+      // Require all L* values to be provided for reconstruction
       const totalInputs = inputs.length;
       if (values.length !== totalInputs) {
         hasErrors = true;
@@ -15229,92 +15319,103 @@ DOMAIN_MAX 1.0 1.0 1.0
     }
     
     function parseManualLstarData(validation) {
-      const measuredPairs = validation.measuredPairs;
-      // Build aligned arrays in row order
+      const measuredPairs = validation.measuredPairs || [];
       const measuredXs = measuredPairs.map(p => p.x);
-      const measured = measuredPairs.map(p => ({ value: p.l }));
-      const N = measured.length;
-      // Normalize X positions to 0..1
-      const inputNormMeasured = measuredXs.map(v => Math.max(0, Math.min(100, v)) / 100);
-      // Wedgie-like target: Target X% is linked to Measured X% and Target L* is linear 100→0
-      // Therefore target L* = 100 - Target X% and target density = Target X% / 100
-      const inputNormTarget = inputNormMeasured.slice();
-      const targetDensity = inputNormTarget.slice();
-      // Actual density from measured L* (normalized by measured min/max) then invert
-      const mVals = measured.map(m => m.value);
-      const minLab = Math.min(...mVals);
-      const maxLab = Math.max(...mVals);
-      const labRange = Math.max(1e-6, maxLab - minLab);
-      const actualDensity = measured.map(m => 1.0 - ((m.value - minLab) / labRange));
-
-      function targetAt(x) {
-        // linear interpolation on (inputNormTarget, targetDensity)
-        if (x <= inputNormTarget[0]) return targetDensity[0];
-        if (x >= inputNormTarget[N - 1]) return targetDensity[N - 1];
-        let lo = 0;
-        let hi = N - 1;
-        while (hi - lo > 1) {
+      const measuredL = measuredPairs.map(p => p.l);
+      const N = measuredL.length;
+      const posNorm = measuredXs.map(v => Math.max(0, Math.min(100, v)) / 100);
+      const expectedDensity = posNorm.slice();
+      const Dvals = measuredL.map(L => cieDensityFromLstar(L));
+      const Dmax = Math.max(...Dvals, 1e-6);
+      const actualDensity = Dvals.map(D => D / Dmax);
+      const correctionPoints = posNorm.map((pos, i) => ({
+        position: pos,
+        correction: (expectedDensity[i] - actualDensity[i]),
+        originalLab: measuredL[i],
+        originalInput: measuredXs[i]
+      }));
+      const positionsOnly = correctionPoints.map(p => p.position);
+      const K_NEIGHBORS = 6;
+      const SIGMA_FLOOR = 0.02;
+      const SIGMA_CEIL = 0.15;
+      const SIGMA_ALPHA = 3.0;
+      function localSigmaAt(t) {
+        const n = positionsOnly.length;
+        if (n <= 1) return SIGMA_CEIL;
+        let lo = 0, hi = n;
+        while (lo < hi) {
           const mid = (lo + hi) >> 1;
-          if (inputNormTarget[mid] <= x) lo = mid; else hi = mid;
+          if (positionsOnly[mid] < t) lo = mid + 1; else hi = mid;
         }
-        const x0 = inputNormTarget[lo], x1 = inputNormTarget[hi];
-        const y0 = targetDensity[lo], y1 = targetDensity[hi];
-        const t = (x - x0) / Math.max(1e-9, (x1 - x0));
-        return y0 * (1 - t) + y1 * t;
+        const dists = [];
+        let L = lo - 1, R = lo;
+        while ((L >= 0 || R < n) && dists.length < K_NEIGHBORS) {
+          const dl = (L >= 0) ? Math.abs(t - positionsOnly[L]) : Infinity;
+          const dr = (R < n) ? Math.abs(t - positionsOnly[R]) : Infinity;
+          if (dl <= dr) { if (isFinite(dl)) dists.push(dl); L--; } else { if (isFinite(dr)) dists.push(dr); R++; }
+        }
+        if (dists.length === 0) return SIGMA_CEIL;
+        dists.sort((a,b)=>a-b);
+        const mid = dists.length >> 1;
+        const med = (dists.length % 2 === 0) ? 0.5*(dists[mid-1]+dists[mid]) : dists[mid];
+        return Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, SIGMA_ALPHA * med));
       }
-
-      const samples = [];
-      const minActual = Math.min(...actualDensity);
-      const maxActual = Math.max(...actualDensity);
+      const samples = new Array(256);
       for (let i = 0; i < 256; i++) {
-        const x = i / 255;
-        const desired = targetAt(x);
-        let correctedInput = x;
-        // Find bracket in actualDensity on measured input positions
-        if (desired <= minActual) {
-          correctedInput = inputNormMeasured[actualDensity.indexOf(minActual)];
-        } else if (desired >= maxActual) {
-          correctedInput = inputNormMeasured[actualDensity.indexOf(maxActual)];
-        } else {
-          for (let j = 0; j < N - 1; j++) {
-            const a0 = actualDensity[j];
-            const a1 = actualDensity[j + 1];
-            const x0 = inputNormMeasured[j];
-            const x1 = inputNormMeasured[j + 1];
-            const minA = Math.min(a0, a1);
-            const maxA = Math.max(a0, a1);
-            if (desired >= minA && desired <= maxA) {
-              const denom = (a1 - a0);
-              const t = Math.abs(denom) > 1e-12 ? (desired - a0) / denom : 0;
-              const tClamped = Math.max(0, Math.min(1, t));
-              correctedInput = x0 * (1 - tClamped) + x1 * tClamped;
-              break;
-            }
-          }
+        const t = i / 255;
+        const sigma = localSigmaAt(t);
+        const denom = 2 * sigma * sigma;
+        let num = 0, den = 0;
+        for (let j = 0; j < correctionPoints.length; j++) {
+          const d = Math.abs(t - correctionPoints[j].position);
+          const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
+          num += correctionPoints[j].correction * w;
+          den += w;
         }
-        samples.push(correctedInput);
+        const corr = den > 0 ? (num / den) : 0;
+        samples[i] = Math.max(0, Math.min(1, t + corr));
       }
-      
-      // Dual transformation application: Coordinate system alignment with industry standard
-      const flippedSamples = samples.map((sample, i) => {
-        const inputPos = i / 255; // Current input position (0-1)
-        const flippedInputPos = 1.0 - inputPos; // Horizontal flip
-        const flippedInputIndex = Math.round(flippedInputPos * 255); // Convert back to index
-        const clampedIndex = Math.max(0, Math.min(255, flippedInputIndex));
-        const originalSample = samples[clampedIndex];
-        const verticallyFlipped = 1.0 - originalSample; // Vertical flip
-        return verticallyFlipped;
-      });
-      
-      // Capture original manual data for display/metadata
-      const originalData = measured.map((m, i) => ({ input: measuredXs[i], lab: m.value }));
-
+      samples[0] = 0.0;
+      samples[255] = 1.0;
+      const originalData = measuredL.map((lab, i) => ({ input: measuredXs[i], lab }));
       return {
         domainMin: 0.0,
         domainMax: 1.0,
-        samples: flippedSamples,
+        samples,
         originalData,
-        format: 'Manual L* Entry'
+        format: 'Manual L* Entry',
+        getSmoothingControlPoints: function(smoothingPercent) {
+          const sp = Math.max(0, Math.min(90, Number(smoothingPercent) || 0));
+          const widen = 1 + (sp / 100);
+          const dyn = new Array(256);
+          for (let i = 0; i < 256; i++) {
+            const t = i / 255;
+            const sigmaLocal = localSigmaAt(t) * widen;
+            const sigma = Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, sigmaLocal));
+            const denom = 2 * sigma * sigma;
+            let num = 0, den = 0;
+            for (let j = 0; j < correctionPoints.length; j++) {
+              const d = Math.abs(t - correctionPoints[j].position);
+              const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
+              num += correctionPoints[j].correction * w;
+              den += w;
+            }
+            const corr = den > 0 ? (num / den) : 0;
+            dyn[i] = Math.max(0, Math.min(1, t + corr));
+          }
+          dyn[0] = 0.0;
+          dyn[255] = 1.0;
+          const controlPointCount = Math.max(3, 21 - Math.floor(sp / 10));
+          const cpY = [];
+          const cpX = [];
+          for (let i = 0; i < controlPointCount; i++) {
+            const x = i / (controlPointCount - 1);
+            const idx = Math.round(x * 255);
+            cpX.push(x);
+            cpY.push(dyn[idx]);
+          }
+          return { samples: cpY, xCoords: cpX, controlPointCount, needsDualTransformation: false, influenceRadius: null };
+        }
       };
     }
     
@@ -15420,7 +15521,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         elements.lstarModal.classList.add('hidden');
         
-        showStatus(`Applied manual L* correction curve (${getBasePointCountLabel(correctionData)})`);
+        // Status note: CIE density; Gaussian-weighted reconstruction with PCHIP interpolation (Manual L*)
+        showStatus(`Applied manual L* correction curve (${getBasePointCountLabel(correctionData)}) (CIE density; Gaussian-weighted reconstruction with PCHIP interpolation)`);
         try { postGlobalDeltaChatSummary(); } catch {}
       } catch (error) {
         console.error('Error processing L* values:', error);
@@ -15567,7 +15669,7 @@ DOMAIN_MAX 1.0 1.0 1.0
 
           <hr />
 
-          <h2 id="quickstart">3. Quick Start (Beta v2.1)</h2>
+          <h2 id="quickstart">3. Quick Start (Beta v2.2)</h2>
           <ol>
             <li>Choose your printer and set ink limits (per channel).</li>
             <li>Start with Linear Ramp, or</li>
