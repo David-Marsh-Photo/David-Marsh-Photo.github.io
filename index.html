@@ -880,6 +880,16 @@ ARCHITECTURAL NOTES:
       box-shadow: 0 0 0 4px rgba(96,165,250,0.55), 0 10px 18px rgba(0,0,0,0.55);
     }
 
+    /* Dark mode: match Help and Load .quad buttons to Undo styling */
+    [data-theme="dark"] #helpBtn,
+    [data-theme="dark"] #loadQuadBtn {
+      background-color: #475569 !important; /* slate-600 */
+      color: #ffffff !important;
+      border: 1px solid transparent !important;
+    }
+    [data-theme="dark"] #helpBtn:hover,
+    [data-theme="dark"] #loadQuadBtn:hover { background-color: #374151 !important; /* gray-700 */ }
+
     /* Light-mode surfaces for Lab Tech, Preview, and Notes (not pure white) */
     :root:not([data-theme="dark"]) #labTechConsole,
     :root:not([data-theme="dark"]) #previewConsole {
@@ -1078,6 +1088,24 @@ ARCHITECTURAL NOTES:
     [data-theme="dark"] #helpPopup svg [stroke="#1A1A1A"] { stroke: #e5e7eb !important; }
     [data-theme="dark"] #helpPopup svg [fill="#1A1A1A"] { fill: #e5e5e5 !important; }
 
+    /* Intent modal: match Help popup styling in dark mode */
+    [data-theme="dark"] #intentModal > div {
+      background-color: var(--bg-elevated) !important;
+      border: 1px solid var(--border-emphasis) !important;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+    }
+    [data-theme="dark"] #intentModal { background-color: rgba(0,0,0,0.5) !important; }
+
+    /* Intent content: use the same scrollbar styling as Help */
+    #intentContent::-webkit-scrollbar { width: 24px; }
+    #intentContent::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 10px; }
+    #intentContent::-webkit-scrollbar-thumb { background: #c7c7c7; border-radius: 10px; border: 3px solid var(--scrollbar-thumb-border); min-height: 60px; }
+    #intentContent::-webkit-scrollbar-thumb:hover { background: #b3b3b3; }
+    #intentContent::-webkit-scrollbar-thumb:active { background: #9a9a9a; }
+    [data-theme="dark"] #intentContent::-webkit-scrollbar-thumb { background: #4b5563; border-color: var(--console-bg); }
+    [data-theme="dark"] #intentContent::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    [data-theme="dark"] #intentContent::-webkit-scrollbar-track { background: var(--console-bg); }
+
     /* Dark-mode UI polish for Lab Tech + Notes */
     [data-theme="dark"] .border-gray-800 { border-color: var(--border-subtle) !important; }
     /* Match Clear button to Undo button styling in dark mode */
@@ -1261,15 +1289,15 @@ ARCHITECTURAL NOTES:
     /* Hide number input spinners for target inputs as well */
     /* (Removed) .lstar-target-* styles – Manual L* no longer uses Target inputs */
     
-    /* Standard dropdown styling */
+    /* Standard dropdown styling — compact across the app */
     .standard-dropdown {
       width: 100%;
-      padding: 0.25rem 0.75rem;
+      padding: 0.125rem 0.5rem;
       border: 1px solid #d1d5db;
       border-radius: 0.375rem;
-      font-size: 0.875rem;
+      font-size: 0.8125rem; /* ~13px */
       line-height: 1.25;
-      height: 32px;
+      height: 28px;
       box-sizing: border-box;
       background-color: white;
       color: #374151;
@@ -1289,9 +1317,46 @@ ARCHITECTURAL NOTES:
     }
     
     .standard-dropdown option {
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       line-height: 1.25;
       color: #374151;
+    }
+
+    /* All dropdowns use the same compact size via .standard-dropdown */
+
+    /* Custom Intent tab: make range sliders more prominent */
+    #intentTab-custom input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 9999px;
+      background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--percent, 50%), var(--console-input-bg) var(--percent, 50%), var(--console-input-bg) 100%);
+      outline: none;
+      transition: filter 120ms ease;
+    }
+    #intentTab-custom input[type="range"]:hover { filter: brightness(1.02); }
+    #intentTab-custom input[type="range"]:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+    /* WebKit thumb */
+    #intentTab-custom input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px; height: 16px;
+      background: var(--accent);
+      border: 2px solid #ffffff;
+      border-radius: 9999px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+      margin-top: -4px; /* center on 8px track */
+    }
+    /* Firefox track + progress */
+    #intentTab-custom input[type="range"]::-moz-range-track {
+      height: 8px; border-radius: 9999px; background: var(--console-input-bg);
+    }
+    #intentTab-custom input[type="range"]::-moz-range-progress {
+      height: 8px; border-radius: 9999px; background: var(--accent);
+    }
+    #intentTab-custom input[type="range"]::-moz-range-thumb {
+      width: 16px; height: 16px; background: var(--accent); border: 2px solid #ffffff; border-radius: 9999px; box-shadow: 0 1px 2px rgba(0,0,0,0.25);
     }
 
     /* Use default system checkbox styling */
@@ -1739,7 +1804,7 @@ ARCHITECTURAL NOTES:
         <!-- Linearization Section -->
         <div class="lg:col-span-1 space-y-4">
           <!-- Global Linearization -->
-          <div class="bg-white border border-gray-200 rounded-xl p-3">
+          <div class="bg-white border border-gray-200 rounded-xl p-2 md:p-3">
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-2">
                 <h3 class="text-sm font-bold">🌐 Global Correction</h3>
@@ -1752,12 +1817,24 @@ ARCHITECTURAL NOTES:
             </div>
             <p class="text-xs text-gray-600 mb-2">Apply a correction to modify all channels uniformly.</p>
             <div class="flex items-center gap-2 mb-1">
-              <button id="globalLinearizationBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold" data-tooltip="Load LUT.cube, LABdata.txt, or .acv curve files">Load Data File</button>
+              <button id="globalLinearizationBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold whitespace-nowrap shrink-0 inline-flex items-center" data-tooltip="Load LUT.cube, LABdata.txt, or .acv curve files">Load Data File</button>
               <input type="file" id="linearizationFile" accept=".cube,.txt,.acv" class="hidden">
-              <button id="manualLstarBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold">
-                ✏️ Enter L* Values Manually
+              <button id="manualLstarBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold whitespace-nowrap shrink-0 inline-flex items-center">
+                Enter L* Values
               </button>
-              <button id="revertGlobalToMeasurementBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed" title="Revert to measurement source (global)" disabled>↺ Revert</button>
+              <button id="revertGlobalToMeasurementBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold whitespace-nowrap shrink-0 inline-flex items-center disabled:opacity-50 disabled:cursor-not-allowed" title="Revert to measurement source (global)" disabled>↺ Revert</button>
+            </div>
+            <div class="flex items-center gap-2 mt-2">
+              <label for="contrastIntentSelect" class="text-xs text-gray-600">Intent</label>
+              <select id="contrastIntentSelect" class="standard-dropdown text-xs" style="width: 200px;">
+                <option value="linear" selected>Linear</option>
+                <option value="soft">Soft (γ≈0.85)</option>
+                <option value="hard">Hard (γ≈1.20)</option>
+                <option value="filmic">Filmic (soft shoulder)</option>
+                
+                <option value="custom">Custom (saved)</option>
+                <option value="enter_custom">Enter Custom…</option>
+              </select>
             </div>
             <p id="globalLinearizationHint" class="text-xs text-gray-500 mb-1">LUT (.cube), LAB data (.txt), or curves (.acv)</p>
             
@@ -1956,6 +2033,101 @@ ARCHITECTURAL NOTES:
   
   </main>
 
+  <!-- Contrast Intent Modal -->
+  <div id="intentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
+      <div class="p-5 pb-3 flex-shrink-0 flex items-center justify-between">
+        <h3 class="text-lg font-semibold">Contrast Intent</h3>
+        <button id="closeIntentModal" class="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
+      </div>
+      <div class="px-5 flex gap-2 text-sm border-b border-gray-200">
+        <button class="px-3 py-2 rounded-t text-gray-700 bg-gray-100 font-medium" data-intent-tab="presets">Presets</button>
+        <button class="px-3 py-2 rounded-t text-gray-600 hover:text-gray-800" data-intent-tab="custom">Custom</button>
+        <button class="px-3 py-2 rounded-t text-gray-600 hover:text-gray-800" data-intent-tab="paste">Paste CSV/JSON</button>
+      </div>
+      <div id="intentContent" class="overflow-y-auto p-5 space-y-5 h-[512px]">
+        <div id="intentTab-presets" class="space-y-4">
+          <div class="text-sm text-gray-700">Choose a preset. Gamma affects overall contrast; Filmic protects highlights with a soft shoulder.</div>
+          <div class="flex items-center gap-3">
+            <label class="text-sm text-gray-700">Preset:</label>
+            <select id="intentPresetSelect" class="standard-dropdown text-sm" style="width: 220px;">
+              <option value="linear">Linear</option>
+              <option value="soft">Soft (γ≈0.85)</option>
+              <option value="hard">Hard (γ≈1.20)</option>
+              <option value="filmic">Filmic (soft shoulder)</option>
+              
+            </select>
+          </div>
+          <div id="intentGammaRow" class="flex items-center gap-3">
+            <label class="text-sm text-gray-700" for="intentGamma">Gamma:</label>
+            <input id="intentGamma" type="range" min="0.6" max="1.6" step="0.01" value="1.00" class="flex-1">
+            <span id="intentGammaVal" class="text-xs text-gray-600 w-12 text-right">1.00</span>
+          </div>
+          <div id="intentFilmicRow" class="grid grid-cols-2 gap-3">
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-gray-700" for="intentFilmicGain">Midtone gain:</label>
+              <input id="intentFilmicGain" type="range" min="0.30" max="0.70" step="0.01" value="0.55" class="flex-1">
+              <span id="intentFilmicGainVal" class="text-xs text-gray-600 w-10 text-right">0.55</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-gray-700" for="intentShoulder">Shoulder:</label>
+              <input id="intentShoulder" type="range" min="0.00" max="0.60" step="0.01" value="0.35" class="flex-1">
+              <span id="intentShoulderVal" class="text-xs text-gray-600 w-10 text-right">0.35</span>
+            </div>
+          </div>
+        </div>
+        <div id="intentTab-custom" class="hidden space-y-4">
+          <div class="text-sm text-gray-700">Define a simple custom shape.</div>
+          <div class="flex items-center gap-3">
+            <label class="text-sm text-gray-700" for="customGamma">Gamma:</label>
+            <input id="customGamma" type="range" min="0.6" max="1.6" step="0.01" value="1.00" class="flex-1">
+            <span id="customGammaVal" class="text-xs text-gray-600 w-12 text-right">1.00</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-gray-700" for="customGain">Midtone gain:</label>
+              <input id="customGain" type="range" min="0.30" max="0.70" step="0.01" value="0.55" class="flex-1">
+              <span id="customGainVal" class="text-xs text-gray-600 w-10 text-right">0.55</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-gray-700" for="customShoulder">Shoulder:</label>
+              <input id="customShoulder" type="range" min="0.00" max="0.60" step="0.01" value="0.35" class="flex-1">
+              <span id="customShoulderVal" class="text-xs text-gray-600 w-10 text-right">0.35</span>
+            </div>
+          </div>
+        </div>
+        <div id="intentTab-paste" class="hidden space-y-3">
+          <div class="text-sm text-gray-700">
+            Supported formats:
+            <ul class="list-disc list-inside text-xs text-gray-600 mt-1 space-y-0.5">
+              <li>CSV with headers: <code>percent_input</code> + <code>density_rel</code> | <code>density_abs</code> | <code>Lstar</code></li>
+              <li>Label-first CSV: <code>Matte Inkjet,20,20,12</code></li>
+              <li>Pipe k/v: <code>Matte Inkjet | Input=20 Linear=20 Intent=12</code></li>
+              <li>CGATS-like: <code>BEGIN_DATA_FORMAT ... BEGIN_DATA ... END_DATA</code> (uses <code>INPUT</code>/<code>INTENT</code>)</li>
+              <li>JSON: <code>points[]</code>, <code>generator</code> (gamma/filmic), or <code>{ Media, Curve:[{Input, Intent}] }</code></li>
+              <li>Whitespace table: rows like <code>0 0 0</code>, <code>20 20 12</code></li>
+              <li>1D list (even spacing): one value per line, optional label as first line</li>
+            </ul>
+          </div>
+          <div class="text-sm bg-gray-800 text-gray-100 border border-gray-700 rounded p-2">
+            Note: pasted intent data is applied over a fixed 0–100% input scale. Black and white points (0% and 100%) do not move. To change endpoints, adjust ink limits/end values rather than the contrast intent.
+          </div>
+          <textarea id="intentPasteArea" class="w-full h-40 border border-gray-300 rounded p-2 text-sm" placeholder="Enter or paste data..."></textarea>
+          <div class="flex items-center gap-3">
+            <div id="intentPasteValidation" class="text-sm hidden flex-1"></div>
+            <button id="intentParseBtn" class="px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold whitespace-nowrap">Parse</button>
+          </div>
+        </div>
+      </div>
+      <div class="p-5 pt-3 flex-shrink-0 border-t border-gray-200">
+        <div class="flex justify-end gap-3">
+          <button id="resetIntentBtn" class="px-4 py-2 text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded font-bold">Reset to Linear</button>
+          <button id="cancelIntentBtn" class="px-4 py-2 text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded font-bold">Cancel</button>
+          <button id="applyIntentBtn" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded">Apply Intent</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- Manual L* Entry Modal -->
   <div id="lstarModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
     <div class="bg-white rounded-lg max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
@@ -2282,7 +2454,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta v2.2.0';
+    const APP_VERSION = 'Beta v2.2.1';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2302,6 +2474,22 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v2.2.1': {
+        date: '2025-09-14',
+        title: 'ACV/LUT orientation parity + Undo pairing fixes',
+        sections: {
+          FIXED: [
+            'ACV/LUT orientation centralized in parsers (flip + invert once); removed duplicate reverse+invert in loaders — Photoshop “lighten” now shows less ink (down hump).',
+            'Undo pairing for load actions now uses the most recent matching “Before:” state — undoing multiple global loads steps back to the immediately previous correction.'
+          ],
+          CHANGED: [],
+          ADDED: []
+        },
+        aboutDialog: [
+          { label: 'Orientation Parity', desc: 'ACV and LUT imports apply flip+invert once in the parser; loaders no longer reapply.' },
+          { label: 'Undo Pairing', desc: 'Undo of consecutive loads returns to the previous correction, not an empty state.' }
+        ]
+      },
       'v2.2.0': {
         date: '2025-09-13',
         title: 'Local-σ LAB reconstruction, Manual L* parity, console clarity',
@@ -3425,6 +3613,89 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             success: false,
             message: `Error opening per-channel linearization file picker: ${error.message}`
           };
+        }
+      }
+
+      /**
+       * Set contrast intent to a preset or explicit gamma/filmic parameters
+       * @param {string} preset - 'linear' | 'soft' | 'hard' | 'filmic' | 'gamma'
+       * @param {object} params - optional params: { gamma?:number, filmicGain?:number, shoulder?:number }
+       */
+      setContrastIntentPreset(preset, params = {}) {
+        try {
+          const p = String(preset || 'linear').toLowerCase();
+          if (p === 'linear') { setContrastIntent('linear', {}, 'preset'); return { success: true, message: 'Intent set to Linear' }; }
+          if (p === 'soft') { setContrastIntent('soft', { gamma: 0.85 }, 'preset'); return { success: true, message: 'Intent set to Soft (γ≈0.85)' }; }
+          if (p === 'hard') { setContrastIntent('hard', { gamma: 1.20 }, 'preset'); return { success: true, message: 'Intent set to Hard (γ≈1.20)' }; }
+          if (p === 'filmic') {
+            const gain = isFinite(params.filmicGain) ? Number(params.filmicGain) : 0.55;
+            const shoulder = isFinite(params.shoulder) ? Number(params.shoulder) : 0.35;
+            setContrastIntent('filmic', { filmicGain: gain, shoulder }, 'preset');
+            try { saveCustomPrefs({ gain, shoulder }); } catch {}
+            return { success: true, message: `Intent set to Filmic (gain=${gain.toFixed(2)}, shoulder=${shoulder.toFixed(2)})` };
+          }
+          if (p === 'gamma') {
+            const g = isFinite(params.gamma) ? Number(params.gamma) : 1.00;
+            // Explicit gamma mapped to custom_gamma so the exact value is used
+            setContrastIntent('custom_gamma', { gamma: g }, 'custom');
+            try { saveCustomPrefs({ gamma: g }); } catch {}
+            return { success: true, message: `Custom Gamma intent applied (γ=${g.toFixed(2)})` };
+          }
+          return { success: false, message: `Unknown preset '${preset}'. Use linear | soft | hard | filmic | gamma.` };
+        } catch (e) {
+          return { success: false, message: `Error setting contrast intent: ${e.message}` };
+        }
+      }
+
+      /** Apply custom intent using sliders (gamma or filmic-like) */
+      applyCustomIntentSliders(params = {}) {
+        try {
+          const g = isFinite(params.gamma) ? Number(params.gamma) : 1.00;
+          const gain = isFinite(params.gain) ? Number(params.gain) : 0.55;
+          const shoulder = isFinite(params.shoulder) ? Number(params.shoulder) : 0.35;
+          // Follow UI rule: if gain/shoulder deviate from defaults, treat as filmic; otherwise gamma
+          if (Math.abs(gain - 0.55) > 1e-3 || Math.abs(shoulder - 0.35) > 1e-3) {
+            try { saveCustomPrefs({ gain, shoulder }); } catch {}
+            setContrastIntent('custom_filmic', { gain, shoulder }, 'custom');
+            return { success: true, message: `Applied Custom Filmic intent (gain=${gain.toFixed(2)}, shoulder=${shoulder.toFixed(2)})` };
+          } else {
+            try { saveCustomPrefs({ gamma: g }); } catch {}
+            setContrastIntent('custom_gamma', { gamma: g }, 'custom');
+            return { success: true, message: `Applied Custom Gamma intent (γ=${g.toFixed(2)})` };
+          }
+        } catch (e) {
+          return { success: false, message: `Error applying custom sliders: ${e.message}` };
+        }
+      }
+
+      /** Parse and apply pasted CSV/JSON intent data */
+      applyCustomIntentPaste(text) {
+        try {
+          const t = String(text || '').trim();
+          if (!t) return { success: false, message: 'No data provided' };
+          if (typeof parseIntentPaste !== 'function') return { success: false, message: 'Parser unavailable in this build' };
+          const parsed = parseIntentPaste(t);
+          if (parsed && parsed.ok && typeof parsed.targetFn === 'function') {
+            const name = parsed.name || 'Custom (pasted)';
+            try { saveCustomPrefs({ pasteText: t }); } catch {}
+            setContrastIntent('custom_points', { name, targetFn: parsed.targetFn }, 'import');
+            return { success: true, message: `Applied Custom (pasted) intent${name ? `: ${name}` : ''}` };
+          }
+          return { success: false, message: parsed?.error || 'Could not parse pasted data' };
+        } catch (e) {
+          return { success: false, message: `Error applying pasted intent: ${e.message}` };
+        }
+      }
+
+      /** Get current contrast intent info */
+      getContrastIntent() {
+        try {
+          const info = { id: contrastIntent?.id || 'linear', name: contrastIntent?.name || 'Linear', params: contrastIntent?.params || {} };
+          let hasSaved = false;
+          try { hasSaved = hasSavedCustomIntent(); } catch {}
+          return { success: true, message: 'OK', data: { ...info, hasSavedCustom: !!hasSaved } };
+        } catch (e) {
+          return { success: false, message: `Error reading contrast intent: ${e.message}` };
         }
       }
 
@@ -5810,6 +6081,63 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
      */
     const CLAUDE_FUNCTIONS = [
       {
+        name: "set_contrast_intent",
+        description: "Set the contrast intent preset (linear, soft, hard, filmic) or explicit gamma.",
+        parameters: {
+          type: "object",
+          properties: {
+            preset: {
+              type: "string",
+              description: "Preset name: linear | soft | hard | filmic | gamma",
+              enum: ["linear", "soft", "hard", "filmic", "gamma"]
+            },
+            params: {
+              type: "object",
+              description: "Optional parameters for filmic or gamma presets",
+              properties: {
+                gamma: { type: "number", description: "Gamma value when preset='gamma' (e.g., 0.85, 1.20)" },
+                filmicGain: { type: "number", description: "Filmic midtone gain (default 0.55)" },
+                shoulder: { type: "number", description: "Filmic shoulder strength (default 0.35)" }
+              }
+            }
+          },
+          required: ["preset"]
+        }
+      },
+      {
+        name: "apply_custom_intent_sliders",
+        description: "Apply a custom intent using slider parameters (gamma or filmic-like).",
+        parameters: {
+          type: "object",
+          properties: {
+            gamma: { type: "number", description: "Custom gamma (used if gain/shoulder are at defaults)" },
+            gain: { type: "number", description: "Filmic midtone gain (triggers filmic when not 0.55)" },
+            shoulder: { type: "number", description: "Filmic shoulder (triggers filmic when not 0.35)" }
+          },
+          required: []
+        }
+      },
+      {
+        name: "apply_custom_intent_paste",
+        description: "Parse and apply a custom intent from pasted CSV/JSON data.",
+        parameters: {
+          type: "object",
+          properties: {
+            text: { type: "string", description: "Pasted CSV/JSON describing a 0–100% input to relative density target" }
+          },
+          required: ["text"]
+        }
+      },
+      {
+        name: "get_contrast_intent",
+        description: "Return the current contrast intent id/name/params and whether a saved custom exists.",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: []
+        }
+      },
+      {
         name: "set_edit_mode",
         description: "Enable or disable Edit Mode for key‑point editing and overlays.",
         parameters: {
@@ -7148,6 +7476,14 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
         const { name, parameters } = functionCall;
 
         switch (name) {
+          case 'set_contrast_intent':
+            return quadGenActions.setContrastIntentPreset(parameters.preset, parameters.params || {});
+          case 'apply_custom_intent_sliders':
+            return quadGenActions.applyCustomIntentSliders(parameters);
+          case 'apply_custom_intent_paste':
+            return quadGenActions.applyCustomIntentPaste(parameters.text);
+          case 'get_contrast_intent':
+            return quadGenActions.getContrastIntent();
           case 'set_edit_mode': {
             try {
               const on = parameters && parameters.enabled === true;
@@ -7959,6 +8295,36 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       aiLabelToggle: document.getElementById('aiLabelToggle'),
       globalLinearizationFilename: document.getElementById('globalLinearizationFilename'),
       globalLinearizationDetails: document.getElementById('globalLinearizationDetails'),
+      // Contrast Intent UI
+      contrastIntentSelect: document.getElementById('contrastIntentSelect'),
+      intentModal: document.getElementById('intentModal'),
+      intentContent: document.getElementById('intentContent'),
+      closeIntentModal: document.getElementById('closeIntentModal'),
+      cancelIntentBtn: document.getElementById('cancelIntentBtn'),
+      applyIntentBtn: document.getElementById('applyIntentBtn'),
+      resetIntentBtn: document.getElementById('resetIntentBtn'),
+      intentPresetSelect: document.getElementById('intentPresetSelect'),
+      intentGamma: document.getElementById('intentGamma'),
+      intentGammaVal: document.getElementById('intentGammaVal'),
+      intentFilmicGain: document.getElementById('intentFilmicGain'),
+      intentFilmicGainVal: document.getElementById('intentFilmicGainVal'),
+      intentShoulder: document.getElementById('intentShoulder'),
+      intentShoulderVal: document.getElementById('intentShoulderVal'),
+      intentGammaRow: document.getElementById('intentGammaRow'),
+      intentFilmicRow: document.getElementById('intentFilmicRow'),
+      intentTabPresets: document.getElementById('intentTab-presets'),
+      intentTabCustom: document.getElementById('intentTab-custom'),
+      intentTabPaste: document.getElementById('intentTab-paste'),
+      intentTabs: document.querySelectorAll('[data-intent-tab]'),
+      customGamma: document.getElementById('customGamma'),
+      customGammaVal: document.getElementById('customGammaVal'),
+      customGain: document.getElementById('customGain'),
+      customGainVal: document.getElementById('customGainVal'),
+      customShoulder: document.getElementById('customShoulder'),
+      customShoulderVal: document.getElementById('customShoulderVal'),
+      intentPasteArea: document.getElementById('intentPasteArea'),
+      intentParseBtn: document.getElementById('intentParseBtn'),
+      intentPasteValidation: document.getElementById('intentPasteValidation'),
       
       loadSampleLabData: document.getElementById('loadSampleLabData'),
       loadSampleCube: document.getElementById('loadSampleCube'),
@@ -8008,15 +8374,9 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       // Global revert: enable if any global measurement is loaded (robust check)
       const globalBtn = document.getElementById('revertGlobalToMeasurementBtn');
       if (globalBtn) {
-        const infoEl = document.getElementById('globalLinearizationInfo');
-        const fnameEl = elements && elements.globalLinearizationFilename;
-        const fdetEl = elements && elements.globalLinearizationDetails;
-        const btnEl = elements && elements.globalLinearizationBtn;
-        const tooltip = btnEl ? (btnEl.getAttribute('data-tooltip') || '') : '';
-        const infoVisible = !!(infoEl && !infoEl.classList.contains('hidden'));
-        const hasText = !!((fnameEl && fnameEl.textContent && fnameEl.textContent.trim().length > 0) || (fdetEl && fdetEl.textContent && fdetEl.textContent.trim().length > 0));
-        const isLoaded = !!linearizationData || infoVisible || hasText || /^Loaded:/i.test(tooltip);
-        if (isLoaded) { globalBtn.disabled = false; globalBtn.removeAttribute('disabled'); }
+        const fmt = String(linearizationData?.format || '').toUpperCase();
+        const isMeasurement = !!linearizationData && (fmt.includes('LAB') || fmt.includes('MANUAL')) && Array.isArray(linearizationData.originalData) && linearizationApplied === true;
+        if (isMeasurement) { globalBtn.disabled = false; globalBtn.removeAttribute('disabled'); }
         else { globalBtn.disabled = true; globalBtn.setAttribute('disabled','disabled'); }
       }
     } catch {}
@@ -8055,6 +8415,139 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         if (!elements.labTechIcon) return;
         elements.labTechIcon.textContent = (aiConnected === true) ? '⚡' : (aiConnected === false ? '🚫' : '💬');
       } catch {}
+    }
+
+    // Contrast Intent state and helpers
+    const DEFAULT_INTENT = { id: 'linear', name: 'Linear', source: 'preset', params: { gamma: 1.0, filmicGain: 0.55, shoulder: 0.35 } };
+    // Always default to Linear at startup; custom sliders/paste are persisted separately
+    let contrastIntent = DEFAULT_INTENT;
+
+    // clamp01 defined later globally; use it here at call time
+    function schlickBias(t, b){ const k = (1/Math.max(1e-6,b) - 2); return t / (k * (1 - t) + 1); }
+    function schlickGain(t, g){ if (t < 0.5) return 0.5 * schlickBias(t*2, 1-g); return 1 - 0.5 * schlickBias(2 - 2*t, 1-g); }
+    function gammaMap(t, gamma){ const g = Math.max(0.01, Number(gamma)||1.0); return Math.pow(clamp01(t), g); }
+    function filmicSoftShoulder(t, gain, shoulder){ const y = schlickGain(clamp01(t), clamp01(gain)); const y2 = 1 - Math.pow(1 - y, 1 + clamp01(shoulder)); return clamp01(y2); }
+    function popsCompatStandard(t){ const y = schlickGain(clamp01(t), 0.55); const shoulder = 0.15; const y2 = 1 - Math.pow(1 - y, 1 + shoulder); return clamp01(y2); }
+
+    // Compile a monotone intent function from anchor points [[t,d_rel]...]
+    function compileIntentFromPoints(points){
+      const pts = (points||[]).filter(p=>Array.isArray(p)&&p.length>=2).map(([t,y])=>[clamp01(+t), clamp01(+y)]);
+      if (pts.length < 2) return (t)=>clamp01(t);
+      if (pts[0][0] !== 0) pts.unshift([0,0]);
+      if (pts[pts.length-1][0] !== 1) pts.push([1,1]);
+      pts.sort((a,b)=>a[0]-b[0]);
+      const xs = pts.map(p=>p[0]);
+      const ys = pts.map(p=>p[1]);
+      for (let i=1;i<ys.length;i++){ if (ys[i] < ys[i-1]) ys[i] = ys[i-1]; }
+      const interp = createPCHIPSpline(xs, ys);
+      return (t)=> clamp01(interp(clamp01(t)));
+    }
+
+    function getTargetRelAt(t){
+      const id = (contrastIntent && contrastIntent.id) || 'linear';
+      if (id === 'linear') return clamp01(t);
+      if (id === 'soft') return gammaMap(t, 0.85);
+      if (id === 'hard') return gammaMap(t, 1.20);
+      if (id === 'filmic') { const g = contrastIntent?.params?.filmicGain ?? 0.55; const s = contrastIntent?.params?.shoulder ?? 0.35; return filmicSoftShoulder(t, g, s); }
+      if (id === 'pops_standard') return popsCompatStandard(t);
+      if (id === 'custom_points' && typeof contrastIntent.targetFn === 'function') return contrastIntent.targetFn(t);
+      if (id === 'custom_gamma') return gammaMap(t, contrastIntent?.params?.gamma ?? 1.0);
+      if (id === 'custom_filmic') return filmicSoftShoulder(t, contrastIntent?.params?.gain ?? 0.55, contrastIntent?.params?.shoulder ?? 0.35);
+      return clamp01(t);
+    }
+
+    function persistContrastIntent(){ try { localStorage.setItem('contrastIntentV1', JSON.stringify({ id: contrastIntent.id, name: contrastIntent.name, source: contrastIntent.source||'preset', params: contrastIntent.params||{}, hasPoints: !!contrastIntent.targetFn })); } catch {} }
+    function setContrastIntent(newId, params, source){
+      try { CurveHistory.captureState(`Before: Change Contrast Intent`); } catch {}
+      const id = newId || 'linear'; const p = params || {}; let name = 'Linear'; let targetFn = null;
+      if (id === 'linear') name = 'Linear';
+      else if (id === 'soft') { name = 'Soft'; }
+      else if (id === 'hard') { name = 'Hard'; }
+      else if (id === 'filmic') { name = 'Filmic Soft Shoulder'; }
+      else if (id === 'pops_standard') { name = 'POPS‑Compat (Standard)'; }
+      else if (id === 'custom_points') { name = p?.name || 'Custom (points)'; targetFn = p?.targetFn || null; }
+      else if (id === 'custom_gamma') { name = `Custom Gamma`; }
+      else if (id === 'custom_filmic') { name = `Custom Filmic`; }
+      contrastIntent = { id, name, source: source || (id.startsWith('custom')?'custom':'preset'), params: p, targetFn };
+      // Mark that a custom intent exists so the main dropdown can show "Custom"
+      try { if (String(id).startsWith('custom')) localStorage.setItem('hasCustomIntentV1', '1'); } catch {}
+      if (elements.contrastIntentSelect) {
+        const idStr = String(id);
+        const opts = Array.from(elements.contrastIntentSelect.options).map(o=>o.value);
+        if (idStr.startsWith('custom') && opts.includes('custom')) elements.contrastIntentSelect.value = 'custom';
+        else if (opts.includes(idStr)) elements.contrastIntentSelect.value = idStr;
+      }
+      persistContrastIntent();
+      updateIntentDetailLabel();
+      recomputeLinearizationForCurrentIntent();
+      try { if (typeof updateCustomOptionVisibility === 'function') updateCustomOptionVisibility(); } catch {}
+      try { CurveHistory.captureState(`After: Change Contrast Intent → ${contrastIntent.name}`); } catch {}
+    }
+    function updateIntentDetailLabel(){
+      try {
+        if (!linearizationData || !linearizationApplied) return;
+        const el = elements.globalLinearizationDetails; if (!el) return;
+        const base = el.textContent || '';
+        if (!base || base.trim().length === 0) return;
+        const cleaned = base.replace(/\s+—\s+Intent:.*$/, '');
+        const intentLabel = contrastIntent?.name || 'Linear';
+        const params = contrastIntent?.params || {};
+        let extra = '';
+        if (contrastIntent.id === 'soft') extra = ` (γ≈0.85)`;
+        else if (contrastIntent.id === 'hard') extra = ` (γ≈1.20)`;
+        else if (contrastIntent.id === 'custom_gamma') extra = ` (γ=${(params.gamma??1).toFixed?params.gamma.toFixed(2):params.gamma})`;
+        el.textContent = `${cleaned} — Intent: ${intentLabel}${extra}`;
+      } catch {}
+    }
+    function recomputeLinearizationForCurrentIntent(){
+      try {
+        if (!linearizationData || !linearizationApplied) return;
+        const fmt = String(linearizationData.format||'').toUpperCase();
+        if (fmt.includes('LAB') && Array.isArray(linearizationData.originalData)) {
+          const rebuilt = buildLabLinearizationFromOriginal(linearizationData.originalData);
+          rebuilt.filename = linearizationData.filename || 'LAB-Data';
+          linearizationData = rebuilt;
+          elements.globalLinearizationInfo.classList.remove('hidden');
+          updateInterpolationControls(); updatePreview(); try { postGlobalDeltaChatSummary(); } catch {}
+        } else if (fmt.includes('MANUAL') && Array.isArray(linearizationData.originalData)) {
+          const rebuilt = buildManualLinearizationFromOriginal(linearizationData.originalData);
+          rebuilt.filename = linearizationData.filename || 'Manual L* Entry';
+          linearizationData = rebuilt;
+          elements.globalLinearizationInfo.classList.remove('hidden');
+          updateInterpolationControls(); updatePreview(); try { postGlobalDeltaChatSummary(); } catch {}
+        }
+      } catch (e) { console.warn('Recompute intent failed:', e); }
+    }
+    function buildLabLinearizationFromOriginal(originalDataPoints){
+      try {
+        const dataPoints = Array.from(originalDataPoints||[]).map(p=>({ input: p.input, lab: p.lab }));
+        if (!dataPoints.length) throw new Error('No LAB original data');
+        dataPoints.sort((a,b)=>a.input-b.input);
+        const labValues = dataPoints.map(p=>p.lab);
+        const D_values = labValues.map(L => cieDensityFromLstar(L));
+        const Dmax = Math.max(...D_values, 1e-6);
+        const correctionPoints = dataPoints.map(point => {
+          const pos = Math.max(0, Math.min(1, point.input / 100));
+          const actualDensity = cieDensityFromLstar(point.lab) / Dmax;
+          const expectedDensity = getTargetRelAt(pos);
+          return { position: pos, correction: (expectedDensity - actualDensity), originalLab: point.lab, originalInput: point.input };
+        });
+        const positionsOnly = correctionPoints.map(p => p.position);
+        const K_NEIGHBORS = 6, SIGMA_FLOOR = 0.02, SIGMA_CEIL = 0.15, SIGMA_ALPHA = 3.0;
+        function localSigmaAt(t) {
+          const n = positionsOnly.length; if (n <= 1) return SIGMA_CEIL;
+          let lo = 0, hi = n; while (lo < hi) { const mid = (lo + hi) >> 1; if (positionsOnly[mid] < t) lo = mid + 1; else hi = mid; }
+          const dists = []; let L = lo - 1, R = lo; while ((L >= 0 || R < n) && dists.length < K_NEIGHBORS) { const dl = (L >= 0) ? Math.abs(t - positionsOnly[L]) : Infinity; const dr = (R < n) ? Math.abs(t - positionsOnly[R]) : Infinity; if (dl <= dr) { if (isFinite(dl)) dists.push(dl); L--; } else { if (isFinite(dr)) dists.push(dr); R++; } }
+          if (!dists.length) return SIGMA_CEIL; dists.sort((a,b)=>a-b); const mid = dists.length >> 1; const med = (dists.length % 2 === 0) ? 0.5*(dists[mid-1]+dists[mid]) : dists[mid];
+          return Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, SIGMA_ALPHA * med));
+        }
+        const samples = []; for (let i=0;i<256;i++){ const t = i/255; const sigma = localSigmaAt(t); const denom = 2*sigma*sigma; let num=0, den=0; for (let j=0;j<correctionPoints.length;j++){ const d = Math.abs(t - correctionPoints[j].position); const w = Math.exp(-(d*d)/Math.max(1e-9,denom)); num += correctionPoints[j].correction*w; den += w; } const corr = den>0 ? (num/den) : 0; samples.push(Math.max(0, Math.min(1, t + corr))); }
+        samples[0]=0.0; samples[255]=1.0;
+        return { domainMin:0.0, domainMax:1.0, samples, originalData: dataPoints, format:'LAB Data', getSmoothingControlPoints: function(sp){ const widen = 1 + (Math.max(0, Math.min(90, Number(sp) || 0))/100); const dyn = new Array(256); for (let i=0;i<256;i++){ const t=i/255; const sigma = Math.min(0.15, Math.max(0.02, localSigmaAt(t)*widen)); const denom=2*sigma*sigma; let num=0, den=0; for (let j=0;j<correctionPoints.length;j++){ const d = Math.abs(t - correctionPoints[j].position); const w = Math.exp(-(d*d)/Math.max(1e-9,denom)); num += correctionPoints[j].correction*w; den += w; } dyn[i]=Math.max(0, Math.min(1, t + (den>0?(num/den):0))); } dyn[0]=0.0; dyn[255]=1.0; const K = 21 - Math.floor(Math.max(0, Math.min(90, Number(sp) || 0))/10); const controlPointCount = Math.max(3, K); const cpY = []; const cpX = []; for (let i=0;i<controlPointCount;i++){ const x = i/(controlPointCount-1); const idx = Math.round(x*255); cpX.push(x); cpY.push(dyn[idx]); } return { samples: cpY, xCoords: cpX }; } };
+      } catch (e) { console.warn('buildLabLinearizationFromOriginal failed:', e); return linearizationData || { domainMin:0, domainMax:1, samples: Array.from({length:256},(_,i)=>i/255), format:'LAB Data' }; }
+    }
+    function buildManualLinearizationFromOriginal(originalData){
+      try { const measuredXs = originalData.map(p=>p.input); const measuredL = originalData.map(p=>p.lab); const N = measuredL.length; const posNorm = measuredXs.map(v => Math.max(0, Math.min(100, v)) / 100); const Dvals = measuredL.map(L => cieDensityFromLstar(L)); const Dmax = Math.max(...Dvals, 1e-6); const actualDensity = Dvals.map(D => D / Dmax); const targetDensity = posNorm.map(t => getTargetRelAt(t)); const cps = posNorm.map((pos,i)=>({ position: pos, correction: (targetDensity[i] - actualDensity[i]) })); const positionsOnly = cps.map(p=>p.position); const K=6, F=0.02, C=0.15, A=3.0; function localSigmaAt(t){ const n=positionsOnly.length; if (n<=1) return C; let lo=0,hi=n; while(lo<hi){const mid=(lo+hi)>>1; if(positionsOnly[mid]<t)lo=mid+1; else hi=mid;} const d=[]; let L=lo-1,R=lo; while((L>=0||R<n)&&d.length<K){const dl=(L>=0)?Math.abs(t-positionsOnly[L]):Infinity; const dr=(R<n)?Math.abs(t-positionsOnly[R]):Infinity; if(dl<=dr){ if(isFinite(dl))d.push(dl); L--; } else { if(isFinite(dr))d.push(dr); R++; } } if(!d.length) return C; d.sort((a,b)=>a-b); const m=d.length>>1; const med=(d.length%2===0)?0.5*(d[m-1]+d[m]):d[m]; return Math.min(C, Math.max(F, A*med)); } const samples=[]; for(let i=0;i<256;i++){ const t=i/255; const s=localSigmaAt(t); const denom=2*s*s; let num=0, den=0; for(let j=0;j<cps.length;j++){ const dd=Math.abs(t-cps[j].position); const w=Math.exp(-(dd*dd)/Math.max(1e-9,denom)); num+=cps[j].correction*w; den+=w; } samples[i]=Math.max(0, Math.min(1, t + (den>0?(num/den):0))); } samples[0]=0.0; samples[255]=1.0; return { domainMin:0, domainMax:1, samples, originalData: originalData.slice(), format: 'Manual L* Entry' }; } catch(e){ console.warn('buildManualLinearizationFromOriginal failed:', e); return linearizationData; }
     }
 
     // Helper to prefix edited filenames for display
@@ -9297,7 +9790,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       } catch (e) { out.textContent=''; }
     }
 
-    // Compute and display delta vs linear when LAB global linearization is active
+    // Compute and display delta vs selected target when LAB/Manual global linearization is active
     // Deprecated UI summary (hidden). Kept for reference; use chat summaries instead.
     function updateDeltaSummary() {
       const el = elements.deltaSummary;
@@ -9342,21 +9835,22 @@ DOMAIN_MAX 1.0 1.0 1.0
             return (1-a)*y0 + a*y1;
           };
         }
-        // Evaluate 256 mapping and compute delta vs linear
+        // Evaluate 256 mapping and compute delta vs target intent
         const N = 256;
         let minDelta=Infinity, maxDelta=-Infinity, minIdx=0, maxIdx=0;
         for (let i=0;i<N;i++){
           const x = i/(N-1);
           const y = interp(x);
-          const d = (y - x) * 100; // percent points
+          const tgt = getTargetRelAt(x);
+          const d = (y - tgt) * 100; // percent points vs target
           if (d < minDelta){ minDelta = d; minIdx = i; }
           if (d > maxDelta){ maxDelta = d; maxIdx = i; }
         }
         // Zero crossing (first sign change)
         let zeroAt = null;
         for (let i=1;i<N;i++){
-          const prev = (interp((i-1)/(N-1)) - (i-1)/(N-1));
-          const curr = (interp(i/(N-1)) - i/(N-1));
+          const prev = (interp((i-1)/(N-1)) - getTargetRelAt((i-1)/(N-1)));
+          const curr = (interp(i/(N-1)) - getTargetRelAt(i/(N-1)));
           if (prev===0){ zeroAt = (i-1)/(N-1); break; }
           if ((prev<0 && curr>0) || (prev>0 && curr<0)){
             const t = Math.abs(curr - prev) > 1e-12 ? (-prev)/(curr - prev) : 0;
@@ -9369,8 +9863,9 @@ DOMAIN_MAX 1.0 1.0 1.0
         const maxLabel = `${fmtPct(maxDelta)} (${kind(maxDelta)}) @ ${(maxIdx/(N-1)*100).toFixed(1)}% input`;
         const minLabel = `${fmtPct(minDelta)} (${kind(minDelta)}) @ ${(minIdx/(N-1)*100).toFixed(1)}% input`;
         const zeroLabel = zeroAt!=null ? `, zero ≈ ${(zeroAt*100).toFixed(1)}% input` : '';
-        el.textContent = `Δ vs linear: ${maxLabel}, ${minLabel}${zeroLabel}`;
-        el.title = 'Delta computed from current LAB mapping and interpolation';
+        const intentName = (contrastIntent?.name) || 'Linear';
+        el.textContent = `Δ vs target (${intentName}): ${maxLabel}, ${minLabel}${zeroLabel}`;
+        el.title = 'Delta computed vs selected target (contrast intent)';
       } catch (e) {
         try { elements.deltaSummary.textContent=''; } catch {}
       }
@@ -9415,15 +9910,16 @@ DOMAIN_MAX 1.0 1.0 1.0
         for (let i=0;i<N;i++){
           const x = i/(N-1);
           const y = interp(x);
-          const d = (y - x) * 100; // percent points
+          const tgt = getTargetRelAt(x);
+          const d = (y - tgt) * 100; // percent points vs target
           if (d < minDelta){ minDelta = d; minIdx = i; }
           if (d > maxDelta){ maxDelta = d; maxIdx = i; }
         }
         // zero crossing
         let zeroAt = null;
         for (let i=1;i<N;i++){
-          const prev = (interp((i-1)/(N-1)) - (i-1)/(N-1));
-          const curr = (interp(i/(N-1)) - i/(N-1));
+          const prev = (interp((i-1)/(N-1)) - getTargetRelAt((i-1)/(N-1)));
+          const curr = (interp(i/(N-1)) - getTargetRelAt(i/(N-1)));
           if (prev===0){ zeroAt=(i-1)/(N-1); break; }
           if ((prev<0 && curr>0) || (prev>0 && curr<0)){
             const t = Math.abs(curr - prev) > 1e-12 ? (-prev)/(curr - prev) : 0;
@@ -9436,7 +9932,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         const maxLabel = `${fmtPct(maxDelta)} (${kind(maxDelta)}) @ ${(maxIdx/(N-1)*100).toFixed(1)}% input`;
         const minLabel = `${fmtPct(minDelta)} (${kind(minDelta)}) @ ${(minIdx/(N-1)*100).toFixed(1)}% input`;
         const zeroLabel = zeroAt!=null ? `, zero ≈ ${(zeroAt*100).toFixed(1)}% input` : '';
-        return `Δ vs linear: ${maxLabel}, ${minLabel}${zeroLabel}`;
+        const intentName = (contrastIntent?.name) || 'Linear';
+        return `Δ vs target (${intentName}): ${maxLabel}, ${minLabel}${zeroLabel}`;
       } catch { return ''; }
     }
 
@@ -10393,10 +10890,33 @@ DOMAIN_MAX 1.0 1.0 1.0
       const hasLinearization = (linearizationData && linearizationApplied) || 
                                 Object.keys(perChannelLinearization).some(ch => perChannelEnabled[ch]);
       if (hasLinearization) {
+        const tag = getIntentFilenameTag();
+        if (tag) parts.push(tag);
         parts.push('CORRECTED');
       }
       
       return parts.join('_');
+    }
+
+    // Compact tag to embed contrast intent in filename
+    function getIntentFilenameTag() {
+      try {
+        const id = String(contrastIntent?.id || 'linear');
+        if (id === 'linear') return 'LIN';
+        if (id === 'soft' || id === 'hard' || id === 'custom_gamma') {
+          const g = Number(contrastIntent?.params?.gamma ?? (id==='soft'?0.85:(id==='hard'?1.20:1.00)));
+          if (!isFinite(g) || g <= 0) return 'G100';
+          const val = Math.round(g * 100);
+          return `G${String(val).padStart(3,'0')}`; // e.g., 0.85 => G085, 1.20 => G120
+        }
+        if (id === 'filmic' || id === 'custom_filmic') {
+          // Keep very compact; omit params to keep names short
+          return 'FILM';
+        }
+        if (id === 'pops_standard') return 'POPS';
+        if (id === 'custom_points') return 'CUST';
+        return 'LIN';
+      } catch { return 'LIN'; }
     }
 
     // Toggle listeners
@@ -10793,14 +11313,20 @@ DOMAIN_MAX 1.0 1.0 1.0
             const lastState = this.legacyHistory.pop();
       if (DEBUG_LOGS) console.log('🔥 UNDO: Processing legacy action:', lastState.action);
             
-            // Check if this is an "After" state from dual-state capture
-            if (lastState.action.startsWith('After: AI Global Linearization')) {
+            // Check if this is an "After" state from dual-state capture (generalized)
+            if (typeof lastState.action === 'string' && lastState.action.startsWith('After:')) {
               if (DEBUG_LOGS) console.log('🔥 UNDO: Found "After" state, looking for matching "Before" state');
               // This is the "After" state, we need to find and use the "Before" state instead
               const beforeStateName = lastState.action.replace('After:', 'Before:');
               
-              // Find the matching "Before" state in the history
-              const beforeStateIndex = this.legacyHistory.findIndex(state => state.action === beforeStateName);
+              // Find the matching "Before" state in the history (search from the end to pair with the most recent one)
+              let beforeStateIndex = -1;
+              for (let i = this.legacyHistory.length - 1; i >= 0; i--) {
+                if (this.legacyHistory[i].action === beforeStateName) {
+                  beforeStateIndex = i;
+                  break;
+                }
+              }
               if (beforeStateIndex !== -1) {
                 // Remove the "Before" state from history and use it for undo
                 const beforeState = this.legacyHistory.splice(beforeStateIndex, 1)[0];
@@ -11641,7 +12167,8 @@ DOMAIN_MAX 1.0 1.0 1.0
           const baseName = state.globalLinearization.filename || (linearizationData.filename || '');
           const disp = getEditedDisplayName(baseName, !!linearizationData.edited);
           if (elements.globalLinearizationFilename) elements.globalLinearizationFilename.textContent = disp;
-          if (elements.globalLinearizationDetails) elements.globalLinearizationDetails.textContent = ` - ${getBasePointCountLabel(linearizationData)} (${(linearizationData.format||'').toString().split(' ')[0] || ''})`;
+        if (elements.globalLinearizationDetails) elements.globalLinearizationDetails.textContent = ` - ${getBasePointCountLabel(linearizationData)} (${(linearizationData.format||'').toString().split(' ')[0] || ''})`;
+        try { updateIntentDetailLabel(); } catch {}
           if (elements.globalLinearizationInfo) elements.globalLinearizationInfo.classList.remove('hidden');
           if (elements.globalLinearizationHint) elements.globalLinearizationHint.classList.add('hidden');
           if (elements.globalLinearizationBtn) elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: ${disp}`);
@@ -11762,6 +12289,11 @@ DOMAIN_MAX 1.0 1.0 1.0
      * Parse a .cube file string as a 1D LUT or route to 3D LUT parser.
      * Returns { domainMin, domainMax, samples } where samples are floats (usually 0..1).
      */
+    function transformSamplesToPrinterSpace(samples) {
+      // Centralized transform: horizontal flip (reverse domain) + vertical inversion (ink/printer space)
+      const flippedHoriz = samples.slice().reverse();
+      return flippedHoriz.map(v => 1 - v);
+    }
     function parseCube1D(cubeText) {
       const lines = cubeText.split(/\r?\n/);
       let domainMin = 0.0;
@@ -11824,20 +12356,9 @@ DOMAIN_MAX 1.0 1.0 1.0
         throw new Error("No 1D samples found in .cube text.");
       }
 
-      // Apply both horizontal and vertical flips to match printing coordinate system
-      // First: horizontal flip (reverse coordinate positions)
-      const horizontallyFlipped = samples.map((sample, i) => {
-        const inputPos = i / (samples.length - 1); // Current input position (0-1)
-        const flippedInputPos = 1.0 - inputPos; // Horizontal flip
-        const flippedInputIndex = Math.round(flippedInputPos * (samples.length - 1)); // Convert back to index
-        const clampedIndex = Math.max(0, Math.min(samples.length - 1, flippedInputIndex));
-        return samples[clampedIndex];
-      });
-      
-      // Second: vertical flip (invert values so 0.0 becomes 1.0, 0.5 becomes 0.5, etc.)
-      const flippedSamples = horizontallyFlipped.map(sample => 1.0 - sample);
-      
-      return { domainMin, domainMax, samples: flippedSamples, originalSamples: samples, format: '1DLUT' };
+      // Normalize orientation once here; do not reapply later
+      const printerSamples = transformSamplesToPrinterSpace(samples);
+      return { domainMin, domainMax, samples: printerSamples, originalSamples: samples, format: '1DLUT' };
     }
 
     // Centralized policy for control point operations
@@ -12200,16 +12721,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         neutralAxisSamples.push(luminance);
       }
 
-      // Apply coordinate system transformations to match other LUT processing
-      const horizontallyFlipped = neutralAxisSamples.map((sample, i) => {
-        const inputPos = i / (neutralAxisSamples.length - 1);
-        const flippedInputPos = 1.0 - inputPos;
-        const flippedInputIndex = Math.round(flippedInputPos * (neutralAxisSamples.length - 1));
-        const clampedIndex = Math.max(0, Math.min(neutralAxisSamples.length - 1, flippedInputIndex));
-        return neutralAxisSamples[clampedIndex];
-      });
-      
-      const flippedSamples = horizontallyFlipped.map(sample => 1.0 - sample);
+      // Apply coordinate system transformations once here
+      const flippedSamples = transformSamplesToPrinterSpace(neutralAxisSamples);
       
       return { 
         domainMin, 
@@ -12340,7 +12853,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       const correctionPoints = dataPoints.map(point => {
         const pos = Math.max(0, Math.min(1, point.input / 100));
         const actualDensity = cieDensityFromLstar(point.lab) / Dmax; // normalized 0..1
-        const expectedDensity = pos; // linear target
+        const expectedDensity = getTargetRelAt(pos);
         return {
           position: pos,
           // Stable sign convention: expected minus actual
@@ -12514,15 +13027,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         samples[i] = Math.max(0, Math.min(1, splineInterpolator(inputValue)));
       }
 
-      // Apply the same orientation as .cube: horizontal flip then vertical inversion
-      const horizontallyFlipped = samples.map((sample, i) => {
-        const inputPos = i / (samples.length - 1);
-        const flippedInputPos = 1.0 - inputPos;
-        const flippedInputIndex = Math.round(flippedInputPos * (samples.length - 1));
-        const clampedIndex = Math.max(0, Math.min(samples.length - 1, flippedInputIndex));
-        return samples[clampedIndex];
-      });
-      const flippedSamples = horizontallyFlipped.map(sample => 1.0 - sample);
+      // Normalize orientation once here; do not reapply later
+      const flippedSamples = transformSamplesToPrinterSpace(samples);
 
       // Also build transformed control points from the original ACV anchors
       // Transform: input' = 1 - input, output' = 1 - output, then scale to 0-100
@@ -13627,6 +14133,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (!file) return;
         
         try {
+          // Capture state before loading per-channel linearization for proper undo/redo pairing
+          CurveHistory.captureState(`Before: Load Per-Channel Linearization (${channelName})`);
           // Per-channel supports curves (.cube), LAB data (.txt), and Photoshop curves (.acv)
           const extension = file.name.toLowerCase().split('.').pop();
           let fileInput;
@@ -13636,13 +14144,6 @@ DOMAIN_MAX 1.0 1.0 1.0
             fileInput = await file.text();
           }
           const parsed = await parseLinearizationFile(fileInput, file.name);
-          // For EDN-style (.cube/.acv), store base samples and compute effective Positive mapping (reverse + invert)
-          const isEDNStyle = ['cube','acv'].includes(extension);
-          if (isEDNStyle && Array.isArray(parsed.samples)) {
-            parsed._baseSamples = parsed.samples.slice();
-            const eff = parsed._baseSamples.slice().reverse().map(v => 1 - v);
-            parsed.samples = eff;
-          }
           parsed.edited = false;
           perChannelLinearization[channelName] = parsed;
           perChannelEnabled[channelName] = true;
@@ -13675,6 +14176,8 @@ DOMAIN_MAX 1.0 1.0 1.0
           showStatus(`Loaded per-channel correction for ${channelName}: ${parsed.samples.length} points${methodNote}`);
           }
           debouncedPreviewUpdate();
+          // Capture an after-state so undo/redo works for per-channel loads as well
+          try { CurveHistory.captureState(`After: Load Per-Channel Linearization (${channelName})`); } catch {}
           // No intent mismatch warning (Positive-only workflow)
           
           // Update processing detail for this channel
@@ -13876,7 +14379,25 @@ DOMAIN_MAX 1.0 1.0 1.0
         const globalFilename = getEditedDisplayName(linearizationData.filename || "unknown file", !!linearizationData.edited);
         const globalCount = getBasePointCountLabel(linearizationData);
         lines.push(`# - Global: ${globalFilename} (${globalCount}, affects all channels)`);
-          // Positive-only workflow: no intent notes
+          // Contrast intent annotation (compact but readable)
+          try {
+            const id = String(contrastIntent?.id || 'linear');
+            let intentLine = '#   Intent: ';
+            if (id === 'linear') intentLine += 'Linear';
+            else if (id === 'soft' || id === 'hard' || id === 'custom_gamma') {
+              const g = Number(contrastIntent?.params?.gamma ?? (id==='soft'?0.85:(id==='hard'?1.20:1.00)));
+              intentLine += `Gamma ${isFinite(g)?g.toFixed(2):'1.00'}`;
+            } else if (id === 'filmic' || id === 'custom_filmic') {
+              const gain = Number(contrastIntent?.params?.filmicGain ?? contrastIntent?.params?.gain ?? 0.55);
+              const shoulder = Number(contrastIntent?.params?.shoulder ?? 0.35);
+              intentLine += `Filmic (gain ${isFinite(gain)?gain.toFixed(2):'0.55'}, shoulder ${isFinite(shoulder)?shoulder.toFixed(2):'0.35'})`;
+            } else if (id === 'pops_standard') intentLine += 'POPS‑Compat (Standard)';
+            else if (id === 'custom_points') intentLine += 'Custom';
+            else intentLine += id;
+            lines.push(intentLine);
+            // Also add compact tag used in filename
+            lines.push(`#   Intent tag: ${getIntentFilenameTag()}`);
+          } catch {}
         }
         
         // Per-channel linearization
@@ -14023,12 +14544,6 @@ DOMAIN_MAX 1.0 1.0 1.0
           filename = 'LAB-Data-sample.txt';
         } else if (type === 'cube') {
           correctionData = parseCube1D(SAMPLE_DATA.gammaCube);
-          // For EDN-style sample LUT, compute effective Positive mapping (reverse + invert)
-          if (Array.isArray(correctionData.samples)) {
-            correctionData._baseSamples = correctionData.samples.slice();
-            const eff = correctionData._baseSamples.slice().reverse().map(v => 1 - v);
-            correctionData.samples = eff;
-          }
           filename = 'LUT Sample Data';
         } else {
           throw new Error('Invalid sample data type');
@@ -14191,8 +14706,8 @@ DOMAIN_MAX 1.0 1.0 1.0
       if (!file) return;
       
       try {
-        // Capture state before loading file for proper undo functionality
-        CurveHistory.captureState('Before loading linearization file');
+        // Capture state before loading file for proper undo/redo pairing
+        CurveHistory.captureState('Before: Load Global Linearization');
         // Read file content based on file type
         const extension = file.name.toLowerCase().split('.').pop();
         let fileInput;
@@ -14203,13 +14718,6 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         
         const parsed = await parseLinearizationFile(fileInput, file.name);
-        // For EDN-style (.cube/.acv), store base samples and compute effective Positive mapping (reverse + invert)
-        const isEDNStyle = ['cube','acv'].includes(extension);
-        if (isEDNStyle && Array.isArray(parsed.samples)) {
-          parsed._baseSamples = parsed.samples.slice();
-          const eff = parsed._baseSamples.slice().reverse().map(v => 1 - v);
-          parsed.samples = eff;
-        }
         parsed.filename = file.name; // Store filename for documentation
         linearizationData = parsed;
         linearizationApplied = true; // Auto-apply when file is loaded
@@ -14236,6 +14744,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         else if (nameLower.endsWith('.cube') || fmtLower === '1dlut' || parsed.is3DLUT) typeLabel = 'LUT';
         else typeLabel = (parsed.format || '').toUpperCase();
         elements.globalLinearizationDetails.textContent = ` - ${ptsLabel} (${typeLabel})`;
+        try { updateIntentDetailLabel(); } catch {}
         elements.globalLinearizationInfo.classList.remove('hidden');
         if (elements.globalLinearizationHint) elements.globalLinearizationHint.classList.add('hidden');
         
@@ -14261,6 +14770,8 @@ DOMAIN_MAX 1.0 1.0 1.0
           try { postGlobalDeltaChatSummary(); } catch {}
       }
         debouncedPreviewUpdate(); // Update preview to show the applied linearization
+        // Capture an after-state so undo/redo works symmetrically
+        try { CurveHistory.captureState('After: Load Global Linearization'); } catch {}
         
         // Update processing details for all channels since global affects all
         const channelNames = getCurrentPrinter().channels;
@@ -15324,7 +15835,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       const measuredL = measuredPairs.map(p => p.l);
       const N = measuredL.length;
       const posNorm = measuredXs.map(v => Math.max(0, Math.min(100, v)) / 100);
-      const expectedDensity = posNorm.slice();
+      const expectedDensity = posNorm.map(t => getTargetRelAt(t));
       const Dvals = measuredL.map(L => cieDensityFromLstar(L));
       const Dmax = Math.max(...Dvals, 1e-6);
       const actualDensity = Dvals.map(D => D / Dmax);
@@ -15419,7 +15930,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       };
     }
     
-    // Modal event handlers
+    // Modal event handlers (Manual L*)
     elements.manualLstarBtn.addEventListener('click', () => {
       updateLstarInputs();
       elements.lstarModal.classList.remove('hidden');
@@ -15505,6 +16016,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.globalLinearizationInfo.classList.remove('hidden');
         elements.globalLinearizationFilename.textContent = `Manual L* Entry`;
         elements.globalLinearizationDetails.textContent = ` (${getBasePointCountLabel(correctionData)})`;
+        try { updateIntentDetailLabel(); } catch {}
         if (elements.globalLinearizationHint) elements.globalLinearizationHint.classList.add('hidden');
         
         // Save the values for re-population
@@ -15552,6 +16064,388 @@ DOMAIN_MAX 1.0 1.0 1.0
       const filename = 'LAB-Data.txt';
       downloadFile(content, filename, 'text/plain');
     });
+
+    // Contrast Intent: main dropdown and modal logic
+    if (elements.contrastIntentSelect) {
+      elements.contrastIntentSelect.addEventListener('change', (e)=>{
+        const v = e.target.value;
+        if (v === 'enter_custom') {
+          try { document.documentElement.classList.add('overflow-hidden'); document.body.classList.add('overflow-hidden'); } catch {}
+          elements.intentModal.classList.remove('hidden');
+          try {
+            elements.intentPresetSelect.value = contrastIntent?.id || 'linear';
+            syncPresetControlsVisibility();
+            syncPresetControlValuesFromState();
+            // Jump to Custom tab for quicker edits
+            setActiveIntentTab('custom');
+            // Validate any prefilled paste data on open
+            try { if (typeof scheduleAutoParseForPasteArea === 'function') scheduleAutoParseForPasteArea(); } catch {}
+          } catch {}
+        } else {
+          if (v === 'custom') {
+            // Apply existing custom intent or build from saved prefs/paste
+            const idStr = String(contrastIntent?.id || 'linear');
+            if (idStr.startsWith('custom')) {
+              // Re-apply to ensure consistent state
+              setContrastIntent(contrastIntent.id, contrastIntent.params || {}, 'custom');
+            } else {
+              const prefs = loadCustomPrefs ? loadCustomPrefs() : { gamma:1.00, gain:0.55, shoulder:0.35, pasteText:'' };
+              // Priority: pasted -> filmic -> gamma
+              let applied = false;
+              if (prefs.pasteText && parseIntentPaste) {
+                try {
+                  const parsed = parseIntentPaste(String(prefs.pasteText));
+                  if (parsed && parsed.ok && typeof parsed.targetFn === 'function') {
+                    setContrastIntent('custom_points', { name: parsed.name || 'Custom (pasted)', targetFn: parsed.targetFn }, 'custom');
+                    applied = true;
+                  }
+                } catch {}
+              }
+              if (!applied) {
+                const g = Number(prefs.gamma||1.00), gain = Number(prefs.gain||0.55), shoulder = Number(prefs.shoulder||0.35);
+                if (Math.abs(gain-0.55)>1e-3 || Math.abs(shoulder-0.35)>1e-3) {
+                  setContrastIntent('custom_filmic', { gain, shoulder }, 'custom');
+                } else {
+                  setContrastIntent('custom_gamma', { gamma: g }, 'custom');
+                }
+              }
+            }
+            // Keep selection on 'custom'
+            elements.contrastIntentSelect.value = 'custom';
+            return;
+          }
+          if (v === 'soft') setContrastIntent('soft', { gamma: 0.85 }, 'preset');
+          else if (v === 'hard') setContrastIntent('hard', { gamma: 1.20 }, 'preset');
+          else if (v === 'filmic') setContrastIntent('filmic', { filmicGain: 0.55, shoulder: 0.35 }, 'preset');
+          else setContrastIntent('linear', {}, 'preset');
+        }
+      });
+    }
+    function setActiveIntentTab(name){
+      const tabs=['presets','custom','paste'];
+      tabs.forEach(t=>{
+        const isActive=(t===name);
+        const btn=Array.from(elements.intentTabs||[]).find(b=>b.getAttribute('data-intent-tab')===t);
+        const panel=document.getElementById(`intentTab-${t}`);
+        if(btn){ if(isActive) btn.classList.add('bg-gray-100','text-gray-700'); else btn.classList.remove('bg-gray-100','text-gray-700'); }
+        if(panel){ panel.classList.toggle('hidden', !isActive); }
+      });
+      // Update footer Apply button label based on active tab
+      if (elements.applyIntentBtn) {
+        if (name === 'custom') elements.applyIntentBtn.textContent = 'Apply Sliders';
+        else if (name === 'paste') elements.applyIntentBtn.textContent = 'Apply Pasted';
+        else elements.applyIntentBtn.textContent = 'Apply Intent';
+      }
+      // If switching to Paste tab, auto-validate current text
+      if (name === 'paste') {
+        try { if (typeof scheduleAutoParseForPasteArea === 'function') scheduleAutoParseForPasteArea(); } catch {}
+      }
+    }
+    function syncPresetControlsVisibility(){ const v=elements.intentPresetSelect.value; elements.intentGammaRow.style.display=(v==='soft'||v==='hard')?'flex':'none'; elements.intentFilmicRow.style.display=(v==='filmic')?'grid':'none'; }
+    const CUSTOM_PREFS_KEY = 'contrastIntentCustomPrefsV1';
+    function loadCustomPrefs(){ try { const j = JSON.parse(localStorage.getItem(CUSTOM_PREFS_KEY)||'{}'); return { gamma: Number(j.gamma??1.00)||1.00, gain: Number(j.gain??0.55)||0.55, shoulder: Number(j.shoulder??0.35)||0.35, pasteText: String(j.pasteText||'') }; } catch { return { gamma:1.00, gain:0.55, shoulder:0.35, pasteText:'' }; } }
+    function saveCustomPrefs(upd){ try { const cur=loadCustomPrefs(); const nxt={...cur, ...upd}; localStorage.setItem(CUSTOM_PREFS_KEY, JSON.stringify(nxt)); } catch {} }
+    function syncPresetControlValuesFromState(){ const id=contrastIntent?.id||'linear'; const prefs = loadCustomPrefs(); if(id==='soft'||id==='hard'||id==='custom_gamma'){ const g=(contrastIntent?.params?.gamma!=null)?contrastIntent.params.gamma:prefs.gamma; elements.intentGamma.value=g; elements.intentGammaVal.textContent=Number(g).toFixed(2);} else { elements.intentGamma.value=prefs.gamma; elements.intentGammaVal.textContent=Number(prefs.gamma).toFixed(2);} if(id==='filmic'||id==='custom_filmic'){ const g=(contrastIntent?.params?.filmicGain!=null)?contrastIntent.params.filmicGain:(contrastIntent?.params?.gain!=null?contrastIntent.params.gain:prefs.gain); const s=(contrastIntent?.params?.shoulder!=null)?contrastIntent.params.shoulder:prefs.shoulder; elements.intentFilmicGain.value=g; elements.intentFilmicGainVal.textContent=Number(g).toFixed(2); elements.intentShoulder.value=s; elements.intentShoulderVal.textContent=Number(s).toFixed(2);} else { elements.intentFilmicGain.value=prefs.gain; elements.intentFilmicGainVal.textContent=Number(prefs.gain).toFixed(2); elements.intentShoulder.value=prefs.shoulder; elements.intentShoulderVal.textContent=Number(prefs.shoulder).toFixed(2);} elements.customGamma.value=prefs.gamma; elements.customGammaVal.textContent=Number(prefs.gamma).toFixed(2); elements.customGain.value=prefs.gain; elements.customGainVal.textContent=Number(prefs.gain).toFixed(2); elements.customShoulder.value=prefs.shoulder; elements.customShoulderVal.textContent=Number(prefs.shoulder).toFixed(2); try{ updateRangeFill(elements.customGamma); updateRangeFill(elements.customGain); updateRangeFill(elements.customShoulder);}catch{} if (elements.intentPasteArea) elements.intentPasteArea.value = prefs.pasteText || ''; }
+    (elements.intentTabs||[]).forEach(btn=>{ btn.addEventListener('click', ()=> setActiveIntentTab(btn.getAttribute('data-intent-tab'))); });
+    if (elements.intentPresetSelect) { elements.intentPresetSelect.addEventListener('change', ()=>{ syncPresetControlsVisibility(); }); }
+    if (elements.intentGamma) { elements.intentGamma.addEventListener('input', ()=>{ elements.intentGammaVal.textContent = Number(elements.intentGamma.value).toFixed(2); }); }
+    if (elements.intentFilmicGain) { elements.intentFilmicGain.addEventListener('input', ()=>{ elements.intentFilmicGainVal.textContent = Number(elements.intentFilmicGain.value).toFixed(2); }); }
+    if (elements.intentShoulder) { elements.intentShoulder.addEventListener('input', ()=>{ elements.intentShoulderVal.textContent = Number(elements.intentShoulder.value).toFixed(2); }); }
+    function updateRangeFill(el){ try { const min=Number(el.min??0), max=Number(el.max??100), val=Number(el.value??0); const pct=Math.max(0, Math.min(100, ((val-min)/(max-min))*100)); el.style.setProperty('--percent', pct+'%'); } catch {} }
+    if (elements.customGamma) { elements.customGamma.addEventListener('input', ()=>{ elements.customGammaVal.textContent = Number(elements.customGamma.value).toFixed(2); updateRangeFill(elements.customGamma); }); }
+    if (elements.customGain) { elements.customGain.addEventListener('input', ()=>{ elements.customGainVal.textContent = Number(elements.customGain.value).toFixed(2); updateRangeFill(elements.customGain); }); }
+    if (elements.customShoulder) { elements.customShoulder.addEventListener('input', ()=>{ elements.customShoulderVal.textContent = Number(elements.customShoulder.value).toFixed(2); updateRangeFill(elements.customShoulder); }); }
+    function closeIntentModal(){
+      elements.intentModal.classList.add('hidden');
+      try { document.documentElement.classList.remove('overflow-hidden'); document.body.classList.remove('overflow-hidden'); } catch {}
+      // No dynamic height; content uses a fixed CSS height
+      try { if (elements.intentContent) elements.intentContent.style.height = ''; } catch {}
+    }
+    if (elements.closeIntentModal) elements.closeIntentModal.addEventListener('click', closeIntentModal);
+    if (elements.cancelIntentBtn) elements.cancelIntentBtn.addEventListener('click', closeIntentModal);
+    // Guard against accidental close when dragging/selecting inside the modal
+    let intentBackdropMouseDown = false;
+    if (elements.intentModal) {
+      elements.intentModal.addEventListener('mousedown', (e)=>{ intentBackdropMouseDown = (e.target === elements.intentModal); });
+      elements.intentModal.addEventListener('touchstart', (e)=>{ intentBackdropMouseDown = (e.target === elements.intentModal); }, { passive: true });
+      elements.intentModal.addEventListener('click', (e)=>{
+        if (e.target === elements.intentModal && intentBackdropMouseDown) closeIntentModal();
+        intentBackdropMouseDown = false;
+      });
+    }
+
+    // Fixed height for intent modal content set via CSS class h-[512px]
+    if (elements.resetIntentBtn) elements.resetIntentBtn.addEventListener('click', ()=>{ setContrastIntent('linear', {}, 'preset'); closeIntentModal(); });
+    if (elements.applyIntentBtn) elements.applyIntentBtn.addEventListener('click', ()=>{
+      const active = ['presets','custom','paste'].find(t => !document.getElementById(`intentTab-${t}`).classList.contains('hidden')) || 'presets';
+      if (active === 'presets'){
+        const v = elements.intentPresetSelect.value;
+        if (v==='soft') { const g=Number(elements.intentGamma.value); saveCustomPrefs({gamma:g}); setContrastIntent('soft', { gamma: g }, 'preset'); }
+        else if (v==='hard') { const g=Number(elements.intentGamma.value); saveCustomPrefs({gamma:g}); setContrastIntent('hard', { gamma: g }, 'preset'); }
+        else if (v==='filmic') { const gain=Number(elements.intentFilmicGain.value), shoulder=Number(elements.intentShoulder.value); saveCustomPrefs({gain, shoulder}); setContrastIntent('filmic', { filmicGain: gain, shoulder }, 'preset'); }
+        else setContrastIntent('linear', {}, 'preset');
+        closeIntentModal();
+      } else if (active === 'custom'){
+        const g = Number(elements.customGamma.value); const gain = Number(elements.customGain.value); const shoulder = Number(elements.customShoulder.value);
+        if (Math.abs(gain-0.55)>1e-3 || Math.abs(shoulder-0.35)>1e-3) { saveCustomPrefs({gain, shoulder}); setContrastIntent('custom_filmic', { gain, shoulder }, 'custom'); } else { saveCustomPrefs({gamma:g}); setContrastIntent('custom_gamma', { gamma: g }, 'custom'); }
+        closeIntentModal();
+      } else if (active === 'paste'){
+        const text = String(elements.intentPasteArea.value||'').trim(); const parsed = parseIntentPaste(text);
+        if (parsed && parsed.ok){ const targetFn = parsed.targetFn; const name = parsed.name || 'Custom (pasted)'; saveCustomPrefs({ pasteText: text }); setContrastIntent('custom_points', { name, targetFn }, 'import'); elements.intentPasteValidation.classList.add('hidden'); elements.intentPasteValidation.textContent = ''; closeIntentModal(); }
+        else { elements.intentPasteValidation.textContent = parsed?.error || 'Could not parse data. Expected CSV percent_input,density_rel or JSON with points/generator.'; elements.intentPasteValidation.classList.remove('hidden'); }
+      }
+    });
+    if (elements.intentParseBtn) elements.intentParseBtn.addEventListener('click', ()=>{ const parsed = parseIntentPaste(String(elements.intentPasteArea.value||'').trim()); if (parsed && parsed.ok) { elements.intentPasteValidation.textContent = 'Parsed OK. Click Apply Pasted to use it.'; elements.intentPasteValidation.classList.remove('hidden'); elements.intentPasteValidation.classList.remove('text-red-600'); elements.intentPasteValidation.classList.add('text-green-700'); } else { elements.intentPasteValidation.textContent = parsed?.error || 'Could not parse data.'; elements.intentPasteValidation.classList.remove('hidden'); elements.intentPasteValidation.classList.add('text-red-600'); elements.intentPasteValidation.classList.remove('text-green-700'); } });
+
+    // Determine if a saved custom intent exists (applied previously, valid pasted data, or saved slider prefs)
+    function hasSavedCustomIntent(){
+      try {
+        if (String(contrastIntent?.id||'').startsWith('custom')) return true;
+        if (localStorage.getItem('hasCustomIntentV1') === '1') return true;
+      } catch {}
+      try {
+        const prefs = loadCustomPrefs ? loadCustomPrefs() : null;
+        if (!prefs) return false;
+        const txt = String(prefs.pasteText||'').trim();
+        if (txt){ try { if (typeof parseIntentPaste === 'function'){ const parsed = parseIntentPaste(txt); if (parsed && parsed.ok) return true; } else { return true; } } catch {} }
+        const g = Number(prefs.gamma||1.00), gain = Number(prefs.gain||0.55), shoulder = Number(prefs.shoulder||0.35);
+        if (Math.abs(g-1.00)>1e-3 || Math.abs(gain-0.55)>1e-3 || Math.abs(shoulder-0.35)>1e-3) return true;
+      } catch {}
+      return false;
+    }
+    function updateCustomOptionVisibility(){
+      try {
+        const sel = elements.contrastIntentSelect; if (!sel) return;
+        const opts = Array.from(sel.options);
+        let customOpt = opts.find(o=>o.value==='custom');
+        const enterOpt = opts.find(o=>o.value==='enter_custom');
+        const shouldShow = hasSavedCustomIntent();
+        if (shouldShow){
+          if (!customOpt){
+            const opt = document.createElement('option');
+            opt.value = 'custom';
+            opt.textContent = 'Custom (saved)';
+            if (enterOpt) sel.insertBefore(opt, enterOpt); else sel.appendChild(opt);
+          }
+        } else {
+          if (customOpt){
+            if (sel.value === 'custom') sel.value = 'linear';
+            sel.removeChild(customOpt);
+          }
+        }
+      } catch {}
+    }
+
+    // Auto-parse when user types or pastes into the paste area (debounced)
+    let intentPasteDebounceTimer = null;
+    function scheduleAutoParseForPasteArea(){
+      if (!elements.intentPasteArea || !elements.intentPasteValidation) return;
+      const text = String(elements.intentPasteArea.value||'').trim();
+      if (intentPasteDebounceTimer) clearTimeout(intentPasteDebounceTimer);
+      if (!text){
+        // Clear validation if empty
+        elements.intentPasteValidation.textContent = '';
+        elements.intentPasteValidation.classList.add('hidden');
+        elements.intentPasteValidation.classList.remove('text-green-700');
+        elements.intentPasteValidation.classList.remove('text-red-600');
+        return;
+      }
+      intentPasteDebounceTimer = setTimeout(()=>{
+        try {
+          const parsed = parseIntentPaste(text);
+          if (parsed && parsed.ok){
+            elements.intentPasteValidation.textContent = 'Parsed OK. Click Apply Pasted to use it.';
+            elements.intentPasteValidation.classList.remove('hidden');
+            elements.intentPasteValidation.classList.remove('text-red-600');
+            elements.intentPasteValidation.classList.add('text-green-700');
+          } else {
+            elements.intentPasteValidation.textContent = parsed?.error || 'Could not parse data.';
+            elements.intentPasteValidation.classList.remove('hidden');
+            elements.intentPasteValidation.classList.add('text-red-600');
+            elements.intentPasteValidation.classList.remove('text-green-700');
+          }
+          // Content height may change when validation appears/disappears
+          
+        } catch (err){
+          elements.intentPasteValidation.textContent = 'Could not parse data.';
+          elements.intentPasteValidation.classList.remove('hidden');
+          elements.intentPasteValidation.classList.add('text-red-600');
+          elements.intentPasteValidation.classList.remove('text-green-700');
+          
+        }
+      }, 300);
+    }
+    if (elements.intentPasteArea){
+      elements.intentPasteArea.addEventListener('input', scheduleAutoParseForPasteArea);
+      elements.intentPasteArea.addEventListener('paste', ()=> setTimeout(scheduleAutoParseForPasteArea, 0));
+    }
+
+    // Initialize main Intent dropdown: show Custom only when a saved custom intent exists
+    try { updateCustomOptionVisibility(); } catch {}
+    function parseIntentPaste(text){
+      try {
+        if (!text) return { ok:false, error: 'No data provided' };
+        const trimmed = text.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')){
+          const obj = JSON.parse(trimmed);
+          if (Array.isArray(obj)){
+            const fn = compileIntentFromPoints(obj);
+            return { ok:true, targetFn: fn, name: 'Custom (points)' };
+          }
+          if (obj.points && Array.isArray(obj.points)){
+            const fn = compileIntentFromPoints(obj.points);
+            return { ok:true, targetFn: fn, name: obj.name || 'Custom (points)' };
+          }
+          // Support schema: { Media: "Matte Inkjet", Curve: [{Input:0, Linear:0, Intent:0}, ...] }
+          if (Array.isArray(obj.Curve)){
+            const rows = [];
+            for (const it of obj.Curve){
+              if (!it || typeof it !== 'object') continue;
+              // Case-insensitive keys
+              const keys = Object.keys(it).reduce((m,k)=>{ m[k.toLowerCase()] = k; return m; }, {});
+              const kInput = keys['input'];
+              const kIntent = keys['intent'];
+              const t = Number(kInput ? it[kInput] : NaN);
+              const yv = Number(kIntent ? it[kIntent] : NaN);
+              if (!isFinite(t) || !isFinite(yv)) continue;
+              const y = yv > 1.000001 ? (yv/100) : yv;
+              rows.push([Math.max(0, Math.min(1, t/100)), Math.max(0, Math.min(1, y))]);
+            }
+            if (rows.length < 2) return { ok:false, error: 'Curve array did not contain valid Input/Intent pairs' };
+            const fn = compileIntentFromPoints(rows);
+            const media = typeof obj.Media === 'string' && obj.Media.trim() ? obj.Media.trim() : '';
+            return { ok:true, targetFn: fn, name: media ? `Custom (${media})` : 'Custom (pasted)' };
+          }
+          if (obj.generator && obj.generator.type === 'gamma'){
+            const g = Number(obj.generator.params?.gamma ?? 1.0);
+            return { ok:true, targetFn: (t)=>gammaMap(t,g), name: obj.name || `Gamma ${g.toFixed(2)}` };
+          }
+          if (obj.generator && obj.generator.type === 'filmic'){
+            const gain = Number(obj.generator.params?.mid_slope ?? obj.generator.params?.gain ?? 0.55);
+            const shoulder = Number(obj.generator.params?.shoulder ?? 0.35);
+            return { ok:true, targetFn: (t)=>filmicSoftShoulder(t,gain,shoulder), name: obj.name || 'Filmic' };
+          }
+          return { ok:false, error: 'Unsupported JSON generator; provide points[] or gamma/filmic.' };
+        }
+        const lines = trimmed.split(/\r?\n/).filter(l=>l.trim().length>0);
+        // CGATS-like block with BEGIN_DATA_FORMAT / BEGIN_DATA
+        if (/BEGIN_DATA_FORMAT/i.test(trimmed) && /BEGIN_DATA/i.test(trimmed)) {
+          let fmtStart = -1, fmtEnd = -1, dataStart = -1, dataEnd = lines.length;
+          for (let i=0;i<lines.length;i++){
+            const L = lines[i].trim();
+            if (fmtStart<0 && /^BEGIN_DATA_FORMAT/i.test(L)) fmtStart = i;
+            if (fmtEnd<0 && /^END_DATA_FORMAT/i.test(L)) fmtEnd = i;
+            if (dataStart<0 && /^BEGIN_DATA/i.test(L)) dataStart = i;
+            if (/^END_DATA/i.test(L)) { dataEnd = i; break; }
+          }
+          const colNames = [];
+          if (fmtStart>=0 && fmtEnd>fmtStart){
+            for (let i=fmtStart+1;i<fmtEnd;i++){
+              const toks = lines[i].trim().split(/\s+/).filter(Boolean);
+              if (toks.length) { colNames.push(...toks); break; }
+            }
+          }
+          // Map column indices (case-insensitive)
+          const lower = colNames.map(s=>s.toLowerCase());
+          const idxInput = Math.max(lower.indexOf('input'), lower.indexOf('gray'));
+          // Prefer 'intent' for target
+          const idxIntent = lower.indexOf('intent');
+          if (idxInput>=0 && idxIntent>=0 && dataStart>=0){
+            const rows = [];
+            for (let i=dataStart+1;i<dataEnd;i++){
+              const parts = lines[i].trim().split(/\s+/).filter(Boolean);
+              const t = Number(parts[idxInput]);
+              const yv = Number(parts[idxIntent]);
+              if (!isFinite(t) || !isFinite(yv)) continue;
+              const y = yv > 1.000001 ? (yv/100) : yv;
+              rows.push([Math.max(0, Math.min(1, t/100)), Math.max(0, Math.min(1, y))]);
+            }
+            if (rows.length >= 2){
+              const fn = compileIntentFromPoints(rows);
+              return { ok:true, targetFn: fn, name: 'Custom (pasted)' };
+            }
+          }
+          // Fall through to generic parsing if mapping failed
+        }
+        if (!lines.length) return { ok:false, error: 'Empty input' };
+        // Detect a label-only first line (no numbers) to use as a name
+        const numberRegex = /[+-]?\d*\.?\d+(?:[eE][+-]?\d+)?/g;
+        let labelOnlyFirst = false; let labelName = '';
+        try {
+          const firstNums = (lines[0].match(numberRegex) || []).map(Number).filter(n=>isFinite(n));
+          if (firstNums.length === 0 && /[A-Za-z]/.test(lines[0])) { labelOnlyFirst = true; labelName = lines[0].trim(); }
+        } catch {}
+        const header = lines[0].toLowerCase();
+        let colT=-1, colRel=-1, colAbs=-1, colL=-1;
+        const headers = header.split(/[,\t]/).map(h=>h.trim());
+        headers.forEach((h,i)=>{ if (['percent_input','t','%input','input','gray','patch','patch%'].includes(h)) colT = i; if (['density_rel','d_rel','rel_density','relative','rel'].includes(h)) colRel = i; if (['density_abs','d_abs','abs_density','absolute','abs'].includes(h)) colAbs = i; if (['lstar','l*','lab_l','lab l','lab l*'].includes(h)) colL = i; });
+        const rows = [];
+        const nameCandidates = [];
+        const startIdx = (colT>=0 || colRel>=0 || colAbs>=0 || colL>=0) ? 1 : (labelOnlyFirst ? 1 : 0);
+        for (let i=startIdx;i<lines.length;i++){
+          const rawLine = lines[i];
+          const parts = rawLine.split(/[,\t]/).map(s=>s.trim());
+          if (colT>=0) {
+            const t = Number(parts[colT]); if (!isFinite(t)) continue;
+            if (colRel>=0) { const y = Number(parts[colRel]); if (!isFinite(y)) continue; rows.push([t/100, y]); }
+            else if (colAbs>=0) { const yAbs = Number(parts[colAbs]); if (!isFinite(yAbs)) continue; const y = Math.max(0, Math.min(1, yAbs)); rows.push([t/100, y]); }
+            else if (colL>=0) { const L = Number(parts[colL]); if (!isFinite(L)) continue; const y = Math.max(0, Math.min(1, (100 - L)/100)); rows.push([t/100, y]); }
+            continue;
+          }
+          // No header: accept whitespace- or comma-separated numeric rows, optionally with a leading label segment
+          // Extract numeric tokens robustly (handles spaces or tabs):
+          const numTokens = (rawLine.match(/[+-]?\d*\.?\d+(?:[eE][+-]?\d+)?/g) || []).map(Number).filter(n=>isFinite(n));
+          // Gather name candidates only when commas are present (avoid treating a numeric row as a label)
+          if (rawLine.includes(',')) {
+            const labelParts = rawLine.split(',').map(s=>s.trim());
+            for (const lp of labelParts) { if (/[A-Za-z]/.test(lp)) nameCandidates.push(lp); }
+          }
+          // Also accept label separated by a pipe character
+          if (rawLine.includes('|')) {
+            const labelParts = rawLine.split('|').map(s=>s.trim());
+            for (const lp of labelParts) { if (/[A-Za-z]/.test(lp)) nameCandidates.push(lp); }
+          }
+          if (numTokens.length >= 2) {
+            const t = numTokens[0];
+            const yVal = numTokens[numTokens.length-1];
+            let y = yVal > 1.000001 ? (yVal/100) : yVal; // normalize to 0..1
+            rows.push([Math.max(0, Math.min(1, t/100)), Math.max(0, Math.min(1, y))]);
+          }
+        }
+        if (rows.length < 2) {
+          // Fallback: one-column numeric list interpreted as evenly spaced targets
+          const yVals = [];
+          for (let i=startIdx;i<lines.length;i++){
+            const nums = (lines[i].match(/[+-]?\d*\.?\d+(?:[eE][+-]?\d+)?/g) || []).map(Number).filter(n=>isFinite(n));
+            if (nums.length >= 1) yVals.push(nums[0]);
+          }
+          if (yVals.length >= 2) {
+            const usesPercent = Math.max(...yVals) > 1.000001;
+            const n = yVals.length;
+            const rows1 = [];
+            for (let i=0;i<n;i++){
+              const t = (n === 1) ? 0 : (i/(n-1));
+              const yn = usesPercent ? (yVals[i]/100) : yVals[i];
+              rows1.push([Math.max(0, Math.min(1, t)), Math.max(0, Math.min(1, yn))]);
+            }
+            const fn = compileIntentFromPoints(rows1);
+            return { ok:true, targetFn: fn, name: 'Custom (pasted)' };
+          }
+          return { ok:false, error: 'No valid rows parsed' };
+        }
+        const fn = compileIntentFromPoints(rows);
+        let commonName = '';
+        try {
+          const labels = nameCandidates.filter(s => s && isNaN(Number(s)));
+          if (labels.length) {
+            const freq = labels.reduce((m,s)=>{ m[s]=(m[s]||0)+1; return m; }, {});
+            commonName = Object.keys(freq).sort((a,b)=>freq[b]-freq[a])[0] || '';
+          }
+          if (!commonName && labelOnlyFirst && labelName) commonName = labelName;
+        } catch {}
+        return { ok:true, targetFn: fn, name: commonName ? `Custom (${commonName})` : 'Custom (pasted)' };
+      } catch (e) { return { ok:false, error: e.message }; }
+    }
     
     // [removed] About/Changelog popup rendering now lives under Help → Version History tab
     
@@ -15659,7 +16553,7 @@ DOMAIN_MAX 1.0 1.0 1.0
 
           <hr />
 
-          <h2 id="install">2. Installation and Access</h2>
+          <h2 id="install">Installation and Access</h2>
           <ul>
             <li><strong>Online:</strong> visit <a href="https://david-marsh-photo.github.io/" target="_blank" rel="noopener">https://david-marsh-photo.github.io/</a>.</li>
             <li><strong>Offline:</strong> right‑click and download this file: <a href="https://david-marsh-photo.github.io/index.html" target="_blank" rel="noopener">https://david-marsh-photo.github.io/index.html</a>, then open it locally (no install required).</li>
@@ -15669,7 +16563,7 @@ DOMAIN_MAX 1.0 1.0 1.0
 
           <hr />
 
-          <h2 id="quickstart">3. Quick Start (Beta v2.2)</h2>
+          <h2 id="quickstart">Quick Start (Beta v2.2)</h2>
           <ol>
             <li>Choose your printer and set ink limits (per channel).</li>
             <li>Start with Linear Ramp, or</li>
@@ -15680,7 +16574,7 @@ DOMAIN_MAX 1.0 1.0 1.0
 
           <hr />
 
-          <h2 id="features">4. Features (highlights)</h2>
+          <h2 id="features">Features (highlights)</h2>
           <ul>
             <li>Supports most Epson printers.</li>
             <li>Quickly export linear ramps with any single ink channel or combination.</li>
@@ -15690,11 +16584,12 @@ DOMAIN_MAX 1.0 1.0 1.0
             <li>Undo/Redo: full history of edits and toggles.</li>
             <li>Recompute key points: simplify Smart Curves with tolerance/max-point controls.</li>
             <li>Lab Tech: AI assistant for Q&amp;A and automation.</li>
+            <li>Contrast intent: presets or custom targets; shows Δ vs target; endpoints fixed (use ink limits to change).</li>
           </ul>
 
           <hr />
 
-          <h2 id="examples">5. Usage Examples</h2>
+          <h2 id="examples">Usage Examples</h2>
           <ul>
             <li>Digital negatives: cyanotype, Pt/Pd, kallitype, polymer photogravure.</li>
             <li>Inkjet linearization: refine monochrome response for QTR printing.</li>
@@ -15704,7 +16599,7 @@ DOMAIN_MAX 1.0 1.0 1.0
 
           <hr />
 
-          <h2 id="best">6. Best Practices</h2>
+          <h2 id="best">Best Practices</h2>
           <ul>
             <li>If your process requires a negative, invert it before printing with your <code>.quad</code>.</li>
             <li>Measure the final positive print (not the negative).</li>
@@ -15715,7 +16610,7 @@ DOMAIN_MAX 1.0 1.0 1.0
 
           <hr />
 
-          <h2 id="faq">7. Troubleshooting &amp; FAQ</h2>
+          <h2 id="faq">Troubleshooting &amp; FAQ</h2>
           <ul>
             <li><strong>Offline use:</strong> Lab Tech is unavailable offline; manual functions work fully.</li>
             <li><strong>Curve orientation:</strong> quadGEN plots input % (X) vs ink output % (Y), origin = white. Other tools may use tone curves with origin = black.</li>
@@ -15724,12 +16619,24 @@ DOMAIN_MAX 1.0 1.0 1.0
 
           <hr />
 
-          <h2 id="feedback">8. Contributing / Feedback</h2>
-          <p>Contact David Marsh – <a href="mailto:marshmonkey@gmail.com">marshmonkey@gmail.com</a></p>
+          <h2 id="feedback">Feedback / Contact</h2>
+            <p>Contact David Marsh – <a href="mailto:marshmonkey@gmail.com">marshmonkey@gmail.com</a></p>
 
           <hr />
 
-          <h2 id="refs">9. External References</h2>
+          <h2 id="credits">Credits / Attribution</h2>
+          <ul>
+            <li>Tailwind CSS — used via CDN (<code>cdn.tailwindcss.com</code>), MIT License.</li>
+            <li>Cloudflare Workers — used as an API proxy (rate-limited edge function).</li>
+            <li>Anthropic Claude</li>
+            <li>OpenAI ChatGPT / Codex</li>
+            <li>Trademarks: QuadToneRIP and Print‑Tool are property of Roy Harrington. Color Muse is a trademark of Variable, Inc. Easy Digital Negatives is a separate project. All product names, logos, and brands are property of their respective owners.</li>
+          </ul>
+
+
+          <hr />        
+
+          <h2 id="refs">External References</h2>
           <ul>
             <li><a href="http://www.easydigitalnegatives.com/" target="_blank" rel="noopener">Easy Digital Negatives</a> – Export correction LUTs (<code>.cube</code>) and load into quadGEN.</li>
             <li><a href="https://www.quadtonerip.com/" target="_blank" rel="noopener">QuadToneRIP</a> – RIP software using <code>.quad</code> files. Install/export from quadGEN to QTR’s quad folder.</li>
@@ -15780,6 +16687,9 @@ DOMAIN_MAX 1.0 1.0 1.0
 
             <dt>Input Level %</dt>
             <dd>X-axis value representing the input level (0–100%) in printer space; corresponds to the source tone step being mapped.</dd>
+
+            <dt>Intent (Contrast Intent)</dt>
+            <dd>A target tonal mapping the correction aims to match. Choose a preset (Linear, Soft/Hard gamma, Filmic, etc...) or define a custom target via sliders or pasted CSV/JSON. Intents affect Δ vs target and exported filename/comments (compact tag), but do not change measurement ingestion; endpoints (0% and 100%) remain fixed. To alter black/white points, adjust ink limits/end values.</dd>
 
             <dt>Interpolation</dt>
             <dd>Method to form a smooth curve between key points. quadGEN favors monotonic PCHIP for predictable, non-overshooting results.</dd>
@@ -15947,6 +16857,12 @@ DOMAIN_MAX 1.0 1.0 1.0
           <ul>
             <li>Repeat from step 5 until corrections become negligible.</li>
             <li>There will be some noise in the measurements for both workflows. Expect diminishing returns on linearization.</li>
+          </ul>
+          <h3>10) Choose a Contrast Intent (optional)</h3>
+          <ul>
+            <li>Use the <strong>Intent</strong> dropdown in Global Correction to pick a preset (Linear, Soft, Hard, Filmic) or choose <strong>Enter Custom…</strong> to open the modal.</li>
+            <li><strong>Custom</strong>: apply sliders (Gamma or Filmic‑like) or <strong>Paste CSV/JSON</strong> data; the parser auto‑validates pasted text.</li>
+            <li>Intents shape the target curve only; ingestion and reconstruction are unchanged. Endpoints (0% and 100%) remain fixed — adjust ink limits/end values to move black/white points.</li>
           </ul>
           <h3>Notes & Tips</h3>
           <ul>
