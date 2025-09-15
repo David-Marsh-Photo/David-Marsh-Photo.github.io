@@ -1083,10 +1083,22 @@ ARCHITECTURAL NOTES:
     /* Help overlay: ensure translucent backdrop in dark mode */
     [data-theme="dark"] #helpPopup { background-color: rgba(0,0,0,0.5) !important; }
     [data-theme="dark"] #globalCorrectionHelpPopup { background-color: rgba(0,0,0,0.5) !important; }
+    [data-theme="dark"] #intentHelpPopup { background-color: rgba(0,0,0,0.5) !important; }
 
     /* Help logo: apply dark-mode stroke/fill overrides like main logo */
     [data-theme="dark"] #helpPopup svg [stroke="#1A1A1A"] { stroke: #e5e7eb !important; }
     [data-theme="dark"] #helpPopup svg [fill="#1A1A1A"] { fill: #e5e5e5 !important; }
+    [data-theme="dark"] #intentHelpPopup > div {
+      background-color: var(--bg-elevated) !important;
+      border: 1px solid var(--border-emphasis) !important;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+    }
+
+    /* Reusable help callouts/badges */
+    .help-callout { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 0.75rem; }
+    [data-theme="dark"] .help-callout { background-color: #1f2937; border-color: #374151; color: #e5e7eb; }
+    .help-badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; border: 1px solid #e5e7eb; background: #f3f4f6; color: #374151; }
+    [data-theme="dark"] .help-badge { border-color: #374151; background: #111827; color: #e5e7eb; }
 
     /* Intent modal: match Help popup styling in dark mode */
     [data-theme="dark"] #intentModal > div {
@@ -1105,6 +1117,18 @@ ARCHITECTURAL NOTES:
     [data-theme="dark"] #intentContent::-webkit-scrollbar-thumb { background: #4b5563; border-color: var(--console-bg); }
     [data-theme="dark"] #intentContent::-webkit-scrollbar-thumb:hover { background: #6b7280; }
     [data-theme="dark"] #intentContent::-webkit-scrollbar-track { background: var(--console-bg); }
+
+    /* Paste tab note: light by default, darker in dark mode */
+    [data-theme="dark"] #intentPasteNote {
+      background-color: #1f2937 !important; /* gray-800 */
+      color: #e5e7eb !important;            /* gray-200 */
+      border-color: #374151 !important;     /* gray-700 */
+    }
+
+    /* Dark mode: make the paste-parse success message a brighter green */
+    [data-theme="dark"] #intentPasteValidation.text-green-700 {
+      color: #34d399 !important; /* Tailwind green-400 */
+    }
 
     /* Dark-mode UI polish for Lab Tech + Notes */
     [data-theme="dark"] .border-gray-800 { border-color: var(--border-subtle) !important; }
@@ -1331,32 +1355,37 @@ ARCHITECTURAL NOTES:
       width: 100%;
       height: 8px;
       border-radius: 9999px;
-      background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--percent, 50%), var(--console-input-bg) var(--percent, 50%), var(--console-input-bg) 100%);
+      /* Light mode: uniform track (no filled portion) */
+      background: #e5e7eb; /* gray-200 */
       outline: none;
       transition: filter 120ms ease;
     }
+    /* Dark mode: uniform darker track (no filled portion) */
+    [data-theme="dark"] #intentTab-custom input[type="range"] {
+      background: var(--console-input-bg);
+    }
     #intentTab-custom input[type="range"]:hover { filter: brightness(1.02); }
-    #intentTab-custom input[type="range"]:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+    #intentTab-custom input[type="range"]:focus { box-shadow: 0 0 0 3px rgba(59,130,246,0.25); }
     /* WebKit thumb */
     #intentTab-custom input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
       width: 16px; height: 16px;
-      background: var(--accent);
-      border: 2px solid #ffffff;
+      background: #ffffff;
+      border: 1px solid #cbd5e1; /* slate-300 */
       border-radius: 9999px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
       margin-top: -4px; /* center on 8px track */
     }
     /* Firefox track + progress */
     #intentTab-custom input[type="range"]::-moz-range-track {
-      height: 8px; border-radius: 9999px; background: var(--console-input-bg);
+      height: 8px; border-radius: 9999px; background: #e5e7eb; /* gray-200 */
     }
     #intentTab-custom input[type="range"]::-moz-range-progress {
-      height: 8px; border-radius: 9999px; background: var(--accent);
+      height: 8px; border-radius: 9999px; background: transparent; /* no filled portion */
     }
     #intentTab-custom input[type="range"]::-moz-range-thumb {
-      width: 16px; height: 16px; background: var(--accent); border: 2px solid #ffffff; border-radius: 9999px; box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+      width: 16px; height: 16px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 9999px; box-shadow: 0 1px 2px rgba(0,0,0,0.12);
     }
 
     /* Use default system checkbox styling */
@@ -1767,7 +1796,7 @@ ARCHITECTURAL NOTES:
             </div>
             
             <!-- Interpolation Controls (moved inside graph container) -->
-            <div class="mt-3">
+            <div class="mt-0">
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- Left Column: Interpolation Method -->
                 <div class="space-y-2">
@@ -1813,7 +1842,7 @@ ARCHITECTURAL NOTES:
                   <span class="slider"></span>
                 </label>
               </div>
-              <button id="globalCorrectionHelpBtn" class="text-xs text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 transition-colors font-bold" title="Global Correction Help" aria-label="Global Correction Help">?</button>
+              <button id="intentHelpBtn" class="text-xs text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 transition-colors font-bold" title="Correction vs. Intent" aria-label="Correction vs. Intent">?</button>
             </div>
             <p class="text-xs text-gray-600 mb-2">Apply a correction to modify all channels uniformly.</p>
             <div class="flex items-center gap-2 mb-1">
@@ -1824,35 +1853,34 @@ ARCHITECTURAL NOTES:
               </button>
               <button id="revertGlobalToMeasurementBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold whitespace-nowrap shrink-0 inline-flex items-center disabled:opacity-50 disabled:cursor-not-allowed" title="Revert to measurement source (global)" disabled>↺ Revert</button>
             </div>
+            <p id="globalLinearizationHint" class="text-xs text-gray-500 mb-1">LUT (.cube), LAB data (.txt), or curves (.acv)</p>
+            <div id="globalLinearizationInfo" class="text-xs text-gray-600 mb-2 hidden">
+              <span id="globalLinearizationFilename" class="font-medium"></span>
+              <span id="globalLinearizationDetails" class="text-gray-500"></span>
+              <span id="deltaSummary" class="ml-2 inline-block align-middle hidden"></span>
+              <span class="ml-3 inline-flex items-center gap-1 align-middle hidden">
+                <label for="perChannelDeltaSelect" class="text-gray-600">Channel change:</label>
+                <select id="perChannelDeltaSelect" class="text-xs border border-gray-300 rounded px-1 py-0.5"></select>
+                <span id="perChannelDeltaSummary" class="ml-1"></span>
+              </span>
+            </div>
             <div class="flex items-center gap-2 mt-2">
-              <label for="contrastIntentSelect" class="text-xs text-gray-600">Intent</label>
+              <label for="contrastIntentSelect" class="text-xs text-gray-600 font-bold">Intent</label>
               <select id="contrastIntentSelect" class="standard-dropdown text-xs" style="width: 200px;">
                 <option value="linear" selected>Linear</option>
                 <option value="soft">Soft (γ≈0.85)</option>
                 <option value="hard">Hard (γ≈1.20)</option>
                 <option value="filmic">Filmic (soft shoulder)</option>
-                
+
                 <option value="custom">Custom (saved)</option>
                 <option value="enter_custom">Enter Custom…</option>
               </select>
             </div>
-            <p id="globalLinearizationHint" class="text-xs text-gray-500 mb-1">LUT (.cube), LAB data (.txt), or curves (.acv)</p>
             
             <!-- Linearization Controls -->
           <div class="space-y-3">
               <!-- File Upload -->
               <div>
-                <div id="globalLinearizationInfo" class="text-xs text-gray-600 mb-2 hidden">
-                  <span id="globalLinearizationFilename" class="font-medium"></span>
-                  <span id="globalLinearizationDetails" class="text-gray-500"></span>
-                  <span id="deltaSummary" class="ml-2 inline-block align-middle hidden"></span>
-                  <span class="ml-3 inline-flex items-center gap-1 align-middle hidden">
-                    <label for="perChannelDeltaSelect" class="text-gray-600">Channel change:</label>
-                    <select id="perChannelDeltaSelect" class="text-xs border border-gray-300 rounded px-1 py-0.5"></select>
-                    <span id="perChannelDeltaSummary" class="ml-1"></span>
-                  </span>
-                  
-                </div>
                 <!-- Buttons moved above; keep info here only -->
               </div>
             </div>
@@ -1864,7 +1892,7 @@ ARCHITECTURAL NOTES:
 
           <!-- Edit Curves Panel -->
           <div class="bg-white border border-gray-200 rounded-xl p-3">
-            <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center justify-between mb-4">
               <button id="editModeToggleBtn" type="button" class="inline-flex text-xs font-bold px-2.5 py-1.5 rounded cursor-pointer relative z-10 text-white bg-slate-600 hover:bg-slate-700 border-0" aria-pressed="false" role="switch" aria-checked="false" title="Toggle edit mode">
                 <span id="editModeLabel">⟐ Edit Mode: OFF</span>
               </button>
@@ -1876,17 +1904,17 @@ ARCHITECTURAL NOTES:
 
             <!-- Calculate points -->
             <div class="border border-gray-200 rounded-lg p-3 mb-3 relative">
-              <div class="flex items-center justify-between mb-2">
-                <span class="absolute top-0 left-2 -translate-y-1/2 bg-white px-2 text-xs text-gray-700 z-10">Calculate points</span>
+              <span class="absolute top-0 left-2 -translate-y-1/2 bg-white px-2 text-xs text-gray-700 z-10">Calculate points</span>
+              <div class="flex items-end gap-4">
+                <label class="text-xs text-gray-700 flex flex-col items-center">
+                  <span class="mb-1">Max error %</span>
+                  <input type="number" id="editMaxError" class="w-20 px-2 py-1 text-xs border border-gray-300 rounded" min="0.05" max="5" step="0.05" value="0.25">
+                </label>
+                <label class="text-xs text-gray-700 flex flex-col items-center">
+                  <span class="mb-1">Max points</span>
+                  <input type="number" id="editMaxPoints" class="w-16 px-2 py-1 text-xs border border-gray-300 rounded" min="2" max="21" step="1" value="21">
+                </label>
                 <button id="editRecomputeBtn" class="px-3 py-1.5 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition-colors font-bold">↻ Recompute</button>
-              </div>
-              <div class="flex items-center gap-4">
-                <label class="text-xs text-gray-700">Max error %
-                  <input type="number" id="editMaxError" class="w-20 ml-1 px-2 py-1 text-xs border border-gray-300 rounded" min="0.05" max="5" step="0.05" value="0.25">
-                </label>
-                <label class="text-xs text-gray-700">Max points
-                  <input type="number" id="editMaxPoints" class="w-16 ml-1 px-2 py-1 text-xs border border-gray-300 rounded" min="2" max="21" step="1" value="21">
-                </label>
               </div>
             </div>
 
@@ -1907,8 +1935,8 @@ ARCHITECTURAL NOTES:
 
           <!-- Selected point tools -->
           <div class="border border-gray-200 rounded-lg p-3 relative">
-              <span class="absolute top-0 left-2 -translate-y-1/2 bg-white px-2 text-xs text-gray-700 z-10">Selected point</span>
-              <div class="flex items-center justify-between mb-2">
+              <span class="absolute top-0 left-2 -translate-y-1/2 bg-white px-2 text-xs text-gray-700 z-10">Point</span>
+              <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <div class="inline-flex items-center gap-2">
                     <button id="editPointLeft" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold" title="Previous point">◀</button>
@@ -2044,6 +2072,7 @@ ARCHITECTURAL NOTES:
         <button class="px-3 py-2 rounded-t text-gray-700 bg-gray-100 font-medium" data-intent-tab="presets">Presets</button>
         <button class="px-3 py-2 rounded-t text-gray-600 hover:text-gray-800" data-intent-tab="custom">Custom</button>
         <button class="px-3 py-2 rounded-t text-gray-600 hover:text-gray-800" data-intent-tab="paste">Paste CSV/JSON</button>
+        <button class="px-3 py-2 rounded-t text-gray-600 hover:text-gray-800" data-intent-tab="import">Import ACV/LUT</button>
       </div>
       <div id="intentContent" class="overflow-y-auto p-5 space-y-5 h-[512px]">
         <div id="intentTab-presets" class="space-y-4">
@@ -2075,6 +2104,20 @@ ARCHITECTURAL NOTES:
               <span id="intentShoulderVal" class="text-xs text-gray-600 w-10 text-right">0.35</span>
             </div>
           </div>
+        </div>
+        <div id="intentTab-import" class="hidden space-y-4">
+          <div class="text-sm text-gray-700">
+            <div class="p-3 rounded border bg-gray-50">
+              <div class="font-medium">Import Target (ACV/LUT)</div>
+              <div class="text-xs text-gray-600 mt-1">Import an ACV/LUT as a target tonal intent (the curve you want to aim for if not the default Linear). This does not apply a correction. To apply ACV/LUT as a correction, use Global Corrections → Load Data File.</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="intentImportFile" type="file" accept=".acv,.cube" class="hidden">
+            <button id="intentImportBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded font-bold" title="Treats the file as a target curve (intent). No correction is applied.">Load ACV/LUT as Target</button>
+          </div>
+          <div id="intentImportInfo" class="text-xs text-gray-600"></div>
+          
         </div>
         <div id="intentTab-custom" class="hidden space-y-4">
           <div class="text-sm text-gray-700">Define a simple custom shape.</div>
@@ -2109,7 +2152,7 @@ ARCHITECTURAL NOTES:
               <li>1D list (even spacing): one value per line, optional label as first line</li>
             </ul>
           </div>
-          <div class="text-sm bg-gray-800 text-gray-100 border border-gray-700 rounded p-2">
+          <div id="intentPasteNote" class="text-sm bg-gray-50 text-gray-700 border border-gray-200 rounded p-2">
             Note: pasted intent data is applied over a fixed 0–100% input scale. Black and white points (0% and 100%) do not move. To change endpoints, adjust ink limits/end values rather than the contrast intent.
           </div>
           <textarea id="intentPasteArea" class="w-full h-40 border border-gray-300 rounded p-2 text-sm" placeholder="Enter or paste data..."></textarea>
@@ -2323,6 +2366,19 @@ ARCHITECTURAL NOTES:
     </div>
   </div>
 
+  <!-- Intent Help Popup (Correction vs Intent) -->
+  <div id="intentHelpPopup" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] p-6 relative">
+      <button id="closeIntentHelpBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+      <h2 class="text-xl font-bold mb-4">Global Correction & Intent</h2>
+      <div id="intentHelpContent" class="text-sm text-gray-700 space-y-6 max-h-[70vh] overflow-y-auto"></div>
+    </div>
+  </div>
+
   <!-- Edit Mode Help Popup -->
   <div id="editModeHelpPopup" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] p-6 relative">
@@ -2335,24 +2391,26 @@ ARCHITECTURAL NOTES:
       <div class="text-sm text-gray-700 space-y-4 max-h-[70vh] overflow-y-auto">
         <div>
           <p class="font-medium">Overview</p>
-          <p class="text-sm text-gray-600">Edit Mode enables point-by-point curve editing on the selected channel. Other enabled channels dim for focus. Turn Edit Mode off to prevent accidental edits.</p>
+          <p class="text-sm text-gray-600">Edit Mode enables point-by-point curve editing on the selected channel. Your data is converted into Smart curves to allow edits. Other enabled channels dim for focus. Turn Edit Mode off to prevent accidental edits.</p>
+          <p class="text-sm text-gray-600 mt-2">If at any time you want to revert to the original data instead of the generated Smart curves, you can use the "Revert" buttons.</p>
         </div>
         <div>
-          <p class="font-medium">How it works</p>
+          <p class="font-medium">Calculate points</p>
           <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
-            <li>Selected channel draws on top; others dim to 50%.</li>
-            <li>Only the selected channel shows key‑point markers and ordinal labels.</li>
-            <li>Click the chart to insert a point at the curve under the cursor X.</li>
-            <li>Type “X,Y” in the field and press Enter to move the selected point (0–100).</li>
-            <li>Use ◀ ▶ to change the selected point; use ↑ ↓ or nudgers to adjust.</li>
-            <li>Undo/Redo supports all edit actions.</li>
+            <li><strong>Max error %</strong>: Controls how closely the curve fits when generating points (lower = more points, tighter fit).</li>
+            <li><strong>Max points</strong>: Limits the maximum number of points generated (2-21).</li>
+            <li><strong>Recompute</strong>: Regenerates Smart curve points from the current curve using the Max error % and Max points settings.</li>
           </ul>
         </div>
         <div>
-          <p class="font-medium">First time use</p>
+          <p class="font-medium">Point editing</p>
           <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
-            <li>On first enable, Smart key points are prepared from the current curves to avoid “jumping” on first edits.</li>
-            <li>ACV sources seed from their anchors; disabled channels remain disabled.</li>
+            <li>Selected channel draws on top; others dim to 50%.</li>
+            <li>Only the selected channel shows key‑point markers and numbered labels.</li>
+            <li>Click the chart to insert a point at the curve under the cursor X.</li>
+            <li>Type "X,Y" in the field and press Enter to move the selected point (0–100).</li>
+            <li>Use ◀ ▶ to change the selected point; use △ ▽ ◁ ▷ or nudgers to adjust position.</li>
+            <li>Undo/Redo supports all edit actions.</li>
           </ul>
         </div>
       </div>
@@ -2454,7 +2512,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta v2.2.1';
+    const APP_VERSION = 'Beta v2.2.2';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2474,18 +2532,42 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v2.2.2': {
+        date: '2025-09-15',
+        title: 'UI refinements + Intent behavior improvements',
+        sections: {
+          CHANGED: [
+            'Edit Mode panel layout: Consolidated Calculate points controls onto single row with centered field labels and aligned Recompute button. Improved Point section spacing and reduced graph container margins for tighter UI layout.',
+            'Edit Mode help modal: Clarified data conversion to Smart curves, added Calculate points section explaining Max error %/Max points/Recompute functionality, and improved terminology throughout.',
+            'Global Correction & Intent help modal: Added correction process overview, warning section explaining when Intent takes effect, and link to Detailed Workflow. Modal title changed from "Correction vs. Intent" to "Global Correction & Intent". Reorganized content with card-based layout for improved readability and visual hierarchy.',
+            'Intent dropdown behavior: Now automatically disables when no linearization data is loaded (visual feedback with grayed appearance). Eliminates confusion about why Intent appears inactive with .quad files only.'
+          ],
+          FIXED: [
+            'Edit Mode revert button: Fixed issue where the revert button would appear to work but continue showing "Smart Curve" status when used in Edit Mode. The button now properly clears Smart curve data and displays the original loaded .quad status without automatic restoration interference.'
+          ]
+        },
+        aboutDialog: [
+          { label: 'UI Layout Refinements', desc: 'Improved Edit Mode panel layout, Point section spacing, and graph container margins for better space utilization.' },
+          { label: 'Enhanced Help Modals', desc: 'Clarified Edit Mode help with Smart curve explanation and reorganized Global Correction help with card-based layout.' },
+          { label: 'Intent Dropdown Feedback', desc: 'Intent dropdown now disables and grays out when no linearization data is loaded, eliminating user confusion.' },
+          { label: 'Edit Mode Revert Fix', desc: 'Fixed revert button issue that continued showing "Smart Curve" status after reverting in Edit Mode.' }
+        ]
+      },
       'v2.2.1': {
         date: '2025-09-14',
         title: 'ACV/LUT orientation parity + Undo pairing fixes',
         sections: {
+          ADDED: [
+            'Custom Intent: new Import Target (ACV/LUT) tab — load .acv/.cube as a target intent (not a correction), with endpoint anchoring, monotonic enforcement, and optional blend with current target.'
+          ],
           FIXED: [
             'ACV/LUT orientation centralized in parsers (flip + invert once); removed duplicate reverse+invert in loaders — Photoshop “lighten” now shows less ink (down hump).',
             'Undo pairing for load actions now uses the most recent matching “Before:” state — undoing multiple global loads steps back to the immediately previous correction.'
           ],
-          CHANGED: [],
-          ADDED: []
+          CHANGED: []
         },
         aboutDialog: [
+          { label: 'Import Target (ACV/LUT)', desc: 'New Custom Intent tab to load .acv/.cube as a target intent; includes anchor/monotonic options and blend with current.' },
           { label: 'Orientation Parity', desc: 'ACV and LUT imports apply flip+invert once in the parser; loaders no longer reapply.' },
           { label: 'Undo Pairing', desc: 'Undo of consecutive loads returns to the previous correction, not an empty state.' }
         ]
@@ -3678,7 +3760,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           if (parsed && parsed.ok && typeof parsed.targetFn === 'function') {
             const name = parsed.name || 'Custom (pasted)';
             try { saveCustomPrefs({ pasteText: t }); } catch {}
-            setContrastIntent('custom_points', { name, targetFn: parsed.targetFn }, 'import');
+            setContrastIntent('custom_points', { name, targetFn: parsed.targetFn }, 'paste');
             return { success: true, message: `Applied Custom (pasted) intent${name ? `: ${name}` : ''}` };
           }
           return { success: false, message: parsed?.error || 'Could not parse pasted data' };
@@ -5090,14 +5172,6 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           // Store the curve in the global loadedQuadData and mark as Smart source
           window.loadedQuadData.curves[channelName] = [...curve];
           window.loadedQuadData.sources[channelName] = 'smart';
-          console.log(`DEBUG: Stored Smart curve for ${channelName}:`, {
-            curveLength: curve.length,
-            firstFew: curve.slice(0, 5),
-            lastFew: curve.slice(-5),
-            maxValue: Math.max(...curve),
-            loadedQuadDataExists: !!window.loadedQuadData,
-            curvesExists: !!window.loadedQuadData?.curves
-          });
           
           // Keep any existing per-channel linearization metadata so the UI can still display the source filename.
           // Just ensure it is disabled to avoid double-processing while a Smart Curve is active.
@@ -8297,12 +8371,41 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       globalLinearizationDetails: document.getElementById('globalLinearizationDetails'),
       // Contrast Intent UI
       contrastIntentSelect: document.getElementById('contrastIntentSelect'),
+      intentHelpBtn: document.getElementById('intentHelpBtn'),
+      intentHelpPopup: document.getElementById('intentHelpPopup'),
+      closeIntentHelpBtn: document.getElementById('closeIntentHelpBtn'),
       intentModal: document.getElementById('intentModal'),
       intentContent: document.getElementById('intentContent'),
       closeIntentModal: document.getElementById('closeIntentModal'),
       cancelIntentBtn: document.getElementById('cancelIntentBtn'),
       applyIntentBtn: document.getElementById('applyIntentBtn'),
       resetIntentBtn: document.getElementById('resetIntentBtn'),
+      intentTabPresets: document.getElementById('intentTab-presets'),
+      intentTabCustom: document.getElementById('intentTab-custom'),
+      intentTabPaste: document.getElementById('intentTab-paste'),
+      intentTabImport: document.getElementById('intentTab-import'),
+      intentTabs: document.querySelectorAll('[data-intent-tab]'),
+      intentPresetSelect: document.getElementById('intentPresetSelect'),
+      intentGamma: document.getElementById('intentGamma'),
+      intentGammaVal: document.getElementById('intentGammaVal'),
+      intentGammaRow: document.getElementById('intentGammaRow'),
+      intentFilmicRow: document.getElementById('intentFilmicRow'),
+      intentFilmicGain: document.getElementById('intentFilmicGain'),
+      intentFilmicGainVal: document.getElementById('intentFilmicGainVal'),
+      intentShoulder: document.getElementById('intentShoulder'),
+      intentShoulderVal: document.getElementById('intentShoulderVal'),
+      customGamma: document.getElementById('customGamma'),
+      customGammaVal: document.getElementById('customGammaVal'),
+      customGain: document.getElementById('customGain'),
+      customGainVal: document.getElementById('customGainVal'),
+      customShoulder: document.getElementById('customShoulder'),
+      customShoulderVal: document.getElementById('customShoulderVal'),
+      intentPasteArea: document.getElementById('intentPasteArea'),
+      intentPasteValidation: document.getElementById('intentPasteValidation'),
+      intentImportBtn: document.getElementById('intentImportBtn'),
+      intentImportFile: document.getElementById('intentImportFile'),
+      intentImportInfo: document.getElementById('intentImportInfo'),
+      
       intentPresetSelect: document.getElementById('intentPresetSelect'),
       intentGamma: document.getElementById('intentGamma'),
       intentGammaVal: document.getElementById('intentGammaVal'),
@@ -8387,7 +8490,15 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         const ch = tr && tr.getAttribute && tr.getAttribute('data-channel');
         if (!ch) return;
         const btn = tr.querySelector('.per-channel-revert');
-        if (btn) btn.disabled = !perChannelLinearization[ch];
+        if (!btn) return;
+        const hasMeas = !!perChannelLinearization[ch];
+        const hasSmart = (typeof isSmartCurve === 'function') ? isSmartCurve(ch) : false;
+        btn.disabled = !(hasMeas || hasSmart);
+        if (!btn.disabled) {
+          btn.title = hasMeas ? `Revert ${ch} to measurement source` : `Clear Smart (restore loaded .quad)`;
+        }
+        // Reserve space: hide visually but keep layout when disabled
+        btn.classList.toggle('invisible', btn.disabled);
       });
     } catch {}
   }
@@ -8443,6 +8554,18 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       return (t)=> clamp01(interp(clamp01(t)));
     }
 
+    // Build a target intent function from uniformly spaced samples (0..1 domain)
+    function buildTargetFnFromSamples(samples){
+      try {
+        const n = Array.isArray(samples) ? samples.length : 0;
+        if (n < 2) return (t)=>clamp01(t);
+        const xs = new Array(n);
+        for (let i=0;i<n;i++) xs[i] = i/(n-1);
+        const pchip = createPCHIPSpline(xs, samples.map(v=>clamp01(Number(v)||0)));
+        return (t)=> clamp01(pchip(clamp01(t)));
+      } catch { return (t)=>clamp01(t); }
+    }
+
     function getTargetRelAt(t){
       const id = (contrastIntent && contrastIntent.id) || 'linear';
       if (id === 'linear') return clamp01(t);
@@ -8458,7 +8581,6 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
 
     function persistContrastIntent(){ try { localStorage.setItem('contrastIntentV1', JSON.stringify({ id: contrastIntent.id, name: contrastIntent.name, source: contrastIntent.source||'preset', params: contrastIntent.params||{}, hasPoints: !!contrastIntent.targetFn })); } catch {} }
     function setContrastIntent(newId, params, source){
-      try { CurveHistory.captureState(`Before: Change Contrast Intent`); } catch {}
       const id = newId || 'linear'; const p = params || {}; let name = 'Linear'; let targetFn = null;
       if (id === 'linear') name = 'Linear';
       else if (id === 'soft') { name = 'Soft'; }
@@ -8468,9 +8590,26 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       else if (id === 'custom_points') { name = p?.name || 'Custom (points)'; targetFn = p?.targetFn || null; }
       else if (id === 'custom_gamma') { name = `Custom Gamma`; }
       else if (id === 'custom_filmic') { name = `Custom Filmic`; }
+      const prev = contrastIntent ? { id: contrastIntent.id, name: contrastIntent.name, source: contrastIntent.source, params: contrastIntent.params, targetFn: contrastIntent.targetFn } : null;
       contrastIntent = { id, name, source: source || (id.startsWith('custom')?'custom':'preset'), params: p, targetFn };
       // Mark that a custom intent exists so the main dropdown can show "Custom"
       try { if (String(id).startsWith('custom')) localStorage.setItem('hasCustomIntentV1', '1'); } catch {}
+      // Persist "last applied custom" kind so 'Custom (saved)' restores the most recent from any tab
+      try {
+        if (String(id).startsWith('custom')) {
+          localStorage.setItem('lastCustomTimestampV1', String(Date.now()));
+          if (id === 'custom_points') {
+            // Distinguish paste vs import based on provided source hint
+            const src = (source||'').toLowerCase();
+            localStorage.setItem('lastCustomKindV1', 'points');
+            localStorage.setItem('lastCustomPointsSourceV1', (src === 'import') ? 'import' : 'paste');
+          } else if (id === 'custom_gamma') {
+            localStorage.setItem('lastCustomKindV1', 'gamma');
+          } else if (id === 'custom_filmic') {
+            localStorage.setItem('lastCustomKindV1', 'filmic');
+          }
+        }
+      } catch {}
       if (elements.contrastIntentSelect) {
         const idStr = String(id);
         const opts = Array.from(elements.contrastIntentSelect.options).map(o=>o.value);
@@ -8481,7 +8620,10 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       updateIntentDetailLabel();
       recomputeLinearizationForCurrentIntent();
       try { if (typeof updateCustomOptionVisibility === 'function') updateCustomOptionVisibility(); } catch {}
-      try { CurveHistory.captureState(`After: Change Contrast Intent → ${contrastIntent.name}`); } catch {}
+      try {
+        CurveHistory.recordUIAction('intent', prev, { id, name, source: contrastIntent.source, params: p, targetFn }, `Change Contrast Intent → ${name}`);
+      } catch {}
+      try { updateInkChart(); } catch {}
     }
     function updateIntentDetailLabel(){
       try {
@@ -9519,9 +9661,26 @@ DOMAIN_MAX 1.0 1.0 1.0
 
       const segmentsApplied = [];
 
+      // Helper: determine effective Smart status (ignore tag if curve matches original .quad)
+      function isSmartEffective(ch){
+        try {
+          const tag = window.loadedQuadData?.sources?.[ch];
+          let smart = (tag === 'smart' || tag === 'ai');
+          if (smart) {
+            const curv = window.loadedQuadData?.curves?.[ch];
+            const orig = window.loadedQuadData?.originalCurves?.[ch];
+            if (Array.isArray(curv) && Array.isArray(orig) && curv.length === orig.length) {
+              const same = curv.every((v,i)=>v===orig[i]);
+              if (same) smart = false;
+            }
+          }
+          return smart;
+        } catch { return false; }
+      }
+
       // Consolidated display: if a Smart Curve is active and there is a loaded per‑channel source that is disabled,
       // show a single line with the source filename and the current Smart key‑point count.
-      const hasSmartCurve = !!(window.loadedQuadData && window.loadedQuadData.curves && window.loadedQuadData.curves[channelName] && isSmartCurve(channelName));
+      const hasSmartCurve = !!(window.loadedQuadData && window.loadedQuadData.curves && window.loadedQuadData.curves[channelName] && isSmartEffective(channelName));
       const per = perChannelLinearization[channelName];
       const perIsDisabled = !!(per && !perChannelEnabled[channelName]);
       if (hasSmartCurve && per && perIsDisabled) {
@@ -9538,7 +9697,7 @@ DOMAIN_MAX 1.0 1.0 1.0
 
       // Base curve segment (Smart vs loaded .quad)
       if (window.loadedQuadData && window.loadedQuadData.curves && window.loadedQuadData.curves[channelName]) {
-        const isSmart = isSmartCurve(channelName);
+        const isSmart = isSmartEffective(channelName);
         if (isSmart) {
           const kp = ControlPoints.get(channelName).points;
           const kpLabel = Array.isArray(kp) ? ` (${kp.length} key points)` : '';
@@ -10219,20 +10378,22 @@ DOMAIN_MAX 1.0 1.0 1.0
         });
         
         
-        // Draw a faded linear reference line (always for Smart/edited curves; also for active linearization)
+        // Draw a faded target reference line (matches current Intent)
         const isAICurve = isSmartCurve(channelName);
-        const showLinearRef = hasLinearization || isAICurve;
-        if (showLinearRef) {
-          // Generate linear values without linearization for comparison
-          // Use a pure linear ramp from 0→End to avoid Smart/per-channel/global influences
-          const linearValues = (() => {
+        const showRef = hasLinearization || isAICurve;
+        if (showRef) {
+          // Build intent-based reference: y = Intent(t) scaled to current End (ink output)
+          const refValues = (() => {
             const Nvals = 256;
             const arr = new Array(Nvals);
-            for (let i = 0; i < Nvals; i++) arr[i] = Math.round((i / (Nvals - 1)) * endVal);
+            for (let i = 0; i < Nvals; i++) {
+              const t = i / (Nvals - 1);
+              const yRel = clamp01(getTargetRelAt(t)); // 0..1
+              arr[i] = Math.round(yRel * endVal);
+            }
             return arr;
           })();
-          
-          // Draw faded linear reference line
+          // Draw faded reference line (dotted)
           ctx.strokeStyle = inkColor;
           // Dim further when Edit Mode is on and this is not the selected channel
           const isEdit = isEditModeEnabled();
@@ -10242,9 +10403,9 @@ DOMAIN_MAX 1.0 1.0 1.0
           ctx.setLineDash([2, 2]); // Dotted line
           ctx.beginPath();
           
-          for (let i = 0; i < linearValues.length; i++) {
-            const x = leftPadding + (i / (linearValues.length - 1)) * chartWidth;
-            const valuePercent = (linearValues[i] / maxValue) * 100;
+          for (let i = 0; i < refValues.length; i++) {
+            const x = leftPadding + (i / (refValues.length - 1)) * chartWidth;
+            const valuePercent = (refValues[i] / maxValue) * 100;
             const y = height - padding - (valuePercent / 100) * chartHeight;
             
             if (i === 0) {
@@ -11024,7 +11185,29 @@ DOMAIN_MAX 1.0 1.0 1.0
       return hasGlobal || hasAnyPerEnabled;
       // Note: Loaded .quad data alone doesn't need interpolation since it already has 256 points
     }
-    
+
+    // Update Intent dropdown based on linearization availability
+    function updateIntentDropdownState() {
+      if (!elements.contrastIntentSelect) return;
+
+      const hasLinearization = hasAnyLinearization();
+      elements.contrastIntentSelect.disabled = !hasLinearization;
+
+      // Find the Intent label
+      const intentLabel = document.querySelector('label[for="contrastIntentSelect"]');
+
+      // Update visual styling to indicate disabled state
+      if (hasLinearization) {
+        elements.contrastIntentSelect.style.opacity = '1';
+        elements.contrastIntentSelect.style.cursor = 'pointer';
+        if (intentLabel) intentLabel.style.opacity = '1';
+      } else {
+        elements.contrastIntentSelect.style.opacity = '0.5';
+        elements.contrastIntentSelect.style.cursor = 'not-allowed';
+        if (intentLabel) intentLabel.style.opacity = '0.5';
+      }
+    }
+
     // Update interpolation description based on selected method
     function updateInterpolationDescription() {
       const method = elements.curveSmoothingMethod.value;
@@ -11043,6 +11226,9 @@ DOMAIN_MAX 1.0 1.0 1.0
       // Enable smoothing whenever a linearization source exists; do not gate on Edit Mode
       if (elements.smoothingSlider) elements.smoothingSlider.disabled = true;
       if (elements.simplificationMethod) elements.simplificationMethod.disabled = !hasLinearization;
+
+      // Update Intent dropdown state
+      updateIntentDropdownState();
       
       // Update visual styling for disabled state
       if (!hasLinearization) {
@@ -11379,8 +11565,22 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (action.type === 'ui') {
           try {
             if (action.uiType === 'editMode') {
-              // Restore previous edit mode state without recording
               if (typeof setEditMode === 'function') setEditMode(!!action.oldValue, { recordHistory: false });
+            } else if (action.uiType === 'intent') {
+              const snap = action.oldValue || null;
+              if (snap && snap.id) {
+                if (snap.id === 'custom_points' && typeof snap.targetFn === 'function') {
+                  setContrastIntent('custom_points', { name: snap.name || 'Custom (points)', targetFn: snap.targetFn }, snap.source || 'custom');
+                } else if (snap.id === 'custom_gamma') {
+                  setContrastIntent('custom_gamma', { gamma: snap.params?.gamma ?? 1.0 }, 'custom');
+                } else if (snap.id === 'custom_filmic') {
+                  const gain = snap.params?.gain ?? snap.params?.filmicGain ?? 0.55;
+                  const shoulder = snap.params?.shoulder ?? 0.35;
+                  setContrastIntent('custom_filmic', { gain, shoulder }, 'custom');
+                } else {
+                  setContrastIntent(snap.id, snap.params || {}, (snap.id==='linear'||snap.id==='soft'||snap.id==='hard'||snap.id==='filmic')?'preset':'custom');
+                }
+              }
             }
           } finally {
             this.isRestoring = false;
@@ -11892,8 +12092,22 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (action.type === 'ui') {
           try {
             if (action.uiType === 'editMode') {
-              // Re-apply new edit mode state without recording
               if (typeof setEditMode === 'function') setEditMode(!!action.newValue, { recordHistory: false });
+            } else if (action.uiType === 'intent') {
+              const snap = action.newValue || null;
+              if (snap && snap.id) {
+                if (snap.id === 'custom_points' && typeof snap.targetFn === 'function') {
+                  setContrastIntent('custom_points', { name: snap.name || 'Custom (points)', targetFn: snap.targetFn }, snap.source || 'custom');
+                } else if (snap.id === 'custom_gamma') {
+                  setContrastIntent('custom_gamma', { gamma: snap.params?.gamma ?? 1.0 }, 'custom');
+                } else if (snap.id === 'custom_filmic') {
+                  const gain = snap.params?.gain ?? snap.params?.filmicGain ?? 0.55;
+                  const shoulder = snap.params?.shoulder ?? 0.35;
+                  setContrastIntent('custom_filmic', { gain, shoulder }, 'custom');
+                } else {
+                  setContrastIntent(snap.id, snap.params || {}, (snap.id==='linear'||snap.id==='soft'||snap.id==='hard'||snap.id==='filmic')?'preset':'custom');
+                }
+              }
             }
           } finally {
             this.isRestoring = false;
@@ -12519,6 +12733,11 @@ DOMAIN_MAX 1.0 1.0 1.0
     // Ensure AI key points exist for a channel; if not, create them from source data or current curve
     function ensureEditableKeyPointsForChannel(channelName, interpolationType = 'smooth') {
       try {
+        // Don't restore key points during revert operations
+        if (window._REVERT_IN_PROGRESS) {
+          return { success: false, reason: 'Revert in progress' };
+        }
+
         const existing = ControlPoints.get(channelName).points;
         if (existing && existing.length >= 2) return { success: true };
 
@@ -13891,28 +14110,66 @@ DOMAIN_MAX 1.0 1.0 1.0
           const btn = document.createElement('button');
           btn.className = 'per-channel-revert px-2 py-1 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed';
           btn.textContent = 'Revert';
-          btn.title = `Revert ${channelName} to measurement source`;
+          // Title is updated dynamically based on measurement vs smart in refreshDisplay/updateRevertButtonsState
+          btn.title = `Revert / Clear Smart`;
           btn.addEventListener('click', () => {
             const savedSel = (isEditModeEnabled() && typeof EDIT !== 'undefined' && EDIT && EDIT.selectedChannel) ? EDIT.selectedChannel : null;
+
+            // Set flag to prevent ensureEditableKeyPointsForChannel from restoring data during revert
+            window._REVERT_IN_PROGRESS = true;
+
             try { CurveHistory.captureState(`Before: Revert ${channelName} to Measurement`); } catch {}
             // Clear Smart curve and points for this channel
             try {
-              if (window.loadedQuadData?.curves?.[channelName]) delete window.loadedQuadData.curves[channelName];
+              const hasSmart = (typeof isSmartCurve === 'function') ? isSmartCurve(channelName) : false;
+
+              // Always clear Smart metadata when reverting, regardless of hasSmart check
+              // This ensures we clear any lingering key points that might not be detected by isSmartCurve
               if (window.loadedQuadData?.keyPoints?.[channelName]) delete window.loadedQuadData.keyPoints[channelName];
               if (window.loadedQuadData?.keyPointsMeta?.[channelName]) delete window.loadedQuadData.keyPointsMeta[channelName];
               if (window.loadedQuadData?.sources?.[channelName]) delete window.loadedQuadData.sources[channelName];
+
+              if (hasSmart) {
+                // Attempt to restore the prior curve (likely the loaded .quad) from history
+                let restored = false;
+                try {
+                  const orig = window.loadedQuadData?.originalCurves?.[channelName];
+                  if (Array.isArray(orig) && orig.length === 256) {
+                    if (!window.loadedQuadData) window.loadedQuadData = {};
+                    if (!window.loadedQuadData.curves) window.loadedQuadData.curves = {};
+                    window.loadedQuadData.curves[channelName] = [...orig];
+                    restored = true;
+                  }
+                } catch {}
+                // If we couldn't restore from history and a curve exists, leave it as-is; otherwise fall back to no curve
+                if (!restored && window.loadedQuadData?.curves?.[channelName]) {
+                  // keep existing curve
+                }
+              }
             } catch {}
-            // Re-enable per-channel measurement if available
-            if (perChannelLinearization[channelName]) {
-              perChannelEnabled[channelName] = true;
-              if (perChannelToggle) { perChannelToggle.disabled = false; perChannelToggle.checked = true; }
-              try { perChannelLinearization[channelName].edited = false; } catch {}
-              refreshPerChannelLinearizationDisplay(channelName);
-            }
+            const hasMeasNow = !!perChannelLinearization[channelName];
+            // Re-enable per-channel measurement if available; otherwise clear Smart UI state
+              if (hasMeasNow) {
+                perChannelEnabled[channelName] = true;
+                if (perChannelToggle) { perChannelToggle.disabled = false; perChannelToggle.checked = true; }
+                try { perChannelLinearization[channelName].edited = false; } catch {}
+                refreshPerChannelLinearizationDisplay(channelName);
+              } else {
+                if (perChannelToggle) { perChannelToggle.disabled = false; perChannelToggle.checked = false; }
+              }
+            // Refresh row UI to drop any Smart-specific visuals
+            try { if (tr.refreshDisplayFn) tr.refreshDisplayFn(); } catch {}
             updateInterpolationControls();
-            updateProcessingDetail(channelName);
-            debouncedPreviewUpdate();
-            showStatus(`Reverted ${channelName} to measurement`);
+            // Force immediate update of processing detail to reflect cleared Smart curve status
+            setTimeout(() => {
+              updateProcessingDetailForce(channelName);
+              debouncedPreviewUpdate();
+            }, 0);
+            try {
+              if (hasMeasNow) showStatus(`Reverted ${channelName} to measurement`);
+              else showStatus(`Cleared Smart on ${channelName} (restored loaded .quad)`);
+            } catch {}
+            try { updateRevertButtonsState(); } catch {}
             // Restore prior selection if still enabled
             try {
               if (savedSel && isEditModeEnabled()) {
@@ -13926,9 +14183,19 @@ DOMAIN_MAX 1.0 1.0 1.0
                 }
               }
             } catch {}
+
+            // Clear the revert flag
+            window._REVERT_IN_PROGRESS = false;
           });
           // Initialize disabled state based on whether a measurement is loaded for this channel
-          try { btn.disabled = !perChannelLinearization[channelName]; } catch {}
+          try {
+            const hasMeas = !!perChannelLinearization[channelName];
+            const hasSmart = (typeof isSmartCurve === 'function') ? isSmartCurve(channelName) : false;
+            btn.disabled = !(hasMeas || hasSmart);
+            if (!btn.disabled) btn.title = hasMeas ? `Revert ${channelName} to measurement source` : `Clear Smart (restore loaded .quad)`;
+            // Reserve space: hide visually but keep layout when disabled
+            btn.classList.toggle('invisible', btn.disabled);
+          } catch {}
           btnGroup.appendChild(btn);
         }
       } catch {}
@@ -13944,6 +14211,18 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Show disabled label if channel is at 0 (either user-disabled or set to 0%)
         disabledTag.classList.toggle('invisible', !isAtZero);
         
+        // Update per‑channel Revert button enable/title (measurement or smart present)
+        try {
+          const btn = tr.querySelector('.per-channel-revert');
+          if (btn) {
+            const hasMeas = !!perChannelLinearization[channelName];
+            const hasSmart = (typeof isSmartCurve === 'function') ? isSmartCurve(channelName) : false;
+            btn.disabled = !(hasMeas || hasSmart);
+            if (!btn.disabled) btn.title = hasMeas ? `Revert ${channelName} to measurement source` : `Clear Smart (restore loaded .quad)`;
+            btn.classList.toggle('invisible', btn.disabled);
+          }
+        } catch {}
+
         // Handle ultra-compact layout for disabled channels
         if (isAtZero) {
           // Hide from main table and show in compact view
@@ -14655,30 +14934,50 @@ DOMAIN_MAX 1.0 1.0 1.0
     const revertGlobalBtn = document.getElementById('revertGlobalToMeasurementBtn');
     if (revertGlobalBtn){
       revertGlobalBtn.addEventListener('click', () => {
-        const savedSel = (isEditModeEnabled() && typeof EDIT !== 'undefined' && EDIT && EDIT.selectedChannel) ? EDIT.selectedChannel : null;
+        // Guard: only perform revert when a global measurement dataset is actually loaded
         try {
-          CurveHistory.captureState('Before: Revert Global to Measurement');
+          const fmt = String(linearizationData?.format || '').toUpperCase();
+          const isMeasurement = !!linearizationData && (fmt.includes('LAB') || fmt.includes('MANUAL')) && Array.isArray(linearizationData.originalData);
+          if (!isMeasurement) return;
         } catch {}
-        const chs = (getCurrentPrinter()?.channels || []).slice();
-        chs.forEach((ch) => {
+          const savedSel = (isEditModeEnabled() && typeof EDIT !== 'undefined' && EDIT && EDIT.selectedChannel) ? EDIT.selectedChannel : null;
           try {
-            if (window.loadedQuadData?.curves?.[ch]) delete window.loadedQuadData.curves[ch];
-            if (window.loadedQuadData?.keyPoints?.[ch]) delete window.loadedQuadData.keyPoints[ch];
-            if (window.loadedQuadData?.keyPointsMeta?.[ch]) delete window.loadedQuadData.keyPointsMeta[ch];
-            if (window.loadedQuadData?.sources?.[ch]) delete window.loadedQuadData.sources[ch];
+            CurveHistory.captureState('Before: Revert Global to Measurement');
           } catch {}
-        });
-        if (elements.globalLinearizationToggle) {
-          elements.globalLinearizationToggle.disabled = false;
-          elements.globalLinearizationToggle.checked = true;
-        }
-        // Clear edited flag on global measurement (we are reverting to the loaded source)
-        if (linearizationData) { try { linearizationData.edited = false; } catch {} }
-        linearizationApplied = !!linearizationData;
-        updateInterpolationControls();
-        // Refresh filename/details to drop the Edited prefix
-        try { refreshGlobalLinearizationDisplay(); } catch {}
-        updatePreview();
+          const chs = (getCurrentPrinter()?.channels || []).slice();
+          chs.forEach((ch) => {
+            try {
+              // Only clear Smart-derived curves/points; preserve file-loaded .quad curves
+              if (isSmartCurve && isSmartCurve(ch)) {
+                // Restore original .quad curve if available
+                try {
+                  const orig = window.loadedQuadData?.originalCurves?.[ch];
+                  if (Array.isArray(orig) && orig.length === 256) {
+                    if (!window.loadedQuadData) window.loadedQuadData = {};
+                    if (!window.loadedQuadData.curves) window.loadedQuadData.curves = {};
+                    window.loadedQuadData.curves[ch] = [...orig];
+                  } else {
+                    // If no original is available, remove the Smart curve (will fall back to linear)
+                    if (window.loadedQuadData?.curves?.[ch]) delete window.loadedQuadData.curves[ch];
+                  }
+                } catch {}
+                if (window.loadedQuadData?.keyPoints?.[ch]) delete window.loadedQuadData.keyPoints[ch];
+                if (window.loadedQuadData?.keyPointsMeta?.[ch]) delete window.loadedQuadData.keyPointsMeta[ch];
+                if (window.loadedQuadData?.sources?.[ch]) delete window.loadedQuadData.sources[ch];
+              }
+            } catch {}
+          });
+          if (elements.globalLinearizationToggle) {
+            elements.globalLinearizationToggle.disabled = false;
+            elements.globalLinearizationToggle.checked = true;
+          }
+          // Clear edited flag on global measurement (we are reverting to the loaded source)
+          if (linearizationData) { try { linearizationData.edited = false; } catch {} }
+          linearizationApplied = !!linearizationData;
+          updateInterpolationControls();
+          // Refresh filename/details to drop the Edited prefix
+          try { refreshGlobalLinearizationDisplay(); } catch {}
+          updatePreview();
         try {
           const chans = getCurrentPrinter().channels;
           chans.forEach((name)=> updateProcessingDetail(name));
@@ -15508,12 +15807,20 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         const parsed = parseQuadFile(content);
         
-        // Store the complete curve data for use in generation
+        // Store the complete curve data for use in generation and keep an immutable copy
         window.loadedQuadData = {
           filename: file.name,
           curves: parsed.curves,
           channels: parsed.channels
         };
+        try {
+          // Preserve original .quad curves for future restore (e.g., clearing Smart)
+          window.loadedQuadData.originalCurves = {};
+          parsed.channels.forEach((ch) => {
+            const arr = parsed.curves?.[ch];
+            if (Array.isArray(arr)) window.loadedQuadData.originalCurves[ch] = arr.slice();
+          });
+        } catch {}
         // Normalize any legacy source tags immediately after load
         normalizeSmartSourcesInLoadedData();
         
@@ -16080,6 +16387,13 @@ DOMAIN_MAX 1.0 1.0 1.0
             setActiveIntentTab('custom');
             // Validate any prefilled paste data on open
             try { if (typeof scheduleAutoParseForPasteArea === 'function') scheduleAutoParseForPasteArea(); } catch {}
+            // Reset the dropdown away from 'enter_custom' so selecting it again will fire 'change'
+            try {
+              const idStr = String(contrastIntent?.id || 'linear');
+              const desired = idStr.startsWith('custom') ? 'custom' : idStr;
+              const opts = Array.from(elements.contrastIntentSelect.options).map(o=>o.value);
+              elements.contrastIntentSelect.value = opts.includes(desired) ? desired : (opts.includes('linear') ? 'linear' : opts[0]);
+            } catch {}
           } catch {}
         } else {
           if (v === 'custom') {
@@ -16090,9 +16404,18 @@ DOMAIN_MAX 1.0 1.0 1.0
               setContrastIntent(contrastIntent.id, contrastIntent.params || {}, 'custom');
             } else {
               const prefs = loadCustomPrefs ? loadCustomPrefs() : { gamma:1.00, gain:0.55, shoulder:0.35, pasteText:'' };
-              // Priority: pasted -> filmic -> gamma
+              // Priority: imported samples → pasted → filmic → gamma
               let applied = false;
-              if (prefs.pasteText && parseIntentPaste) {
+              try {
+                const saved = JSON.parse(localStorage.getItem('customIntentSamplesV1')||'null');
+                if (saved && Array.isArray(saved.samples) && saved.samples.length >= 2) {
+                  const fn = buildTargetFnFromSamples(saved.samples);
+                  const nm = saved.filename ? `Custom (imported: ${saved.filename})` : 'Custom (imported)';
+                  setContrastIntent('custom_points', { name: nm, targetFn: fn }, 'custom');
+                  applied = true;
+                }
+              } catch {}
+              if (!applied && prefs.pasteText && parseIntentPaste) {
                 try {
                   const parsed = parseIntentPaste(String(prefs.pasteText));
                   if (parsed && parsed.ok && typeof parsed.targetFn === 'function') {
@@ -16122,7 +16445,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       });
     }
     function setActiveIntentTab(name){
-      const tabs=['presets','custom','paste'];
+      const tabs=['presets','custom','paste','import'];
       tabs.forEach(t=>{
         const isActive=(t===name);
         const btn=Array.from(elements.intentTabs||[]).find(b=>b.getAttribute('data-intent-tab')===t);
@@ -16134,6 +16457,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       if (elements.applyIntentBtn) {
         if (name === 'custom') elements.applyIntentBtn.textContent = 'Apply Sliders';
         else if (name === 'paste') elements.applyIntentBtn.textContent = 'Apply Pasted';
+        else if (name === 'import') elements.applyIntentBtn.textContent = 'Apply Imported';
         else elements.applyIntentBtn.textContent = 'Apply Intent';
       }
       // If switching to Paste tab, auto-validate current text
@@ -16177,7 +16501,7 @@ DOMAIN_MAX 1.0 1.0 1.0
     // Fixed height for intent modal content set via CSS class h-[512px]
     if (elements.resetIntentBtn) elements.resetIntentBtn.addEventListener('click', ()=>{ setContrastIntent('linear', {}, 'preset'); closeIntentModal(); });
     if (elements.applyIntentBtn) elements.applyIntentBtn.addEventListener('click', ()=>{
-      const active = ['presets','custom','paste'].find(t => !document.getElementById(`intentTab-${t}`).classList.contains('hidden')) || 'presets';
+      const active = ['presets','custom','paste','import'].find(t => !document.getElementById(`intentTab-${t}`).classList.contains('hidden')) || 'presets';
       if (active === 'presets'){
         const v = elements.intentPresetSelect.value;
         if (v==='soft') { const g=Number(elements.intentGamma.value); saveCustomPrefs({gamma:g}); setContrastIntent('soft', { gamma: g }, 'preset'); }
@@ -16191,10 +16515,53 @@ DOMAIN_MAX 1.0 1.0 1.0
         closeIntentModal();
       } else if (active === 'paste'){
         const text = String(elements.intentPasteArea.value||'').trim(); const parsed = parseIntentPaste(text);
-        if (parsed && parsed.ok){ const targetFn = parsed.targetFn; const name = parsed.name || 'Custom (pasted)'; saveCustomPrefs({ pasteText: text }); setContrastIntent('custom_points', { name, targetFn }, 'import'); elements.intentPasteValidation.classList.add('hidden'); elements.intentPasteValidation.textContent = ''; closeIntentModal(); }
+        if (parsed && parsed.ok){ const targetFn = parsed.targetFn; const name = parsed.name || 'Custom (pasted)'; saveCustomPrefs({ pasteText: text }); setContrastIntent('custom_points', { name, targetFn }, 'paste'); elements.intentPasteValidation.classList.add('hidden'); elements.intentPasteValidation.textContent = ''; closeIntentModal(); }
         else { elements.intentPasteValidation.textContent = parsed?.error || 'Could not parse data. Expected CSV percent_input,density_rel or JSON with points/generator.'; elements.intentPasteValidation.classList.remove('hidden'); }
+      } else if (active === 'import'){
+        if (!intentImportState.samples || intentImportState.samples.length < 2) { showStatus('Import a valid ACV/LUT first'); return; }
+        // Helpers (scoped here to avoid hoist issues)
+        const _normalizeEndpoints=(samples)=>{ const y0=samples[0], y1=samples[samples.length-1]; const d=Math.max(1e-6,y1-y0); const out=samples.map(v=>clamp01((v-y0)/d)); out[0]=0; out[out.length-1]=1; return out; };
+        const _enforceMonotonicIncreasing=(arr)=>{ const out=arr.slice(); for(let i=1;i<out.length;i++){ if(out[i]<out[i-1]) out[i]=out[i-1]; } out[0]=Math.max(0,out[0]); out[out.length-1]=Math.min(1,out[out.length-1]); return out; };
+        // Build imported target samples (always anchor endpoints and enforce monotonic; no blending UI)
+        let ys = _normalizeEndpoints(intentImportState.samples);
+        ys = _enforceMonotonicIncreasing(ys);
+        const targetFn = buildTargetFnFromSamples(ys);
+        const baseName = intentImportState.filename ? `Custom (imported: ${intentImportState.filename})` : 'Custom (imported)';
+        setContrastIntent('custom_points', { name: baseName, targetFn }, 'import');
+        // Persist imported samples so Custom (saved) can restore this target later
+        try { localStorage.setItem('customIntentSamplesV1', JSON.stringify({ samples: ys, filename: intentImportState.filename||'', kind: intentImportState.kind||'' })); localStorage.setItem('hasCustomIntentV1','1'); } catch {}
+        closeIntentModal();
       }
     });
+
+    // Import tab UI wiring
+    if (elements.intentImportBtn && elements.intentImportFile){
+      elements.intentImportBtn.addEventListener('click', ()=> elements.intentImportFile.click());
+      elements.intentImportFile.addEventListener('change', async (e)=>{
+        const file = e.target.files[0]; if (!file) return;
+        try{
+          const ext = file.name.toLowerCase().split('.').pop();
+          const input = (ext==='acv') ? await file.arrayBuffer() : await file.text();
+          const parsed = await parseLinearizationFile(input, file.name);
+          intentImportState = {
+            samples: (parsed && Array.isArray(parsed.samples)) ? parsed.samples.slice() : null,
+            filename: file.name,
+            kind: parsed?.is3DLUT ? 'LUT3D (neutral axis)' : (String(parsed?.format||'').toUpperCase()==='ACV' ? 'ACV' : 'LUT1D')
+          };
+          if (elements.intentImportInfo) {
+            const n = intentImportState.samples?.length || 0;
+            const y0 = n? intentImportState.samples[0].toFixed(3):'-';
+            const y1 = n? intentImportState.samples[n-1].toFixed(3):'-';
+            elements.intentImportInfo.textContent = `Parsed: ${intentImportState.kind} (${n} samples) from ${intentImportState.filename}. Endpoints: [${y0} → ${y1}]. Endpoints will be normalized and monotonic enforced.`;
+          }
+        } catch(err){
+          intentImportState = { samples:null, filename:'', kind:'' };
+          if (elements.intentImportInfo) elements.intentImportInfo.textContent = `Error: ${err.message}`;
+        }
+      });
+    }
+    // Removed: explicit "Load as correction instead" button from Import tab
+    // No blend/anchor/monotonic options; import path always anchors endpoints and enforces monotonic
     if (elements.intentParseBtn) elements.intentParseBtn.addEventListener('click', ()=>{ const parsed = parseIntentPaste(String(elements.intentPasteArea.value||'').trim()); if (parsed && parsed.ok) { elements.intentPasteValidation.textContent = 'Parsed OK. Click Apply Pasted to use it.'; elements.intentPasteValidation.classList.remove('hidden'); elements.intentPasteValidation.classList.remove('text-red-600'); elements.intentPasteValidation.classList.add('text-green-700'); } else { elements.intentPasteValidation.textContent = parsed?.error || 'Could not parse data.'; elements.intentPasteValidation.classList.remove('hidden'); elements.intentPasteValidation.classList.add('text-red-600'); elements.intentPasteValidation.classList.remove('text-green-700'); } });
 
     // Determine if a saved custom intent exists (applied previously, valid pasted data, or saved slider prefs)
@@ -16210,6 +16577,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (txt){ try { if (typeof parseIntentPaste === 'function'){ const parsed = parseIntentPaste(txt); if (parsed && parsed.ok) return true; } else { return true; } } catch {} }
         const g = Number(prefs.gamma||1.00), gain = Number(prefs.gain||0.55), shoulder = Number(prefs.shoulder||0.35);
         if (Math.abs(g-1.00)>1e-3 || Math.abs(gain-0.55)>1e-3 || Math.abs(shoulder-0.35)>1e-3) return true;
+        // Imported samples persisted
+        try { const saved = JSON.parse(localStorage.getItem('customIntentSamplesV1')||'null'); if (saved && Array.isArray(saved.samples) && saved.samples.length>=2) return true; } catch {}
       } catch {}
       return false;
     }
@@ -16282,6 +16651,8 @@ DOMAIN_MAX 1.0 1.0 1.0
 
     // Initialize main Intent dropdown: show Custom only when a saved custom intent exists
     try { updateCustomOptionVisibility(); } catch {}
+    // Initialize Intent dropdown state based on linearization data
+    try { updateIntentDropdownState(); } catch {}
     function parseIntentPaste(text){
       try {
         if (!text) return { ok:false, error: 'No data provided' };
@@ -16531,7 +16902,7 @@ DOMAIN_MAX 1.0 1.0 1.0
     function getHelpReadmeHTML(){
       return `
         <section class="prose prose-gray max-w-none p-6 bg-white rounded-2xl shadow">
-          <h2 id="overview">1. Overview</h2>
+          <h2 id="overview">Overview</h2>
           <p>
             <strong>quadGEN</strong> is a free, browser-based tool for generating and refining <code>.quad</code> files used with QuadToneRIP.  
             It supports LAB/LUT/ACV inputs, and an Edit Mode for precise, point-based curve edits.  
@@ -16585,6 +16956,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             <li>Recompute key points: simplify Smart Curves with tolerance/max-point controls.</li>
             <li>Lab Tech: AI assistant for Q&amp;A and automation.</li>
             <li>Contrast intent: presets or custom targets; shows Δ vs target; endpoints fixed (use ink limits to change).</li>
+            <li>Import ACV/LUT as target: in the Custom Intent modal, load <code>.acv</code>/<code>.cube</code> as a target intent (not a correction); includes endpoint anchoring, monotonic enforcement, and blend.</li>
           </ul>
 
           <hr />
@@ -16656,7 +17028,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           <p>A concise, alphabetized reference to key terms used in quadGEN, QuadToneRIP, and related workflows.</p>
           <dl>
             <dt>ACV (Photoshop Curves)</dt>
-            <dd>Binary curve format used by Adobe Photoshop (<code>.acv</code>). In quadGEN: can be loaded as a global correction or per-channel adapter; anchors can seed editable Smart key points.</dd>
+            <dd>Binary curve format used by Adobe Photoshop (<code>.acv</code>). In quadGEN: can be loaded as a global correction or per-channel adapter; anchors can seed editable Smart curve.</dd>
 
             <dt>Channel</dt>
             <dd>A printer ink channel (e.g., K, C, M, Y, LC, LM, LK, LLK, OR, GR, MK, V). Channels can be enabled/disabled and have independent End (ink limits).</dd>
@@ -16734,7 +17106,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             <dd>Buttons that return curves to the loaded measurement source for iteration. <strong>Per‑channel Revert</strong> clears Smart curves/points and re‑enables that channel’s measurement (enabled only when measurement data is loaded for that channel). <strong>Global Revert</strong> clears Smart curves/points across all channels and re‑enables the global measurement (enabled only when a global file is loaded and the global toggle is ON). Both actions are undoable.</dd>
 
             <dt>Recompute</dt>
-            <dd>Button in Edit Mode that regenerates Smart key points for the selected channel from the currently plotted curve using the configured <em>Max error %</em> and <em>Max points</em> settings—useful for simplifying or refreshing an editable set from a loaded <code>.quad</code>.</dd>
+            <dd>Button in Edit Mode that regenerates Smart curve points for the selected channel from the currently plotted curve using the configured <em>Max error %</em> and <em>Max points</em> settings—useful for simplifying or refreshing an editable set from a loaded <code>.quad</code>.</dd>
           </dl>
         </section>
       `;
@@ -16848,7 +17220,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             <li>Selected channel draws on top; others dim.</li>
             <li>Use:</li>
             <ul>
-              <li><strong>Recompute</strong>: regenerate Smart key points from the plotted curve using Max error % and Max points.</li>
+              <li><strong>Recompute</strong>: regenerate Smart curve points from the plotted curve using Max error % and Max points.</li>
               <li><strong>XY input</strong>: type <code>X,Y</code> (Y is absolute after End). Up/Down adjusts absolute Y; Left/Right adjusts X.</li>
               <li><strong>Insert/Delete</strong>: click to insert; delete non‑endpoints only.</li>
             </ul>
@@ -16933,6 +17305,102 @@ DOMAIN_MAX 1.0 1.0 1.0
     function populateHelp() {
       try { document.getElementById('helpAppVersion').textContent = APP_VERSION; } catch {}
       setHelpActiveTab('readme');
+    }
+
+    // Intent Help (Correction vs Intent)
+    function getIntentVsCorrectionHTML(){
+      return `
+        <div class="grid gap-4">
+          <!-- Process Overview Card -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <h3 class="font-semibold text-base mb-3 flex items-center">
+              📋 Making Corrections Overview
+            </h3>
+            <p class="text-sm mb-3">
+              The correction process involves: 1) Load a .quad file, 2) Test print and measure results, 3) Load measurement data to create corrections, 4) Export corrected .quad and repeat until linear.
+            </p>
+            <p class="text-xs">
+              For complete step-by-step guidance, see <button onclick="try{if(elements.intentHelpPopup){elements.intentHelpPopup.classList.add('hidden');}setHelpActiveTab('workflow');if(elements.helpPopup){elements.helpPopup.classList.remove('hidden');lockBodyScroll();}}catch{}" class="underline hover:text-gray-800">Detailed Workflow in the main Help</button>.
+            </p>
+          </div>
+
+          <!-- When Intent Works Card -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <h3 class="font-semibold text-base mb-3">⚠️ When Intent Takes Effect</h3>
+            <p class="text-sm mb-3">
+              <strong>Intent only affects linearization data</strong> (LAB measurements, not existing .quad curves). If you see no changes when adjusting Intent, you likely need to load measurement data first.
+            </p>
+            <ul class="text-sm space-y-2">
+              <li><strong>Intent works with:</strong> LAB .txt files, Manual L* entries</li>
+              <li><strong>Intent doesn't affect:</strong> Loaded .quad files, existing curves</li>
+              <li><strong>To modify existing curves:</strong> Load them as corrections via "Load Data File"</li>
+            </ul>
+          </div>
+
+          <!-- Main Content Card -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <h3 class="font-semibold text-base mb-3 flex items-center">
+              🎼 Understanding the Difference
+            </h3>
+            <p class="mb-4">
+              Choose a target tonal intent (the target you want to aim for if not the default Linear). This shapes how linearization data is applied but does not directly modify existing curves.
+              To apply ACV/LUT as a correction, use <span class="font-semibold">Global Corrections → Load Data File</span>.
+            </p>
+
+            <div class="space-y-4">
+              <div>
+                <h4 class="font-semibold mb-2">Correction = the tuning process.</h4>
+                <p class="text-sm">
+                  Before the orchestra plays, each instrument is tuned to a linear, evenly spaced scale of notes so that pitches are objectively accurate.
+                  This provides a neutral, consistent foundation, much like linearizing a printer in L*.
+                </p>
+              </div>
+
+              <div>
+                <h4 class="font-semibold mb-2">Intent = the interpretation chosen by the conductor.</h4>
+                <p class="text-sm mb-3">
+                  Once tuned, the orchestra can perform a written piece in different ways, much like choosing a <em>Linear</em>, <em>Filmic</em>, <em>Perceptual</em>, etc. intent.
+                </p>
+                <ul class="list-disc list-inside text-sm space-y-1 ml-4">
+                  <li><span class="italic font-medium">literalist</span> — a literal performance, playing the score exactly as notated, without taking any liberties.</li>
+                  <li><span class="italic font-medium">Rubato</span> — literally "stolen time"; the flexible stretching/compressing of tempo to heighten expression.</li>
+                  <li><span class="italic font-medium">Marcato</span> — accented, marked style; adds weight and emphasis.</li>
+                </ul>
+              </div>
+
+              <div class="bg-gray-50 rounded p-3">
+                <p class="text-sm italic">
+                  Changing the intent will adjust how the printed image appears, but it is still based on an underlying calibration that was <span class="italic">tuned</span> to match a linear target response first.
+                </p>
+              </div>
+
+              <div class="bg-gray-50 rounded p-3">
+                <p class="text-sm">
+                  Another way to think of the intent is as an image filter that tweaks how the end result looks. However before you can apply a filter, you need to be able to render the original image correctly on it's own.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    if (elements.intentHelpBtn && elements.intentHelpPopup && elements.closeIntentHelpBtn) {
+      elements.intentHelpBtn.addEventListener('click', () => {
+        const c = document.getElementById('intentHelpContent');
+        if (c) c.innerHTML = getIntentVsCorrectionHTML();
+        elements.intentHelpPopup.classList.remove('hidden');
+        lockBodyScroll();
+      });
+      elements.closeIntentHelpBtn.addEventListener('click', () => {
+        elements.intentHelpPopup.classList.add('hidden');
+        unlockBodyScrollIfNoHelpOpen();
+      });
+      elements.intentHelpPopup.addEventListener('click', (e) => {
+        if (e.target === elements.intentHelpPopup) {
+          elements.intentHelpPopup.classList.add('hidden');
+          unlockBodyScrollIfNoHelpOpen();
+        }
+      });
     }
 
     // Wire sample buttons in Global Correction Help popup
