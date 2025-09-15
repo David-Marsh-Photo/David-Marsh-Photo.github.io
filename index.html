@@ -1867,11 +1867,7 @@ ARCHITECTURAL NOTES:
             <div class="flex items-center gap-2 mt-2">
               <label for="contrastIntentSelect" class="text-xs text-gray-600 font-bold">Intent</label>
               <select id="contrastIntentSelect" class="standard-dropdown text-xs" style="width: 200px;">
-                <option value="linear" selected>Linear</option>
-                <option value="soft">Soft (γ≈0.85)</option>
-                <option value="hard">Hard (γ≈1.20)</option>
-                <option value="filmic">Filmic (soft shoulder)</option>
-
+                <!-- Preset options will be populated dynamically from CONTRAST_INTENT_PRESETS -->
                 <option value="custom">Custom (saved)</option>
                 <option value="enter_custom">Enter Custom…</option>
               </select>
@@ -2076,32 +2072,17 @@ ARCHITECTURAL NOTES:
       </div>
       <div id="intentContent" class="overflow-y-auto p-5 space-y-5 h-[512px]">
         <div id="intentTab-presets" class="space-y-4">
-          <div class="text-sm text-gray-700">Choose a preset. Gamma affects overall contrast; Filmic protects highlights with a soft shoulder.</div>
+          <div class="text-sm text-gray-700">Choose a preset tonal intent for your linearization data.</div>
           <div class="flex items-center gap-3">
             <label class="text-sm text-gray-700">Preset:</label>
             <select id="intentPresetSelect" class="standard-dropdown text-sm" style="width: 220px;">
-              <option value="linear">Linear</option>
-              <option value="soft">Soft (γ≈0.85)</option>
-              <option value="hard">Hard (γ≈1.20)</option>
-              <option value="filmic">Filmic (soft shoulder)</option>
-              
+              <!-- Options will be populated dynamically from CONTRAST_INTENT_PRESETS -->
             </select>
           </div>
-          <div id="intentGammaRow" class="flex items-center gap-3">
-            <label class="text-sm text-gray-700" for="intentGamma">Gamma:</label>
-            <input id="intentGamma" type="range" min="0.6" max="1.6" step="0.01" value="1.00" class="flex-1">
-            <span id="intentGammaVal" class="text-xs text-gray-600 w-12 text-right">1.00</span>
-          </div>
-          <div id="intentFilmicRow" class="grid grid-cols-2 gap-3">
-            <div class="flex items-center gap-2">
-              <label class="text-sm text-gray-700" for="intentFilmicGain">Midtone gain:</label>
-              <input id="intentFilmicGain" type="range" min="0.30" max="0.70" step="0.01" value="0.55" class="flex-1">
-              <span id="intentFilmicGainVal" class="text-xs text-gray-600 w-10 text-right">0.55</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <label class="text-sm text-gray-700" for="intentShoulder">Shoulder:</label>
-              <input id="intentShoulder" type="range" min="0.00" max="0.60" step="0.01" value="0.35" class="flex-1">
-              <span id="intentShoulderVal" class="text-xs text-gray-600 w-10 text-right">0.35</span>
+          <div id="presetDescription" class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+            <div id="presetDescriptionContent">
+              <h4 class="font-medium text-gray-900 mb-2">Linear</h4>
+              <p class="text-sm text-gray-600">No curve adjustment. 1:1 input-to-output mapping for neutral, unmodified tonal reproduction.</p>
             </div>
           </div>
         </div>
@@ -2512,7 +2493,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta v2.2.2';
+    const APP_VERSION = 'Beta v2.2.3';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2532,6 +2513,33 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'v2.2.3': {
+        date: '2025-09-15',
+        title: 'Intent system fixes + Documentation improvements',
+        sections: {
+          ADDED: [
+            'Help glossary entries for "Image space" and "Printer space": Added comprehensive definitions explaining the coordinate system differences that are central to quadGEN\'s data transformation pipeline. Image space (0=black pixel, 100=white pixel) vs printer space (0=white/no ink, 100=black/maximum ink) with explicit (0,0) and (100,100) coordinate meanings for both systems.',
+            'PoPS (Prints on Paper Studio) glossary entry: Added definition with link to their website and note about contrast intent presets included in quadGEN.',
+            'MIT License: Added complete license text to Help ReadMe section with proper attribution and scope clarification.',
+            'Prints on Paper Studio attribution: Added formal attribution in Help ReadMe Credits section for contrast intent definitions used with permission under GNU Public License.'
+          ],
+          CHANGED: [
+            'Contrast intent system architecture: Centralized all preset definitions (Linear, Soft, Hard, Filmic) into single source object. Removed sliders from Preset tab in favor of descriptive text. Preset dropdowns now populate dynamically from central definitions, making preset management more maintainable.'
+          ],
+          FIXED: [
+            'Intent system image-to-printer space conversion: Fixed critical issue where custom pasted intent data wasn\'t being transformed consistently with preset intents. All intent types now use the same image-to-printer space transformation pipeline (horizontal flip + vertical inversion) as ACV/LUT files, ensuring consistent behavior across preset and custom intents.',
+            'Custom intent data parsing for 0-255 range: Fixed parsing failure when pasting intent data with 0-255 range values (common in image editing workflows). Parser now auto-detects range (0-100 vs 0-255) and normalizes appropriately, preventing data truncation and visualization artifacts.',
+            'LAB linearization with custom intents: Resolved issue where LAB linearization would revert to linear when custom intent data was applied, caused by NaN values in the correction algorithm due to improper intent data transformation.',
+            'Auto-detection for mixed-range data: Added consistent range detection logic to parseIntentPaste(), parseLabData(), parseManualLstarData(), and buildManualLinearizationFromOriginal() functions. Input values auto-detect 0-100 vs 0-255 ranges while maintaining CIE LAB standard (L* values always 0-100).'
+          ]
+        },
+        aboutDialog: [
+          { label: 'Intent System Overhaul', desc: 'Fixed critical image-to-printer space conversion issues, 0-255 range parsing, and LAB linearization compatibility with custom intents.' },
+          { label: 'Enhanced Documentation', desc: 'Added comprehensive glossary entries for coordinate systems, PoPS attribution, and complete MIT license in Help section.' },
+          { label: 'Data Range Auto-Detection', desc: 'Improved parsing across multiple functions to handle both 0-100 and 0-255 input ranges automatically.' },
+          { label: 'Architecture Improvements', desc: 'Centralized intent preset definitions and improved preset management workflow.' }
+        ]
+      },
       'v2.2.2': {
         date: '2025-09-15',
         title: 'UI refinements + Intent behavior improvements',
@@ -3026,7 +3034,298 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
         ]
       }
     };
-    
+
+    // Centralized contrast intent preset definitions
+    const CONTRAST_INTENT_PRESETS = {
+      'linear': {
+        id: 'linear',
+        label: 'Linear',
+        description: 'Neutral contrast. No curve adjustment with 1:1 input-to-output mapping for unmodified tonal reproduction.',
+        params: {},
+        curveFunction: (t) => clamp01(t),
+        displayOrder: 1
+      },
+      'soft': {
+        id: 'soft',
+        label: 'Gamma 0.85',
+        description: 'Lowers contrast. Gentle highlight compression that brightens shadows while preserving detail in bright areas. Ideal for maintaining shadow detail in high-contrast images.',
+        params: { gamma: 0.85 },
+        curveFunction: (t) => gammaMap(t, 0.85),
+        displayOrder: 2
+      },
+      'hard': {
+        id: 'hard',
+        label: 'Gamma 1.2',
+        description: 'Increases contrast. Mild shadow compression that darkens shadows while maintaining highlight detail. Useful for adding contrast to flat images.',
+        params: { gamma: 1.20 },
+        curveFunction: (t) => gammaMap(t, 1.20),
+        displayOrder: 3
+      },
+      'gamma16': {
+        id: 'gamma16',
+        label: 'Gamma 1.6',
+        description: 'Increases contrast. Moderate shadow compression providing balanced contrast enhancement between mild and strong gamma curves. Good for print workflows requiring moderate contrast.',
+        params: { gamma: 1.6 },
+        curveFunction: (t) => gammaMap(t, 1.6),
+        displayOrder: 4
+      },
+      'gamma18': {
+        id: 'gamma18',
+        label: 'Gamma 1.8',
+        description: 'Increases contrast. Strong shadow compression that darkens shadows significantly while preserving highlight detail. Useful for dramatic tonal effects.',
+        params: { gamma: 1.8 },
+        curveFunction: (t) => gammaMap(t, 1.8),
+        displayOrder: 5
+      },
+      'gamma20': {
+        id: 'gamma20',
+        label: 'Gamma 2.0',
+        description: 'Increases contrast. High contrast with pronounced shadow compression providing substantial tonal separation. Good for high-impact printing applications.',
+        params: { gamma: 2.0 },
+        curveFunction: (t) => gammaMap(t, 2.0),
+        displayOrder: 6
+      },
+      'gamma22': {
+        id: 'gamma22',
+        label: 'Gamma 2.2',
+        description: 'Increases contrast. Standard sRGB gamma correction providing traditional monitor-like contrast curve with substantial shadow compression. Common for display calibration.',
+        params: { gamma: 2.2 },
+        curveFunction: (t) => gammaMap(t, 2.2),
+        displayOrder: 7
+      },
+      'filmic': {
+        id: 'filmic',
+        label: 'Filmic (soft shoulder)',
+        description: 'Preserves contrast. Soft shoulder roll-off protects highlights from clipping while maintaining midtone contrast. Mimics film-like highlight handling for smooth tonal transitions.',
+        params: { filmicGain: 0.55, shoulder: 0.35 },
+        curveFunction: (t) => filmicSoftShoulder(t, 0.55, 0.35),
+        displayOrder: 8
+      },
+      'popsgloss': {
+        id: 'popsgloss',
+        label: 'PoPS Gloss Curve',
+        description: 'Increases contrast. Prints on Paper Studios system gloss curve with gentle shadow compression and smooth highlight preservation. Optimized for photographic paper simulation.',
+        params: {
+          keyPoints: [
+            {x: 0, y: 0},
+            {x: 10/255, y: 4/255},
+            {x: 40/255, y: 30/255},
+            {x: 125/255, y: 123/255},
+            {x: 192/255, y: 193/255},
+            {x: 223/255, y: 223/255},
+            {x: 1, y: 1}
+          ]
+        },
+        curveFunction: (t) => {
+          // PoPS Gloss Curve PCHIP interpolation
+          const points = [
+            {x: 0, y: 0},
+            {x: 10/255, y: 4/255},
+            {x: 40/255, y: 30/255},
+            {x: 125/255, y: 123/255},
+            {x: 192/255, y: 193/255},
+            {x: 223/255, y: 223/255},
+            {x: 1, y: 1}
+          ];
+
+          // PCHIP interpolation for smooth curves
+          if (t <= 0) return 0;
+          if (t >= 1) return 1;
+
+          const xs = points.map(p => p.x);
+          const ys = points.map(p => p.y);
+
+          try {
+            const pchip = createPCHIPSpline(xs, ys);
+            return clamp01(pchip(t));
+          } catch (e) {
+            // Fallback to linear if PCHIP fails
+            for (let i = 0; i < points.length - 1; i++) {
+              if (t >= points[i].x && t <= points[i + 1].x) {
+                const ratio = (t - points[i].x) / (points[i + 1].x - points[i].x);
+                return points[i].y + ratio * (points[i + 1].y - points[i].y);
+              }
+            }
+            return t;
+          }
+        },
+        displayOrder: 9
+      },
+      'popsmatte': {
+        id: 'popsmatte',
+        label: 'PoPS Matte Curve',
+        description: 'Increases contrast. Prints on Paper Studios system matte curve with more aggressive shadow compression than gloss variant. Designed for matte paper characteristics.',
+        params: {
+          keyPoints: [
+            {x: 0, y: 0},
+            {x: 10/255, y: 3/255},
+            {x: 28/255, y: 14/255},
+            {x: 55/255, y: 37/255},
+            {x: 90/255, y: 79/255},
+            {x: 170/255, y: 174/255},
+            {x: 1, y: 1}
+          ]
+        },
+        curveFunction: (t) => {
+          // PoPS Matte Curve PCHIP interpolation
+          const points = [
+            {x: 0, y: 0},
+            {x: 10/255, y: 3/255},
+            {x: 28/255, y: 14/255},
+            {x: 55/255, y: 37/255},
+            {x: 90/255, y: 79/255},
+            {x: 170/255, y: 174/255},
+            {x: 1, y: 1}
+          ];
+
+          // PCHIP interpolation for smooth curves
+          if (t <= 0) return 0;
+          if (t >= 1) return 1;
+
+          const xs = points.map(p => p.x);
+          const ys = points.map(p => p.y);
+
+          try {
+            const pchip = createPCHIPSpline(xs, ys);
+            return clamp01(pchip(t));
+          } catch (e) {
+            // Fallback to linear if PCHIP fails
+            for (let i = 0; i < points.length - 1; i++) {
+              if (t >= points[i].x && t <= points[i + 1].x) {
+                const ratio = (t - points[i].x) / (points[i + 1].x - points[i].x);
+                return points[i].y + ratio * (points[i + 1].y - points[i].y);
+              }
+            }
+            return t;
+          }
+        },
+        displayOrder: 10
+      },
+      'popsuncoated': {
+        id: 'popsuncoated',
+        label: 'PoPS Uncoated / Alt Process',
+        description: 'Increases contrast. Prints on Paper Studios system curve optimized for uncoated papers and alternative photographic processes. Features strong shadow compression with smooth highlight transitions.',
+        params: {
+          keyPoints: [
+            {x: 0, y: 0},
+            {x: 28/255, y: 9/255},
+            {x: 66/255, y: 44/255},
+            {x: 112/255, y: 100/255},
+            {x: 164/255, y: 168/255},
+            {x: 221/255, y: 223/255},
+            {x: 1, y: 1}
+          ]
+        },
+        curveFunction: (t) => {
+          // PoPS Uncoated / Alt Process Curve PCHIP interpolation
+          const points = [
+            {x: 0, y: 0},
+            {x: 28/255, y: 9/255},
+            {x: 66/255, y: 44/255},
+            {x: 112/255, y: 100/255},
+            {x: 164/255, y: 168/255},
+            {x: 221/255, y: 223/255},
+            {x: 1, y: 1}
+          ];
+
+          // PCHIP interpolation for smooth curves
+          if (t <= 0) return 0;
+          if (t >= 1) return 1;
+
+          const xs = points.map(p => p.x);
+          const ys = points.map(p => p.y);
+
+          try {
+            const pchip = createPCHIPSpline(xs, ys);
+            return clamp01(pchip(t));
+          } catch (e) {
+            // Fallback to linear if PCHIP fails
+            for (let i = 0; i < points.length - 1; i++) {
+              if (t >= points[i].x && t <= points[i + 1].x) {
+                const ratio = (t - points[i].x) / (points[i + 1].x - points[i].x);
+                return points[i].y + ratio * (points[i + 1].y - points[i].y);
+              }
+            }
+            return t;
+          }
+        },
+        displayOrder: 11
+      },
+      'popsuncoatedsofter': {
+        id: 'popsuncoatedsofter',
+        label: 'PoPS Uncoated / Alt Process (softer)',
+        description: 'Increases contrast. Prints on Paper Studios system softer variant for uncoated papers and alternative processes. Less aggressive shadow compression than the standard uncoated curve.',
+        params: {
+          keyPoints: [
+            {x: 0, y: 0},
+            {x: 28/255, y: 12/255},
+            {x: 66/255, y: 47/255},
+            {x: 112/255, y: 100/255},
+            {x: 164/255, y: 168/255},
+            {x: 221/255, y: 223/255},
+            {x: 1, y: 1}
+          ]
+        },
+        curveFunction: (t) => {
+          // PoPS Uncoated / Alt Process (softer) Curve PCHIP interpolation
+          const points = [
+            {x: 0, y: 0},
+            {x: 28/255, y: 12/255},
+            {x: 66/255, y: 47/255},
+            {x: 112/255, y: 100/255},
+            {x: 164/255, y: 168/255},
+            {x: 221/255, y: 223/255},
+            {x: 1, y: 1}
+          ];
+
+          // PCHIP interpolation for smooth curves
+          if (t <= 0) return 0;
+          if (t >= 1) return 1;
+
+          const xs = points.map(p => p.x);
+          const ys = points.map(p => p.y);
+
+          try {
+            const pchip = createPCHIPSpline(xs, ys);
+            return clamp01(pchip(t));
+          } catch (e) {
+            // Fallback to linear if PCHIP fails
+            for (let i = 0; i < points.length - 1; i++) {
+              if (t >= points[i].x && t <= points[i + 1].x) {
+                const ratio = (t - points[i].x) / (points[i + 1].x - points[i].x);
+                return points[i].y + ratio * (points[i + 1].y - points[i].y);
+              }
+            }
+            return t;
+          }
+        },
+        displayOrder: 12
+      }
+    };
+
+    // Utility functions for preset management
+    function getPreset(presetId) {
+      return CONTRAST_INTENT_PRESETS[presetId] || null;
+    }
+
+    function getAllPresets() {
+      return Object.values(CONTRAST_INTENT_PRESETS)
+        .sort((a, b) => a.displayOrder - b.displayOrder);
+    }
+
+    function getPresetDefaults(presetId, param) {
+      const preset = CONTRAST_INTENT_PRESETS[presetId];
+      if (!preset || !preset.params) return null;
+      return preset.params[param];
+    }
+
+    function generatePresetDropdownHTML() {
+      const presets = getAllPresets();
+      return presets.map(preset =>
+        `<option value="${preset.id}">${preset.label}</option>`
+      ).join('\n');
+    }
+
     // Functions to generate version history content
     // Removed unused generateInternalVersionHistory()
     
@@ -3706,9 +4005,15 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       setContrastIntentPreset(preset, params = {}) {
         try {
           const p = String(preset || 'linear').toLowerCase();
-          if (p === 'linear') { setContrastIntent('linear', {}, 'preset'); return { success: true, message: 'Intent set to Linear' }; }
-          if (p === 'soft') { setContrastIntent('soft', { gamma: 0.85 }, 'preset'); return { success: true, message: 'Intent set to Soft (γ≈0.85)' }; }
-          if (p === 'hard') { setContrastIntent('hard', { gamma: 1.20 }, 'preset'); return { success: true, message: 'Intent set to Hard (γ≈1.20)' }; }
+
+          // Check for preset definitions first
+          const presetDef = getPreset(p);
+          if (presetDef) {
+            setContrastIntent(presetDef.id, presetDef.params, 'preset');
+            return { success: true, message: `Intent set to ${presetDef.label}` };
+          }
+
+          // Handle filmic with custom parameters
           if (p === 'filmic') {
             const gain = isFinite(params.filmicGain) ? Number(params.filmicGain) : 0.55;
             const shoulder = isFinite(params.shoulder) ? Number(params.shoulder) : 0.35;
@@ -8529,7 +8834,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
     }
 
     // Contrast Intent state and helpers
-    const DEFAULT_INTENT = { id: 'linear', name: 'Linear', source: 'preset', params: { gamma: 1.0, filmicGain: 0.55, shoulder: 0.35 } };
+    const DEFAULT_INTENT = { id: 'linear', name: 'Linear', source: 'preset', params: getPreset('linear')?.params || {} };
     // Always default to Linear at startup; custom sliders/paste are persisted separately
     let contrastIntent = DEFAULT_INTENT;
 
@@ -8542,16 +8847,35 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
 
     // Compile a monotone intent function from anchor points [[t,d_rel]...]
     function compileIntentFromPoints(points){
-      const pts = (points||[]).filter(p=>Array.isArray(p)&&p.length>=2).map(([t,y])=>[clamp01(+t), clamp01(+y)]);
-      if (pts.length < 2) return (t)=>clamp01(t);
-      if (pts[0][0] !== 0) pts.unshift([0,0]);
-      if (pts[pts.length-1][0] !== 1) pts.push([1,1]);
-      pts.sort((a,b)=>a[0]-b[0]);
-      const xs = pts.map(p=>p[0]);
-      const ys = pts.map(p=>p[1]);
-      for (let i=1;i<ys.length;i++){ if (ys[i] < ys[i-1]) ys[i] = ys[i-1]; }
-      const interp = createPCHIPSpline(xs, ys);
-      return (t)=> clamp01(interp(clamp01(t)));
+      try {
+        const pts = (points||[]).filter(p=>Array.isArray(p)&&p.length>=2).map(([t,y])=>[clamp01(+t), clamp01(+y)]);
+        if (pts.length < 2) return (t)=>clamp01(t);
+        if (pts[0][0] !== 0) pts.unshift([0,0]);
+        if (pts[pts.length-1][0] !== 1) pts.push([1,1]);
+        pts.sort((a,b)=>a[0]-b[0]);
+
+        // Convert points to 256 uniform samples for consistent transformation pipeline
+        const samples = new Array(256);
+        const xs = pts.map(p=>p[0]);
+        const ys = pts.map(p=>p[1]);
+
+        for (let i=1;i<ys.length;i++){ if (ys[i] < ys[i-1]) ys[i] = ys[i-1]; }
+        const tempInterp = createPCHIPSpline(xs, ys);
+
+        for (let i = 0; i < 256; i++) {
+          const inputValue = i / 255;
+          samples[i] = clamp01(tempInterp(inputValue));
+        }
+
+        // Apply the same transformation as ACV files: image space to printer space
+        const transformedSamples = transformSamplesToPrinterSpace(samples);
+
+        // Build final target function from transformed samples
+        return buildTargetFnFromSamples(transformedSamples);
+      } catch (e) {
+        console.warn('compileIntentFromPoints failed:', e);
+        return (t)=>clamp01(t);
+      }
     }
 
     // Build a target intent function from uniformly spaced samples (0..1 domain)
@@ -8566,16 +8890,122 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       } catch { return (t)=>clamp01(t); }
     }
 
+    // Cache for expensive intent transformations
+    let _intentCache = { id: null, targetFn: null };
+
     function getTargetRelAt(t){
       const id = (contrastIntent && contrastIntent.id) || 'linear';
+
+      // Linear stays linear in any space
       if (id === 'linear') return clamp01(t);
-      if (id === 'soft') return gammaMap(t, 0.85);
-      if (id === 'hard') return gammaMap(t, 1.20);
-      if (id === 'filmic') { const g = contrastIntent?.params?.filmicGain ?? 0.55; const s = contrastIntent?.params?.shoulder ?? 0.35; return filmicSoftShoulder(t, g, s); }
-      if (id === 'pops_standard') return popsCompatStandard(t);
-      if (id === 'custom_points' && typeof contrastIntent.targetFn === 'function') return contrastIntent.targetFn(t);
-      if (id === 'custom_gamma') return gammaMap(t, contrastIntent?.params?.gamma ?? 1.0);
-      if (id === 'custom_filmic') return filmicSoftShoulder(t, contrastIntent?.params?.gain ?? 0.55, contrastIntent?.params?.shoulder ?? 0.35);
+
+      // Check for preset definitions first - treat as image space and transform to printer space
+      const preset = CONTRAST_INTENT_PRESETS[id];
+      if (preset && preset.curveFunction) {
+        // For gamma-based presets, use reciprocal gamma (image-space to printer-space conversion)
+        if (preset.params && typeof preset.params.gamma === 'number') {
+          const imageSpaceGamma = preset.params.gamma;
+          const printerSpaceGamma = 1.0 / imageSpaceGamma;
+          return Math.pow(clamp01(t), printerSpaceGamma);
+        }
+        // For non-gamma presets (PoPS, filmic), use cached transformation
+        else {
+          try {
+            // Check cache first
+            if (_intentCache.id !== id || !_intentCache.targetFn) {
+              // Generate 256 samples from the image-space curve function
+              const samples = new Array(256);
+              for (let i = 0; i < 256; i++) {
+                const inputValue = i / 255;
+                samples[i] = preset.curveFunction(inputValue);
+              }
+
+              // Apply the same transformation as ACV files: horizontal flip + vertical inversion
+              const transformedSamples = transformSamplesToPrinterSpace(samples);
+
+              // Build target function from transformed samples (like ACV import)
+              const targetFn = buildTargetFnFromSamples(transformedSamples);
+
+              // Cache the result
+              _intentCache = { id, targetFn };
+            }
+
+            return _intentCache.targetFn(t);
+          } catch (e) {
+            console.warn('Intent processing failed for', id, ':', e);
+            return clamp01(t); // Fallback to linear
+          }
+        }
+      }
+
+      // Handle custom intents - treat as image space and transform to printer space
+      if (id === 'pops_standard') {
+        try {
+          // Check cache first
+          if (_intentCache.id !== id || !_intentCache.targetFn) {
+            const samples = new Array(256);
+            for (let i = 0; i < 256; i++) {
+              const inputValue = i / 255;
+              samples[i] = popsCompatStandard(inputValue);
+            }
+            const transformedSamples = transformSamplesToPrinterSpace(samples);
+            const targetFn = buildTargetFnFromSamples(transformedSamples);
+            _intentCache = { id, targetFn };
+          }
+          return _intentCache.targetFn(t);
+        } catch (e) {
+          console.warn('Intent processing failed for pops_standard:', e);
+          return clamp01(t);
+        }
+      }
+
+      if (id === 'custom_gamma') {
+        try {
+          const imageSpaceGamma = contrastIntent?.params?.gamma ?? 1.0;
+          const printerSpaceGamma = 1.0 / imageSpaceGamma;
+          return Math.pow(clamp01(t), printerSpaceGamma);
+        } catch (e) {
+          console.warn('Intent processing failed for custom_gamma:', e);
+          return clamp01(t);
+        }
+      }
+
+      if (id === 'custom_filmic') {
+        try {
+          // Create cache key with parameters
+          const cacheKey = `${id}_${contrastIntent?.params?.gain ?? 0.55}_${contrastIntent?.params?.shoulder ?? 0.35}`;
+          if (_intentCache.id !== cacheKey || !_intentCache.targetFn) {
+            const samples = new Array(256);
+            for (let i = 0; i < 256; i++) {
+              const inputValue = i / 255;
+              samples[i] = filmicSoftShoulder(inputValue, contrastIntent?.params?.gain ?? 0.55, contrastIntent?.params?.shoulder ?? 0.35);
+            }
+            const transformedSamples = transformSamplesToPrinterSpace(samples);
+            const targetFn = buildTargetFnFromSamples(transformedSamples);
+            _intentCache = { id: cacheKey, targetFn };
+          }
+          return _intentCache.targetFn(t);
+        } catch (e) {
+          console.warn('Intent processing failed for custom_filmic:', e);
+          return clamp01(t);
+        }
+      }
+
+      // Points-based intents (pasted/imported) - ALREADY transformed to printer space during parsing
+      if (id === 'custom_points' && typeof contrastIntent.targetFn === 'function') {
+        try {
+          const result = contrastIntent.targetFn(t); // Already in printer space from transformSamplesToPrinterSpace
+          if (t === 0 || t === 1) {
+            console.log('DEBUG: custom_points intent at', (t*100).toFixed(0) + '%:', result.toFixed(3));
+          }
+          return result;
+        } catch (e) {
+          console.warn('Intent processing failed for custom_points:', e);
+          return clamp01(t);
+        }
+      }
+
+      // Default fallback
       return clamp01(t);
     }
 
@@ -8592,6 +9022,9 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       else if (id === 'custom_filmic') { name = `Custom Filmic`; }
       const prev = contrastIntent ? { id: contrastIntent.id, name: contrastIntent.name, source: contrastIntent.source, params: contrastIntent.params, targetFn: contrastIntent.targetFn } : null;
       contrastIntent = { id, name, source: source || (id.startsWith('custom')?'custom':'preset'), params: p, targetFn };
+
+      // Clear intent cache when intent changes
+      _intentCache = { id: null, targetFn: null };
       // Mark that a custom intent exists so the main dropdown can show "Custom"
       try { if (String(id).startsWith('custom')) localStorage.setItem('hasCustomIntentV1', '1'); } catch {}
       // Persist "last applied custom" kind so 'Custom (saved)' restores the most recent from any tab
@@ -8644,9 +9077,12 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
     function recomputeLinearizationForCurrentIntent(){
       try {
         if (!linearizationData || !linearizationApplied) return;
+        console.log('DEBUG: Recomputing LAB for intent:', contrastIntent?.id, contrastIntent?.name);
         const fmt = String(linearizationData.format||'').toUpperCase();
         if (fmt.includes('LAB') && Array.isArray(linearizationData.originalData)) {
+          console.log('DEBUG: Rebuilding LAB linearization with', linearizationData.originalData.length, 'data points');
           const rebuilt = buildLabLinearizationFromOriginal(linearizationData.originalData);
+          console.log('DEBUG: LAB rebuild result:', rebuilt ? 'success' : 'failed', 'samples:', rebuilt?.samples?.length);
           rebuilt.filename = linearizationData.filename || 'LAB-Data';
           linearizationData = rebuilt;
           elements.globalLinearizationInfo.classList.remove('hidden');
@@ -8668,11 +9104,16 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         const labValues = dataPoints.map(p=>p.lab);
         const D_values = labValues.map(L => cieDensityFromLstar(L));
         const Dmax = Math.max(...D_values, 1e-6);
+        console.log('DEBUG: Processing', dataPoints.length, 'LAB points, Dmax:', Dmax);
         const correctionPoints = dataPoints.map(point => {
           const pos = Math.max(0, Math.min(1, point.input / 100));
           const actualDensity = cieDensityFromLstar(point.lab) / Dmax;
           const expectedDensity = getTargetRelAt(pos);
-          return { position: pos, correction: (expectedDensity - actualDensity), originalLab: point.lab, originalInput: point.input };
+          const correction = expectedDensity - actualDensity;
+          if (point.input === 0 || point.input === 100) {
+            console.log('DEBUG: Endpoint', point.input + '%: actual =', actualDensity.toFixed(3), 'expected =', expectedDensity.toFixed(3), 'correction =', correction.toFixed(3));
+          }
+          return { position: pos, correction, originalLab: point.lab, originalInput: point.input };
         });
         const positionsOnly = correctionPoints.map(p => p.position);
         const K_NEIGHBORS = 6, SIGMA_FLOOR = 0.02, SIGMA_CEIL = 0.15, SIGMA_ALPHA = 3.0;
@@ -8685,11 +9126,74 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         }
         const samples = []; for (let i=0;i<256;i++){ const t = i/255; const sigma = localSigmaAt(t); const denom = 2*sigma*sigma; let num=0, den=0; for (let j=0;j<correctionPoints.length;j++){ const d = Math.abs(t - correctionPoints[j].position); const w = Math.exp(-(d*d)/Math.max(1e-9,denom)); num += correctionPoints[j].correction*w; den += w; } const corr = den>0 ? (num/den) : 0; samples.push(Math.max(0, Math.min(1, t + corr))); }
         samples[0]=0.0; samples[255]=1.0;
+        console.log('DEBUG: LAB samples at key points:', 'sample[64]:', samples[64].toFixed(3), 'sample[128]:', samples[128].toFixed(3), 'sample[192]:', samples[192].toFixed(3));
+        console.log('DEBUG: Is linear?', samples.every((val, i) => Math.abs(val - i/255) < 0.001));
         return { domainMin:0.0, domainMax:1.0, samples, originalData: dataPoints, format:'LAB Data', getSmoothingControlPoints: function(sp){ const widen = 1 + (Math.max(0, Math.min(90, Number(sp) || 0))/100); const dyn = new Array(256); for (let i=0;i<256;i++){ const t=i/255; const sigma = Math.min(0.15, Math.max(0.02, localSigmaAt(t)*widen)); const denom=2*sigma*sigma; let num=0, den=0; for (let j=0;j<correctionPoints.length;j++){ const d = Math.abs(t - correctionPoints[j].position); const w = Math.exp(-(d*d)/Math.max(1e-9,denom)); num += correctionPoints[j].correction*w; den += w; } dyn[i]=Math.max(0, Math.min(1, t + (den>0?(num/den):0))); } dyn[0]=0.0; dyn[255]=1.0; const K = 21 - Math.floor(Math.max(0, Math.min(90, Number(sp) || 0))/10); const controlPointCount = Math.max(3, K); const cpY = []; const cpX = []; for (let i=0;i<controlPointCount;i++){ const x = i/(controlPointCount-1); const idx = Math.round(x*255); cpX.push(x); cpY.push(dyn[idx]); } return { samples: cpY, xCoords: cpX }; } };
       } catch (e) { console.warn('buildLabLinearizationFromOriginal failed:', e); return linearizationData || { domainMin:0, domainMax:1, samples: Array.from({length:256},(_,i)=>i/255), format:'LAB Data' }; }
     }
     function buildManualLinearizationFromOriginal(originalData){
-      try { const measuredXs = originalData.map(p=>p.input); const measuredL = originalData.map(p=>p.lab); const N = measuredL.length; const posNorm = measuredXs.map(v => Math.max(0, Math.min(100, v)) / 100); const Dvals = measuredL.map(L => cieDensityFromLstar(L)); const Dmax = Math.max(...Dvals, 1e-6); const actualDensity = Dvals.map(D => D / Dmax); const targetDensity = posNorm.map(t => getTargetRelAt(t)); const cps = posNorm.map((pos,i)=>({ position: pos, correction: (targetDensity[i] - actualDensity[i]) })); const positionsOnly = cps.map(p=>p.position); const K=6, F=0.02, C=0.15, A=3.0; function localSigmaAt(t){ const n=positionsOnly.length; if (n<=1) return C; let lo=0,hi=n; while(lo<hi){const mid=(lo+hi)>>1; if(positionsOnly[mid]<t)lo=mid+1; else hi=mid;} const d=[]; let L=lo-1,R=lo; while((L>=0||R<n)&&d.length<K){const dl=(L>=0)?Math.abs(t-positionsOnly[L]):Infinity; const dr=(R<n)?Math.abs(t-positionsOnly[R]):Infinity; if(dl<=dr){ if(isFinite(dl))d.push(dl); L--; } else { if(isFinite(dr))d.push(dr); R++; } } if(!d.length) return C; d.sort((a,b)=>a-b); const m=d.length>>1; const med=(d.length%2===0)?0.5*(d[m-1]+d[m]):d[m]; return Math.min(C, Math.max(F, A*med)); } const samples=[]; for(let i=0;i<256;i++){ const t=i/255; const s=localSigmaAt(t); const denom=2*s*s; let num=0, den=0; for(let j=0;j<cps.length;j++){ const dd=Math.abs(t-cps[j].position); const w=Math.exp(-(dd*dd)/Math.max(1e-9,denom)); num+=cps[j].correction*w; den+=w; } samples[i]=Math.max(0, Math.min(1, t + (den>0?(num/den):0))); } samples[0]=0.0; samples[255]=1.0; return { domainMin:0, domainMax:1, samples, originalData: originalData.slice(), format: 'Manual L* Entry' }; } catch(e){ console.warn('buildManualLinearizationFromOriginal failed:', e); return linearizationData; }
+      try {
+        const measuredXs = originalData.map(p=>p.input);
+        const measuredL = originalData.map(p=>p.lab);
+        const N = measuredL.length;
+
+        // Auto-detect range for input values: if any input value > 100, assume 0-255 range; otherwise 0-100 range
+        // L* values are always 0-100 by CIE LAB standard
+        const maxInputValue = measuredXs.length > 0 ? Math.max(...measuredXs) : 0;
+        const divisor = maxInputValue > 100 ? 255 : 100;
+        const posNorm = measuredXs.map(v => Math.max(0, Math.min(divisor, v)) / divisor);
+
+        const Dvals = measuredL.map(L => cieDensityFromLstar(L));
+        const Dmax = Math.max(...Dvals, 1e-6);
+        const actualDensity = Dvals.map(D => D / Dmax);
+        const targetDensity = posNorm.map(t => getTargetRelAt(t));
+        const cps = posNorm.map((pos,i)=>({ position: pos, correction: (targetDensity[i] - actualDensity[i]) }));
+        const positionsOnly = cps.map(p=>p.position);
+        const K=6, F=0.02, C=0.15, A=3.0;
+
+        function localSigmaAt(t){
+          const n=positionsOnly.length;
+          if (n<=1) return C;
+          let lo=0,hi=n;
+          while(lo<hi){
+            const mid=(lo+hi)>>1;
+            if(positionsOnly[mid]<t) lo=mid+1;
+            else hi=mid;
+          }
+          const d=[]; let L=lo-1,R=lo;
+          while((L>=0||R<n)&&d.length<K){
+            const dl=(L>=0)?Math.abs(t-positionsOnly[L]):Infinity;
+            const dr=(R<n)?Math.abs(t-positionsOnly[R]):Infinity;
+            if(dl<=dr){ if(isFinite(dl))d.push(dl); L--; }
+            else { if(isFinite(dr))d.push(dr); R++; }
+          }
+          if(!d.length) return C;
+          d.sort((a,b)=>a-b);
+          const m=d.length>>1;
+          const med=(d.length%2===0)?0.5*(d[m-1]+d[m]):d[m];
+          return Math.min(C, Math.max(F, A*med));
+        }
+
+        const samples=[];
+        for(let i=0;i<256;i++){
+          const t=i/255;
+          const s=localSigmaAt(t);
+          const denom=2*s*s;
+          let num=0, den=0;
+          for(let j=0;j<cps.length;j++){
+            const dd=Math.abs(t-cps[j].position);
+            const w=Math.exp(-(dd*dd)/Math.max(1e-9,denom));
+            num+=cps[j].correction*w;
+            den+=w;
+          }
+          samples[i]=Math.max(0, Math.min(1, t + (den>0?(num/den):0)));
+        }
+        samples[0]=0.0; samples[255]=1.0;
+        return { domainMin:0, domainMax:1, samples, originalData: originalData.slice(), format: 'Manual L* Entry' };
+      } catch(e){
+        console.warn('buildManualLinearizationFromOriginal failed:', e);
+        return linearizationData;
+      }
     }
 
     // Helper to prefix edited filenames for display
@@ -11065,7 +11569,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const id = String(contrastIntent?.id || 'linear');
         if (id === 'linear') return 'LIN';
         if (id === 'soft' || id === 'hard' || id === 'custom_gamma') {
-          const g = Number(contrastIntent?.params?.gamma ?? (id==='soft'?0.85:(id==='hard'?1.20:1.00)));
+          const g = Number(contrastIntent?.params?.gamma ?? (getPresetDefaults(id, 'gamma') || 1.00));
           if (!isFinite(g) || g <= 0) return 'G100';
           const val = Math.round(g * 100);
           return `G${String(val).padStart(3,'0')}`; // e.g., 0.85 => G085, 1.20 => G120
@@ -13050,8 +13554,12 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (parts.length >= 2) {
           const grayPercent = parseFloat(parts[0]);
           const labL = parseFloat(parts[1]);
-          if (!isNaN(grayPercent) && !isNaN(labL) && grayPercent >= 0 && grayPercent <= 100 && labL >= 0 && labL <= 100) {
-            dataPoints.push({ input: grayPercent, lab: labL });
+
+          // L* values must be 0-100 (CIE LAB standard). Gray input may be 0-100 or 0-255.
+          if (!isNaN(grayPercent) && !isNaN(labL) && grayPercent >= 0 && labL >= 0 && labL <= 100) {
+            // Auto-detect gray range: if gray value > 100, assume 0-255 range; otherwise 0-100 range
+            const normalizedGray = grayPercent > 100 ? (grayPercent / 255) * 100 : grayPercent;
+            dataPoints.push({ input: normalizedGray, lab: labL });
           }
         }
       }
@@ -14664,7 +15172,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             let intentLine = '#   Intent: ';
             if (id === 'linear') intentLine += 'Linear';
             else if (id === 'soft' || id === 'hard' || id === 'custom_gamma') {
-              const g = Number(contrastIntent?.params?.gamma ?? (id==='soft'?0.85:(id==='hard'?1.20:1.00)));
+              const g = Number(contrastIntent?.params?.gamma ?? (getPresetDefaults(id, 'gamma') || 1.00));
               intentLine += `Gamma ${isFinite(g)?g.toFixed(2):'1.00'}`;
             } else if (id === 'filmic' || id === 'custom_filmic') {
               const gain = Number(contrastIntent?.params?.filmicGain ?? contrastIntent?.params?.gain ?? 0.55);
@@ -16141,7 +16649,11 @@ DOMAIN_MAX 1.0 1.0 1.0
       const measuredXs = measuredPairs.map(p => p.x);
       const measuredL = measuredPairs.map(p => p.l);
       const N = measuredL.length;
-      const posNorm = measuredXs.map(v => Math.max(0, Math.min(100, v)) / 100);
+      // Auto-detect range for input values: if any input value > 100, assume 0-255 range; otherwise 0-100 range
+      // L* values are always 0-100 by CIE LAB standard
+      const maxInputValue = measuredXs.length > 0 ? Math.max(...measuredXs) : 0;
+      const divisor = maxInputValue > 100 ? 255 : 100;
+      const posNorm = measuredXs.map(v => Math.max(0, Math.min(divisor, v)) / divisor);
       const expectedDensity = posNorm.map(t => getTargetRelAt(t));
       const Dvals = measuredL.map(L => cieDensityFromLstar(L));
       const Dmax = Math.max(...Dvals, 1e-6);
@@ -16381,7 +16893,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           elements.intentModal.classList.remove('hidden');
           try {
             elements.intentPresetSelect.value = contrastIntent?.id || 'linear';
-            syncPresetControlsVisibility();
+            updatePresetDescription();
             syncPresetControlValuesFromState();
             // Jump to Custom tab for quicker edits
             setActiveIntentTab('custom');
@@ -16437,10 +16949,13 @@ DOMAIN_MAX 1.0 1.0 1.0
             elements.contrastIntentSelect.value = 'custom';
             return;
           }
-          if (v === 'soft') setContrastIntent('soft', { gamma: 0.85 }, 'preset');
-          else if (v === 'hard') setContrastIntent('hard', { gamma: 1.20 }, 'preset');
-          else if (v === 'filmic') setContrastIntent('filmic', { filmicGain: 0.55, shoulder: 0.35 }, 'preset');
-          else setContrastIntent('linear', {}, 'preset');
+          // Use central preset definitions
+          const preset = getPreset(v);
+          if (preset) {
+            setContrastIntent(preset.id, preset.params, 'preset');
+          } else {
+            setContrastIntent('linear', {}, 'preset');
+          }
         }
       });
     }
@@ -16465,13 +16980,25 @@ DOMAIN_MAX 1.0 1.0 1.0
         try { if (typeof scheduleAutoParseForPasteArea === 'function') scheduleAutoParseForPasteArea(); } catch {}
       }
     }
-    function syncPresetControlsVisibility(){ const v=elements.intentPresetSelect.value; elements.intentGammaRow.style.display=(v==='soft'||v==='hard')?'flex':'none'; elements.intentFilmicRow.style.display=(v==='filmic')?'grid':'none'; }
+    function updatePresetDescription(){
+      const presetId = elements.intentPresetSelect?.value || 'linear';
+      const content = document.getElementById('presetDescriptionContent');
+      if (!content) return;
+
+      const preset = getPreset(presetId);
+      if (!preset) return;
+
+      content.innerHTML = `
+        <h4 class="font-medium text-gray-900 mb-2">${preset.label}</h4>
+        <p class="text-sm text-gray-600">${preset.description}</p>
+      `;
+    }
     const CUSTOM_PREFS_KEY = 'contrastIntentCustomPrefsV1';
     function loadCustomPrefs(){ try { const j = JSON.parse(localStorage.getItem(CUSTOM_PREFS_KEY)||'{}'); return { gamma: Number(j.gamma??1.00)||1.00, gain: Number(j.gain??0.55)||0.55, shoulder: Number(j.shoulder??0.35)||0.35, pasteText: String(j.pasteText||'') }; } catch { return { gamma:1.00, gain:0.55, shoulder:0.35, pasteText:'' }; } }
     function saveCustomPrefs(upd){ try { const cur=loadCustomPrefs(); const nxt={...cur, ...upd}; localStorage.setItem(CUSTOM_PREFS_KEY, JSON.stringify(nxt)); } catch {} }
     function syncPresetControlValuesFromState(){ const id=contrastIntent?.id||'linear'; const prefs = loadCustomPrefs(); if(id==='soft'||id==='hard'||id==='custom_gamma'){ const g=(contrastIntent?.params?.gamma!=null)?contrastIntent.params.gamma:prefs.gamma; elements.intentGamma.value=g; elements.intentGammaVal.textContent=Number(g).toFixed(2);} else { elements.intentGamma.value=prefs.gamma; elements.intentGammaVal.textContent=Number(prefs.gamma).toFixed(2);} if(id==='filmic'||id==='custom_filmic'){ const g=(contrastIntent?.params?.filmicGain!=null)?contrastIntent.params.filmicGain:(contrastIntent?.params?.gain!=null?contrastIntent.params.gain:prefs.gain); const s=(contrastIntent?.params?.shoulder!=null)?contrastIntent.params.shoulder:prefs.shoulder; elements.intentFilmicGain.value=g; elements.intentFilmicGainVal.textContent=Number(g).toFixed(2); elements.intentShoulder.value=s; elements.intentShoulderVal.textContent=Number(s).toFixed(2);} else { elements.intentFilmicGain.value=prefs.gain; elements.intentFilmicGainVal.textContent=Number(prefs.gain).toFixed(2); elements.intentShoulder.value=prefs.shoulder; elements.intentShoulderVal.textContent=Number(prefs.shoulder).toFixed(2);} elements.customGamma.value=prefs.gamma; elements.customGammaVal.textContent=Number(prefs.gamma).toFixed(2); elements.customGain.value=prefs.gain; elements.customGainVal.textContent=Number(prefs.gain).toFixed(2); elements.customShoulder.value=prefs.shoulder; elements.customShoulderVal.textContent=Number(prefs.shoulder).toFixed(2); try{ updateRangeFill(elements.customGamma); updateRangeFill(elements.customGain); updateRangeFill(elements.customShoulder);}catch{} if (elements.intentPasteArea) elements.intentPasteArea.value = prefs.pasteText || ''; }
     (elements.intentTabs||[]).forEach(btn=>{ btn.addEventListener('click', ()=> setActiveIntentTab(btn.getAttribute('data-intent-tab'))); });
-    if (elements.intentPresetSelect) { elements.intentPresetSelect.addEventListener('change', ()=>{ syncPresetControlsVisibility(); }); }
+    if (elements.intentPresetSelect) { elements.intentPresetSelect.addEventListener('change', ()=>{ updatePresetDescription(); }); }
     if (elements.intentGamma) { elements.intentGamma.addEventListener('input', ()=>{ elements.intentGammaVal.textContent = Number(elements.intentGamma.value).toFixed(2); }); }
     if (elements.intentFilmicGain) { elements.intentFilmicGain.addEventListener('input', ()=>{ elements.intentFilmicGainVal.textContent = Number(elements.intentFilmicGain.value).toFixed(2); }); }
     if (elements.intentShoulder) { elements.intentShoulder.addEventListener('input', ()=>{ elements.intentShoulderVal.textContent = Number(elements.intentShoulder.value).toFixed(2); }); }
@@ -16503,11 +17030,13 @@ DOMAIN_MAX 1.0 1.0 1.0
     if (elements.applyIntentBtn) elements.applyIntentBtn.addEventListener('click', ()=>{
       const active = ['presets','custom','paste','import'].find(t => !document.getElementById(`intentTab-${t}`).classList.contains('hidden')) || 'presets';
       if (active === 'presets'){
-        const v = elements.intentPresetSelect.value;
-        if (v==='soft') { const g=Number(elements.intentGamma.value); saveCustomPrefs({gamma:g}); setContrastIntent('soft', { gamma: g }, 'preset'); }
-        else if (v==='hard') { const g=Number(elements.intentGamma.value); saveCustomPrefs({gamma:g}); setContrastIntent('hard', { gamma: g }, 'preset'); }
-        else if (v==='filmic') { const gain=Number(elements.intentFilmicGain.value), shoulder=Number(elements.intentShoulder.value); saveCustomPrefs({gain, shoulder}); setContrastIntent('filmic', { filmicGain: gain, shoulder }, 'preset'); }
-        else setContrastIntent('linear', {}, 'preset');
+        const presetId = elements.intentPresetSelect.value;
+        const preset = getPreset(presetId);
+        if (preset) {
+          setContrastIntent(preset.id, preset.params, 'preset');
+        } else {
+          setContrastIntent('linear', {}, 'preset');
+        }
         closeIntentModal();
       } else if (active === 'custom'){
         const g = Number(elements.customGamma.value); const gain = Number(elements.customGain.value); const shoulder = Number(elements.customShoulder.value);
@@ -16649,7 +17178,36 @@ DOMAIN_MAX 1.0 1.0 1.0
       elements.intentPasteArea.addEventListener('paste', ()=> setTimeout(scheduleAutoParseForPasteArea, 0));
     }
 
-    // Initialize main Intent dropdown: show Custom only when a saved custom intent exists
+    // Initialize preset dropdowns from central definitions
+    function initializePresetDropdowns() {
+      try {
+        // Main Intent dropdown
+        const mainSelect = elements.contrastIntentSelect;
+        if (mainSelect) {
+          const presetHTML = generatePresetDropdownHTML();
+          const existingOptions = mainSelect.innerHTML;
+          // Insert preset options before existing custom options
+          const beforeCustom = existingOptions.indexOf('<!-- Preset options will be populated dynamically');
+          const afterComment = existingOptions.indexOf('-->') + 3;
+          const customOptions = existingOptions.substring(afterComment);
+          mainSelect.innerHTML = presetHTML + customOptions;
+        }
+
+        // Modal preset dropdown
+        const modalSelect = elements.intentPresetSelect;
+        if (modalSelect) {
+          modalSelect.innerHTML = generatePresetDropdownHTML();
+        }
+
+        // Initialize description for modal
+        updatePresetDescription();
+      } catch (e) {
+        console.warn('Failed to initialize preset dropdowns:', e);
+      }
+    }
+
+    // Initialize dropdowns and custom options
+    try { initializePresetDropdowns(); } catch {}
     try { updateCustomOptionVisibility(); } catch {}
     // Initialize Intent dropdown state based on linearization data
     try { updateIntentDropdownState(); } catch {}
@@ -16779,8 +17337,14 @@ DOMAIN_MAX 1.0 1.0 1.0
           if (numTokens.length >= 2) {
             const t = numTokens[0];
             const yVal = numTokens[numTokens.length-1];
-            let y = yVal > 1.000001 ? (yVal/100) : yVal; // normalize to 0..1
-            rows.push([Math.max(0, Math.min(1, t/100)), Math.max(0, Math.min(1, y))]);
+
+            // Auto-detect range: if values > 100, assume 0-255 range; otherwise 0-100 range
+            const maxVal = Math.max(t, yVal);
+            const divisor = maxVal > 100 ? 255 : 100;
+
+            const tNorm = Math.max(0, Math.min(1, t / divisor));
+            const yNorm = Math.max(0, Math.min(1, yVal / divisor));
+            rows.push([tNorm, yNorm]);
           }
         }
         if (rows.length < 2) {
@@ -16902,6 +17466,34 @@ DOMAIN_MAX 1.0 1.0 1.0
     function getHelpReadmeHTML(){
       return `
         <section class="prose prose-gray max-w-none p-6 bg-white rounded-2xl shadow">
+          <div style="display: flex; justify-content: center;">
+            <div style="font-size: 10px; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace; white-space: normal; line-height: 1.2; text-align: left; width: 100%;">MIT License
+
+Copyright (c) 2025 David Marsh
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Scope: This license applies to this HTML file (quadgen.html) only.</div>
+          </div>
+
+          <hr />
+
           <h2 id="overview">Overview</h2>
           <p>
             <strong>quadGEN</strong> is a free, browser-based tool for generating and refining <code>.quad</code> files used with QuadToneRIP.  
@@ -17002,6 +17594,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             <li>Cloudflare Workers — used as an API proxy (rate-limited edge function).</li>
             <li>Anthropic Claude</li>
             <li>OpenAI ChatGPT / Codex</li>
+            <li>Prints on Paper Studio — contrast intent definitions used with permission under <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GNU Public License</a>.</li>
             <li>Trademarks: QuadToneRIP and Print‑Tool are property of Roy Harrington. Color Muse is a trademark of Variable, Inc. Easy Digital Negatives is a separate project. All product names, logos, and brands are property of their respective owners.</li>
           </ul>
 
@@ -17049,13 +17642,19 @@ DOMAIN_MAX 1.0 1.0 1.0
             <dd>Per-channel maximum ink level. Edits that require more ink can raise End when feasible; when End is effectively locked, edits that exceed it are blocked with status.</dd>
 
             <dt>Gaussian Weighted Correction</dt>
-            <dd>LAB processing method that spreads each measurement’s influence smoothly across inputs; reduces artifacts versus naive inversion techniques.</dd>
+            <dd>LAB processing method that spreads each measurement's influence smoothly across inputs; reduces artifacts versus naive inversion techniques.</dd>
+
+            <dt>Gamma value</dt>
+            <dd>Numerical parameter that controls the shape of a power-law tone curve. In quadGEN's contrast intent presets: gamma < 1.0 (e.g., 0.85) lowers contrast by brightening shadows; gamma > 1.0 (e.g., 1.2, 1.6, 2.2) increases contrast by darkening shadows. Gamma = 1.0 produces a linear curve with no tonal adjustment.</dd>
 
             <dt>Global correction</dt>
             <dd>A correction that applies uniformly to all channels (e.g., LAB/LUT/ACV loaded as global data or computed from measurements).</dd>
 
             <dt>Graph orientation</dt>
-            <dd>quadGEN plots printer-space ink mapping with 0% = white (no ink) at the origin. Photoshop/other “tone” tools often use 0,0 = black.</dd>
+            <dd>quadGEN plots printer-space ink mapping with 0% = white (no ink) at the origin. Photoshop/other "tone" tools often use 0,0 = black.</dd>
+
+            <dt>Image space</dt>
+            <dd>Coordinate system where 0 represents black (shadow) and 100 represents white (highlight), matching how images are typically viewed and edited. Point (0,0) = black input produces black pixel output; point (100,100) = white input produces white pixel output. ACV files, LUTs, and most user input use image space conventions. quadGEN automatically converts image space data to printer space for internal processing and display.</dd>
 
             <dt>Input Level %</dt>
             <dd>X-axis value representing the input level (0–100%) in printer space; corresponds to the source tone step being mapped.</dd>
@@ -17090,11 +17689,17 @@ DOMAIN_MAX 1.0 1.0 1.0
             <dt>Output Ink Level %</dt>
             <dd>Y-axis value representing the ink output (0–100%) after applying the curve and current End; higher values mean more ink (darker).</dd>
 
+            <dt>Printer space</dt>
+            <dd>Coordinate system where 0 represents white (no ink) and 100 represents maximum ink (black), matching how printers actually operate. Point (0,0) = white input produces no ink output (white); point (100,100) = black input produces maximum ink output (black). This is quadGEN's native coordinate system for all internal processing, curve display, and .quad file generation. Input data from image space sources (ACV, LUT, custom intents) is automatically transformed to printer space.</dd>
+
             <dt>Smart curve</dt>
             <dd>Adaptive curve model in quadGEN defined by editable key points and monotonic interpolation. Smart curves allow precise local edits while preserving smoothness and avoiding overshoot, enabling efficient linearization and correction workflows.</dd>
 
             <dt>Target (21/25-step etc)</dt>
             <dd>Printable step-wedge target used for iterative calibration. Measure the print (e.g., with Color Muse 2), import LAB <code>.txt</code>, refine, and reprint.</dd>
+
+            <dt>PoPS (Prints on Paper Studio)</dt>
+            <dd><a href="https://printsonpaper.studio/" target="_blank" rel="noopener">Collaborative printmaking studio</a> specializing in photogravure and digital pigment printing, offering artists a welcoming environment to create and edition fine art prints using innovative techniques. PoPS has developed contrast intent presets included in quadGEN for alternative photographic processes. Note: quadGEN is not affiliated with or part of Prints on Paper Studio.</dd>
 
             <dt>Print Tool</dt>
             <dd><a href="https://www.quadtonerip.com/html/QTRprinttool.html" target="_blank" rel="noopener">Utility application</a> for macOS that enables color-managed printing from TIFF files while bypassing standard print driver limitations. Commonly used with QuadToneRIP workflows for printing digital negatives and monochrome images.</dd>
