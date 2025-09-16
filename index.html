@@ -196,15 +196,15 @@ FUNCTION CATEGORIES:
 
 CHANNEL CONTROL FUNCTIONS:
 - set_channel_value: Set ink limit percentage for specific channel (0-100%)
-- set_channel_end_value: Set ink limit end value for specific channel (0-64000)
+- set_channel_end_value: Set ink limit end value for specific channel (0-65535)
 - apply_to_all_channels: Apply same ink limit percentage to all enabled channels (creates batch undo)
 - apply_end_to_all_channels: Apply same ink limit end value to all enabled channels (creates batch undo)
 - enable_disable_channel: Enable/disable individual ink channels
 - batch_channel_operations: Multiple enable/disable operations in single call (creates batch undo)
 
 INK LIMIT VALUE SYSTEM:
-- Percentages (0-100%) and end values (0-64000) are mathematically linked
-- 0% = 0 end value, 33% = 21120 end value, 50% = 32000 end value, 100% = 64000 end value
+- Percentages (0-100%) and end values (0-65535) are mathematically linked
+- 0% = 0 end value, 33% ~ 21627 end value, 50% = 32768 end value, 100% = 65535 end value
 - Use set_channel_value for percentage-based requests ("set to 50%")
 - Use set_channel_end_value for direct end value requests ("set to 32000")
 
@@ -1789,10 +1789,13 @@ ARCHITECTURAL NOTES:
             <div id="chartCursorTooltip" class="hidden absolute z-20 px-1.5 py-0.5 text-xs rounded bg-black text-white pointer-events-none shadow-md"></div>
             
             <!-- Status Display -->
-            <div class="absolute top-4 left-4 right-4 z-10">
+            <div class="absolute top-6 left-4 right-4 z-10">
               <div class="bg-gray-50 rounded-lg px-3 py-2 text-center flex items-center justify-center">
                 <span id="status" class="text-xs text-gray-600 font-medium transition-opacity duration-500 ease-in-out">&nbsp;</span>
               </div>
+            </div>
+            <div class="absolute top-1 left-4 z-10">
+              <span id="sessionStatus" class="text-xs text-gray-500">&nbsp;</span>
             </div>
             
             <!-- Interpolation Controls (moved inside graph container) -->
@@ -1844,7 +1847,6 @@ ARCHITECTURAL NOTES:
               </div>
               <button id="intentHelpBtn" class="text-xs text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 transition-colors font-bold" title="Correction vs. Intent" aria-label="Correction vs. Intent">?</button>
             </div>
-            <p class="text-xs text-gray-600 mb-2">Apply a correction to modify all channels uniformly.</p>
             <div class="flex items-center gap-2 mb-1">
               <button id="globalLinearizationBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold whitespace-nowrap shrink-0 inline-flex items-center" data-tooltip="Load LUT.cube, LABdata.txt, or .acv curve files">Load Data File</button>
               <input type="file" id="linearizationFile" accept=".cube,.txt,.acv" class="hidden">
@@ -1863,6 +1865,18 @@ ARCHITECTURAL NOTES:
                 <select id="perChannelDeltaSelect" class="text-xs border border-gray-300 rounded px-1 py-0.5"></select>
                 <span id="perChannelDeltaSummary" class="ml-1"></span>
               </span>
+            </div>
+            <!-- Auto endpoint rolloff controls -->
+            <div class="mt-2 flex items-center gap-3 text-xs text-gray-600">
+              <span class="font-bold" title="Detect early plateau at the ends and apply a soft shoulder/toe so the curve reaches the ink limit exactly at 100% without flattening.">Auto limits</span>
+              <label for="autoWhiteLimitToggle" class="inline-flex items-center gap-1" title="Enable automatic white-shoulder rolloff near paper white.">
+                <input type="checkbox" id="autoWhiteLimitToggle" class="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <span>White</span>
+              </label>
+              <label for="autoBlackLimitToggle" class="inline-flex items-center gap-1" title="Enable automatic black-toe rolloff near maximum ink.">
+                <input type="checkbox" id="autoBlackLimitToggle" class="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <span>Black</span>
+              </label>
             </div>
             <div class="flex items-center gap-2 mt-2">
               <label for="contrastIntentSelect" class="text-xs text-gray-600 font-bold">Intent</label>
@@ -1982,7 +1996,7 @@ ARCHITECTURAL NOTES:
                 Percent <span class="font-normal text-gray-500">(0–100)</span>
               </th>
               <th class="text-right pl-0 py-2" style="width:120px;">
-                End <span class="font-normal text-gray-500">(0–64,000)</span>
+                End <span class="font-normal text-gray-500">(0–65,535)</span>
               </th>
             </tr>
           </thead>
@@ -2331,6 +2345,18 @@ ARCHITECTURAL NOTES:
           <div class="text-xs text-gray-600 ml-2 mt-2">Tip for digital negatives: work in positive space, then invert your image in your editor before printing the negative.</div>
         </div>
         <div>
+          <p class="font-medium text-lg mb-2">Auto endpoint rolloff</p>
+          <p class="text-sm text-gray-600 mb-1">When a non-linear intent + correction pushes the curve against the ink limit early, the last steps can “flat-top” (no separation). Use the Auto limits checkboxes to apply a smooth shoulder (black) or toe (white) so the curve reaches the limit exactly at the endpoint with slope 0.</p>
+          <ul class="list-disc list-inside text-sm text-gray-600">
+            <li><span class="font-medium">Black limit (right)</span>: adds a soft shoulder when the curve plateaus near the max ink (End); preserves separation from ~knee→100%.</li>
+            <li><span class="font-medium">White limit (left)</span>: adds a soft toe if the curve bunches near 0; preserves separation from 0→~knee.</li>
+            <li><span class="font-medium">Scope</span>: local only — midtones are unchanged; applied after intent + corrections.</li>
+            <li><span class="font-medium">Defaults</span>: Black limit ON, white limit OFF; 3% proximity threshold, C1-continuous, monotone knees that re-detect automatically on file/intent/limit changes.</li>
+            <li><span class="font-medium">Edit Mode</span>: Recompute bakes any visible knees into Smart points (undoable). Disable a checkbox to export without that rolloff.</li>
+          </ul>
+          <div class="text-xs text-gray-600 mt-2">Debug notes: With <code>DEBUG_LOGS = true</code>, the console prints detected knee indices and before/after samples; dashed blue (black) / red (white) markers show knee positions on the chart while the respective Auto limit is on.</div>
+        </div>
+        <div>
           <p class="font-medium text-lg mb-2">Sample Data</p>
           <div class="flex gap-2">
             <div class="flex-1">
@@ -2418,7 +2444,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
 —
 
-## 3. Quick Start (Beta v2.2)  
+## 3. Quick Start (Beta 2.3)  
 1) Choose your printer and set ink limits (per channel).
 2) Start with Linear Ramp, or  
 3) Load data: `.quad` (inspect/correct), LAB `.txt`, LUT `.cube` (1D/3D), Photoshop `.acv`, or enter Manual L*.  
@@ -2493,7 +2519,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta v2.2.3';
+    const APP_VERSION = 'Beta 2.3.0';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2513,6 +2539,41 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
     
     // Centralized version history - update in one place
     const VERSION_HISTORY = {
+      'Unreleased': {
+        date: '—',
+        title: 'In progress',
+        sections: {
+          ADDED: [],
+          CHANGED: [],
+          FIXED: [],
+          REMOVED: [],
+          DOCS: []
+        },
+        aboutDialog: []
+      },
+      'v2.3.0': {
+        date: '2025-09-16',
+        title: 'Auto endpoint rolloff (white/black) + UX',
+        sections: {
+          ADDED: [
+            'Auto endpoint rolloff now has independent white/black limit toggles so you can knee only the side that needs protection.',
+            'Glossary: added Auto white limit, Auto black limit, and Endpoint rolloff entries.',
+            'Chart markers: dashed red/blue lines indicate detected knee start/end while the respective Auto limit is on.',
+            'Lab Tech assistant: new set_auto_white_limit / set_auto_black_limit commands to toggle Auto endpoint rolloff from chat.'
+          ],
+          CHANGED: [
+            'Threshold: proximity epsilon increased to 3% of End for clearer shoulders on long plateaus.',
+            'Auto endpoint rolloff now exposes independent white/black limit checkboxes (defaults: white OFF, black ON) with persisted preferences and per-side baking guards.',
+            '.quad generation and channel controls now use the full 0–65,535 16-bit scale instead of 0–64,000; UI ranges and validation updated accordingly so ink limits align with QuadToneRIP conventions.',
+            'Chart background: Enhanced visual structure with subtle accent lines - darker 50% crossover grid lines and boundary lines from 100,0→100,100 and 0,100→100,100 to improve coordinate reference.'
+          ]
+        },
+        aboutDialog: [
+          { label: 'Auto Rolloff Controls', desc: 'Independent white/black knees with 3% proximity threshold keep endpoints smooth without flattening the curve.' },
+          { label: 'Lab Tech Integration', desc: 'New chat commands toggle Auto white/black limits directly from the assistant.' },
+          { label: 'Ink Limit Alignment', desc: 'Full 0–65,535 scaling and dashed knee markers keep the UI aligned with QuadToneRIP expectations.' }
+        ]
+      },
       'v2.2.3': {
         date: '2025-09-15',
         title: 'Intent system fixes + Documentation improvements',
@@ -3332,6 +3393,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
     function generateAboutDialogVersionHistory() {
       let content = '';
       for (const [version, data] of Object.entries(VERSION_HISTORY)) {
+        if (version === 'Unreleased') continue;
         const displayVersion = `Beta ${version}`;
         content += `
           <div class="mb-3">
@@ -3350,7 +3412,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       return content;
     }
     
-    const TOTAL = 64000;
+    const TOTAL = 65535;
     const N = 256;
     const DENOM = N - 1;
 
@@ -3548,7 +3610,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       /**
        * Set ink limit end value for a specific channel
        * @param {string} channelName - The channel name (K, C, M, Y, etc.)
-       * @param {number} endValue - Ink limit end value (0-64000)
+       * @param {number} endValue - Ink limit end value (0-65535)
        * @returns {Object} Result with success status and message
        */
       setChannelEndValue(channelName, endValue) {
@@ -3567,7 +3629,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           if (validatedEndValue !== endValue) {
             return {
               success: false,
-              message: `Invalid end value '${endValue}'. Must be between 0 and 64000.`
+              message: `Invalid end value '${endValue}'. Must be between 0 and 65535.`
             };
           }
 
@@ -3715,7 +3777,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
       /**
        * Apply same end value to all enabled channels
-       * @param {number} endValue - Ink limit end value (0-64000)
+       * @param {number} endValue - Ink limit end value (0-65535)
        * @returns {Object} Result with success status and message
        */
       applyEndToAllChannels(endValue) {
@@ -3724,7 +3786,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           if (validatedEndValue !== endValue) {
             return {
               success: false,
-              message: `Invalid end value '${endValue}'. Must be between 0 and 64000.`
+              message: `Invalid end value '${endValue}'. Must be between 0 and 65535.`
             };
           }
 
@@ -4587,6 +4649,38 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             success: false,
             message: `Error setting global linearization: ${error.message}`
           };
+        }
+      }
+
+      /** Toggle the Auto white limit rolloff checkbox */
+      setAutoWhiteLimit(enabled) {
+        try {
+          const toggle = elements.autoWhiteLimitToggle;
+          if (!toggle) {
+            return { success: false, message: 'Auto white limit toggle not available in this build' };
+          }
+          const desired = !!enabled;
+          toggle.checked = desired;
+          toggle.dispatchEvent(new Event('change', { bubbles: true }));
+          return { success: true, message: `Auto white limit ${desired ? 'enabled' : 'disabled'}` };
+        } catch (error) {
+          return { success: false, message: `Error setting auto white limit: ${error.message}` };
+        }
+      }
+
+      /** Toggle the Auto black limit rolloff checkbox */
+      setAutoBlackLimit(enabled) {
+        try {
+          const toggle = elements.autoBlackLimitToggle;
+          if (!toggle) {
+            return { success: false, message: 'Auto black limit toggle not available in this build' };
+          }
+          const desired = !!enabled;
+          toggle.checked = desired;
+          toggle.dispatchEvent(new Event('change', { bubbles: true }));
+          return { success: true, message: `Auto black limit ${desired ? 'enabled' : 'disabled'}` };
+        } catch (error) {
+          return { success: false, message: `Error setting auto black limit: ${error.message}` };
         }
       }
 
@@ -5667,9 +5761,14 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             if (res && res.success && linearizationApplied && linearizationData) {
               if (!window.loadedQuadData) window.loadedQuadData = {};
               if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+              const autoWhiteOn = !!(elements?.autoWhiteLimitToggle?.checked);
+              const autoBlackOn = !!(elements?.autoBlackLimitToggle?.checked);
               window.loadedQuadData.keyPointsMeta[channelName] = {
                 ...(window.loadedQuadData.keyPointsMeta[channelName] || {}),
-                bakedGlobal: true
+                bakedGlobal: true,
+                bakedAutoLimit: autoWhiteOn || autoBlackOn,
+                bakedAutoWhite: autoWhiteOn,
+                bakedAutoBlack: autoBlackOn
               };
               // Also tag the most recent curve action for this channel so redo restores bakedGlobal
               try {
@@ -6559,7 +6658,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       },
       {
         name: "set_channel_end_value",
-        description: "Set the ink limit end value for a specific channel (0-64000 range)",
+        description: "Set the ink limit end value for a specific channel (0-65535 range)",
         parameters: {
           type: "object",
           properties: {
@@ -6570,9 +6669,9 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             },
             endValue: {
               type: "number",
-              description: "Ink limit end value (0-64000). Common values: 21000=33%, 32000=50%, 64000=100%",
+              description: "Ink limit end value (0-65535). Common values: 21627 (~33%), 32768 (50%), 65535 (100%)",
               minimum: 0,
-              maximum: 64000
+              maximum: 65535
             }
           },
           required: ["channelName", "endValue"]
@@ -6602,9 +6701,9 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           properties: {
             endValue: {
               type: "number",
-              description: "Ink limit end value to apply to all enabled channels (0-64000)",
+              description: "Ink limit end value to apply to all enabled channels (0-65535)",
               minimum: 0,
-              maximum: 64000
+              maximum: 65535
             }
           },
           required: ["endValue"]
@@ -6798,6 +6897,34 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             enabled: {
               type: "boolean",
               description: "Whether to enable (true) or disable (false) global linearization"
+            }
+          },
+          required: ["enabled"]
+        }
+      },
+      {
+        name: "set_auto_white_limit",
+        description: "Enable or disable the Auto white limit rolloff (toe near paper white).",
+        parameters: {
+          type: "object",
+          properties: {
+            enabled: {
+              type: "boolean",
+              description: "true to enable the Auto white limit rolloff; false to disable"
+            }
+          },
+          required: ["enabled"]
+        }
+      },
+      {
+        name: "set_auto_black_limit",
+        description: "Enable or disable the Auto black limit rolloff (shoulder near max ink).",
+        parameters: {
+          type: "object",
+          properties: {
+            enabled: {
+              type: "boolean",
+              description: "true to enable the Auto black limit rolloff; false to disable"
             }
           },
           required: ["enabled"]
@@ -7930,7 +8057,11 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           
           case 'set_global_linearization':
             return quadGenActions.setGlobalLinearization(parameters.enabled);
-          
+          case 'set_auto_white_limit':
+            return quadGenActions.setAutoWhiteLimit(parameters.enabled);
+          case 'set_auto_black_limit':
+            return quadGenActions.setAutoBlackLimit(parameters.enabled);
+
           case 'set_per_channel_linearization':
             return quadGenActions.setPerChannelLinearization(parameters.channelName, parameters.enabled);
           case 'revert_global_to_measurement':
@@ -8110,6 +8241,7 @@ P600-P800 (8 channels, K switchable), P700-P900 (10 channels, MK+V dedicated)
 • Linearization files (.cube/.txt/.acv) compensate for paper/ink characteristics
 • Users can PASTE LAB measurement data or .cube LUT file data directly into chat for instant linearization
 • Positive-only workflow: quadGEN operates in printer-space. EDN LUT/.acv are mapped for Positive orientation (reverse + invert). Work in positive space; invert your image when printing a digital negative. Measurement linearization unchanged.
+• Auto endpoint rolloff: set_auto_black_limit/set_auto_white_limit toggle localized knees (black shoulder default ON, white toe default OFF). Recompute with a side enabled bakes bakedAutoBlack/bakedAutoWhite meta so plotting skips double application.
 • Curve creation: Compute explicit numeric key points yourself based on the user’s intent (e.g., gentle S-curve, lift shadows) and apply them with set_ai_key_points. Do NOT rely on built-in presets or pre-defined curves.
 • You may interpret photography terms (lift/drop shadows/midtones/highlights, crush/blow, peak/bump, gentle arc, roll off, S-curve), but YOU must choose the actual numerical key points.
 • Alt-process terms: palladium/pt-pd curve, cyanotype density, salt print range, gum curve, zone system, block shadows, boost shadows, preserve highlights, contact printing density, UV blocking, exposure scale (ES)
@@ -8165,8 +8297,8 @@ RULES:
 • Process curve requests (cyanotype, palladium, etc.): Do NOT generate a preset. Briefly explain image-space vs printer-space and ask the user to load EDN (.cube/.acv) or LAB (.txt).
 
 VALUE INTERPRETATION:
-• Percentages (0-100%) and end values (0-64000) are equivalent representations
-• 0% = 0, 33% = 21120, 50% = 32000, 100% = 64000
+• Percentages (0-100%) and end values (0-65535) are equivalent representations
+• 0% = 0, 33% ~ 21627, 50% = 32768, 100% = 65535
 • Use set_channel_value for percentage requests ("set to 50%")
 • Use set_channel_end_value for end value requests ("set to 32000")
 
@@ -8626,6 +8758,8 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       globalLinearizationBtn: document.getElementById('globalLinearizationBtn'),
       globalLinearizationHint: document.getElementById('globalLinearizationHint'),
       globalLinearizationToggle: document.getElementById('globalLinearizationToggle'),
+      autoWhiteLimitToggle: document.getElementById('autoWhiteLimitToggle'),
+      autoBlackLimitToggle: document.getElementById('autoBlackLimitToggle'),
       curveSmoothingMethod: document.getElementById('curveSmoothingMethod'),
       catmullTension: document.getElementById('catmullTension'),
       catmullTensionContainer: document.getElementById('catmullTensionContainer'),
@@ -8663,6 +8797,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       helpTabGlossary: document.getElementById('helpTabGlossary'),
       helpTabWorkflow: document.getElementById('helpTabWorkflow'),
       helpTabHistory: document.getElementById('helpTabHistory'),
+      sessionStatus: document.getElementById('sessionStatus'),
       globalCorrectionHelpBtn: document.getElementById('globalCorrectionHelpBtn'),
       globalCorrectionHelpPopup: document.getElementById('globalCorrectionHelpPopup'),
       closeGlobalCorrectionHelpBtn: document.getElementById('closeGlobalCorrectionHelpBtn'),
@@ -9051,6 +9186,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       }
       persistContrastIntent();
       updateIntentDetailLabel();
+      try { updateSessionStatus(); } catch {}
       recomputeLinearizationForCurrentIntent();
       try { if (typeof updateCustomOptionVisibility === 'function') updateCustomOptionVisibility(); } catch {}
       try {
@@ -9060,18 +9196,29 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
     }
     function updateIntentDetailLabel(){
       try {
-        if (!linearizationData || !linearizationApplied) return;
-        const el = elements.globalLinearizationDetails; if (!el) return;
-        const base = el.textContent || '';
-        if (!base || base.trim().length === 0) return;
-        const cleaned = base.replace(/\s+—\s+Intent:.*$/, '');
+        // Keep the loaded correction filename/details clean; show intent as a tooltip on the dropdown instead
+        const detailsEl = elements.globalLinearizationDetails;
+        if (detailsEl) {
+          const base = detailsEl.textContent || '';
+          // Strip any previous appended intent text if present
+          const cleaned = base.replace(/\s+—\s+Intent:.*$/, '');
+          if (cleaned !== base) detailsEl.textContent = cleaned;
+        }
+
+        // Build concise tooltip for the intent dropdown
         const intentLabel = contrastIntent?.name || 'Linear';
         const params = contrastIntent?.params || {};
         let extra = '';
         if (contrastIntent.id === 'soft') extra = ` (γ≈0.85)`;
         else if (contrastIntent.id === 'hard') extra = ` (γ≈1.20)`;
         else if (contrastIntent.id === 'custom_gamma') extra = ` (γ=${(params.gamma??1).toFixed?params.gamma.toFixed(2):params.gamma})`;
-        el.textContent = `${cleaned} — Intent: ${intentLabel}${extra}`;
+        else if (contrastIntent.id === 'filmic' || contrastIntent.id === 'custom_filmic') {
+          const gain = Number(params.filmicGain ?? params.gain ?? 0.55);
+          const shoulder = Number(params.shoulder ?? 0.35);
+          extra = ` (gain ${isFinite(gain)?gain.toFixed(2):'0.55'}, shoulder ${isFinite(shoulder)?shoulder.toFixed(2):'0.35'})`;
+        }
+        const tip = `Intent: ${intentLabel}${extra}`;
+        if (elements.contrastIntentSelect) elements.contrastIntentSelect.setAttribute('title', tip);
       } catch {}
     }
     function recomputeLinearizationForCurrentIntent(){
@@ -9384,7 +9531,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       
       static clampEnd(e) { 
         const num = parseInt(e);
-        return isNaN(num) ? 0 : Math.min(64000, Math.max(0, num)); 
+        return isNaN(num) ? 0 : Math.min(TOTAL, Math.max(0, num)); 
       }
       
       static computeEndFromPercent(p) { 
@@ -10236,6 +10383,19 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
       }
 
+      // Auto endpoint rolloff annotation (if enabled and detected)
+      try {
+        const autoWhiteOn = !!elements?.autoWhiteLimitToggle?.checked;
+        const autoBlackOn = !!elements?.autoBlackLimitToggle?.checked;
+        if ((autoWhiteOn || autoBlackOn) && window._autoLimitState && window._autoLimitState[channelName]) {
+          const meta = window._autoLimitState[channelName];
+          const parts = [];
+          if (autoBlackOn && meta.black && isFinite(meta.black.widthPercent)) parts.push(`B ${meta.black.widthPercent.toFixed(1)}%`);
+          if (autoWhiteOn && meta.white && isFinite(meta.white.widthPercent)) parts.push(`W ${meta.white.widthPercent.toFixed(1)}%`);
+          if (parts.length) segmentsApplied.push(`Auto limit: ${parts.join(', ')}`);
+        }
+      } catch {}
+
       // Build display text; show each applied segment on a new line.
       if (segmentsApplied.length === 0) {
         processingLabel.textContent = '→ Linear ramp';
@@ -10387,6 +10547,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           if (!options.onlyNotes) {
             updateInkChart();
             updateFilename(); // Update filename when preview updates
+            try { updateSessionStatus(); } catch {}
             // Delta UI disabled; summaries are posted to Lab Tech chat instead
             showStatus("Preview updated");
           }
@@ -10868,7 +11029,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         // Generate the 256 values with linearization
         const values = make256(endVal, channelName, true);
-        const maxValue = TOTAL; // 64000
+        const maxValue = TOTAL; // 65535
         
         if (DEBUG_LOGS) console.log('DEBUG: Chart values for', channelName, {
           valuesCount: values.length,
@@ -10979,6 +11140,31 @@ DOMAIN_MAX 1.0 1.0 1.0
         
       ctx.stroke();
       ctx.globalAlpha = 1.0; // reset
+
+      // Auto endpoint rolloff markers (debug overlay)
+      try {
+        const autoWhiteOn = !!elements?.autoWhiteLimitToggle?.checked;
+        const autoBlackOn = !!elements?.autoBlackLimitToggle?.checked;
+        if ((autoWhiteOn || autoBlackOn) && window._autoLimitState && window._autoLimitState[channelName]) {
+          const meta = window._autoLimitState[channelName];
+          const drawMarker = (idx, color) => {
+            const x = leftPadding + (idx / (values.length - 1)) * chartWidth;
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.setLineDash([6, 3]);
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(x, padding);
+            ctx.lineTo(x, height - padding);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+          };
+          // Marker colors: blue = black end (right/knee start), red = white end (left/knee end)
+          if (autoBlackOn && meta.black && isFinite(meta.black.startIndex)) drawMarker(meta.black.startIndex, '#3b82f6');
+          if (autoWhiteOn && meta.white && isFinite(meta.white.endIndex)) drawMarker(meta.white.endIndex, '#ef4444');
+        }
+      } catch {}
         
         // Lightweight overlay: key points visibility follows Edit Mode
         // Prefer explicit AI key points when available; otherwise show adapter overlays (ACV/LUT/LAB)
@@ -11027,7 +11213,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       if (labels.length > 0) {
         labels.sort((a, b) => a.endY - b.endY); // Sort by Y position
         
-        ctx.font = 'bold 12px system-ui';
+        ctx.font = 'bold 11px system-ui';
         ctx.textAlign = 'left';
         
         const minSpacing = 20; // Minimum spacing between labels
@@ -11049,14 +11235,16 @@ DOMAIN_MAX 1.0 1.0 1.0
           labels[i].adjustedY = labelY;
           
           // Draw the label with theme-aware background and ink color chip
-          const labelText = `${labels[i].channelName} (${labels[i].percent}%)`;
+          const labelText = `${labels[i].channelName} ${labels[i].percent}%`;
           const textMetrics = ctx.measureText(labelText);
           const chipW = 8, chipH = 12, pad = 6;
-          const textHeight = 18; // Background height for 12px text with padding
+          const textHeight = 16; // Background height for 11px text with padding
           const bgW = chipW + pad + Math.ceil(textMetrics.width) + pad; // chip + gap + text + pad
           const bgH = textHeight + 2;
+          // Anchor label at the right edge; shift down slightly for clarity
           const bgX = endX;
-          const bgY = labelY - textHeight + 2;
+          
+          const bgY = labelY - textHeight + 5; // shift down 3px
 
           // Read theme colors
           const labelBG = (styles.getPropertyValue('--bg-elevated') || '#ffffff').trim();
@@ -11609,6 +11797,42 @@ DOMAIN_MAX 1.0 1.0 1.0
         .replace(/_{2,}/g, '_')        // Replace multiple underscores with single
         .replace(/^_+|_+$/g, '')       // Trim underscores from start/end
         .substring(0, 200);            // Limit length to 200 chars
+    }
+
+    // Session status (Quad / Global / Intent) displayed near the graph status line
+    function updateSessionStatus() {
+      try {
+        const quadName = (window.loadedQuadData && window.loadedQuadData.filename) ? window.loadedQuadData.filename : 'none';
+        let globalName = 'none';
+        try {
+          if (linearizationData && linearizationApplied) {
+            globalName = (elements.globalLinearizationFilename?.textContent || linearizationData.filename || 'data');
+          }
+        } catch {}
+        // Build concise intent label
+        const id = String(contrastIntent?.id || 'linear');
+        const name = contrastIntent?.name || 'Linear';
+        const p = contrastIntent?.params || {};
+        let extra = '';
+        if (id === 'soft') extra = ' (γ≈0.85)';
+        else if (id === 'hard') extra = ' (γ≈1.20)';
+        else if (id === 'custom_gamma') extra = ` (γ=${(p.gamma??1).toFixed?Number(p.gamma).toFixed(2):p.gamma})`;
+        else if (id === 'filmic' || id === 'custom_filmic') {
+          const gain = Number(p.filmicGain ?? p.gain ?? 0.55);
+          const shoulder = Number(p.shoulder ?? 0.35);
+          extra = ` (gain ${isFinite(gain)?gain.toFixed(2):'0.55'}, shoulder ${isFinite(shoulder)?shoulder.toFixed(2):'0.35'})`;
+        }
+        const intentLabel = `${name}${extra}`;
+        const parts = [];
+        if (quadName && quadName !== 'none') parts.push(`Quad: ${quadName}`);
+        if (globalName && globalName !== 'none') parts.push(`Global: ${globalName}`);
+        // Include Intent only when non-linear
+        if (id !== 'linear') {
+          parts.push(`Intent: ${intentLabel}`);
+        }
+        const line = parts.join(' • ');
+        if (elements.sessionStatus) elements.sessionStatus.textContent = line || '\u00A0';
+      } catch {}
     }
 
     // ---- Linearization utilities ----
@@ -14270,7 +14494,7 @@ DOMAIN_MAX 1.0 1.0 1.0
      * @param {string} interpolationType - 'cubic', 'catmull', or 'linear'
      * @returns {number[]} adjusted integer outputs with preserved endpoints
      */
-    function apply1DLUT(values, lutOrData, domainMin = 0, domainMax = 1, maxValue = 64000, interpolationType = 'cubic', smoothingPercent = 0) {
+    function apply1DLUT(values, lutOrData, domainMin = 0, domainMax = 1, maxValue = TOTAL, interpolationType = 'cubic', smoothingPercent = 0) {
       // Handle both direct samples array and linearization data object
       let processedLUT, lutX, needsDualTransformation = false;
       
@@ -14524,7 +14748,216 @@ DOMAIN_MAX 1.0 1.0 1.0
         });
       }
       
+      // Step 4: Auto endpoint rolloff (soft knee/toe) — applied after all corrections/intents
+      try {
+        const metaForAuto = window.loadedQuadData?.keyPointsMeta?.[channelName] || {};
+        const autoWhiteOn = !!elements?.autoWhiteLimitToggle?.checked;
+        const autoBlackOn = !!elements?.autoBlackLimitToggle?.checked;
+        const applyWhite = autoWhiteOn && !(smartApplied && metaForAuto.bakedAutoWhite);
+        const applyBlack = autoBlackOn && !(smartApplied && metaForAuto.bakedAutoBlack);
+        if (applyWhite || applyBlack) {
+          arr = applyAutoEndpointRolloff(arr, endValue, channelName, { applyWhite, applyBlack });
+        } else {
+          if (window._autoLimitState && channelName) delete window._autoLimitState[channelName];
+        }
+      } catch (e) {
+        if (DEBUG_LOGS) console.warn('Auto endpoint rolloff error:', e);
+      }
+      
       return arr;
+    }
+
+    // Auto endpoint rolloff (soft knee/toe) utilities
+    function applyAutoEndpointRolloff(values, endValue, channelName, options = {}) {
+      try {
+        const Np = values.length;
+        if (Np < 8 || endValue <= 0) return values;
+        const applyWhite = !!options.applyWhite;
+        const applyBlack = !!options.applyBlack;
+        if (!applyWhite && !applyBlack) return values;
+        const arr = values.slice();
+        const last = Np - 1;
+
+        // Compute slopes (first differences)
+        const slopes = new Array(Np).fill(0);
+        for (let i = 1; i < Np; i++) slopes[i] = arr[i] - arr[i-1];
+
+        // Median slope around midtones (30–70%) as baseline
+        const iLo = Math.floor(0.30 * last), iHi = Math.ceil(0.70 * last);
+        const midSlopes = slopes.slice(iLo+1, iHi+1).map(Math.abs).filter(isFinite);
+        const midMedian = median(midSlopes) || 0;
+
+        // Thresholds
+        const epsY = Math.max(1, Math.round(0.03 * endValue)); // 3% of End (min 1)
+        const epsSlope = Math.max(1, Math.round(0.15 * (midMedian || 1))); // 15% of mid median
+        const sustain = 4; // sustained samples
+        const minWidthIdx = Math.round(0.05 * last); // 5% domain
+
+        if (DEBUG_LOGS) console.log('[AUTO LIMIT] begin', {
+          channelName,
+          Np,
+          endValue,
+          epsY,
+          epsSlope,
+          sustain,
+          minWidthIdx,
+          arrHead: arr.slice(0,8), arrTail: arr.slice(-8)
+        });
+
+        let whiteStart = null;
+        if (applyBlack) {
+          // Scan last 10%
+          const startScanW = Math.max(1, Math.floor(0.80 * last));
+          for (let i = startScanW; i <= last - sustain; i++) {
+            const nearCap = (endValue - arr[i]) <= epsY;
+            if (!nearCap) continue;
+            // Rolling low slope sustain
+            let ok = true;
+            for (let k = 0; k < sustain; k++) {
+              if (Math.abs(slopes[i + k]) > epsSlope) { ok = false; break; }
+            }
+            if (ok) { whiteStart = i; break; }
+          }
+        }
+
+        let blackEnd = null;
+        if (applyWhite) {
+          // Scan first 10%
+          const endScanB = Math.min(last-1, Math.ceil(0.10 * last));
+          for (let j = endScanB; j >= sustain; j--) {
+            const nearFloor = arr[j] <= epsY;
+            if (!nearFloor) continue;
+            let ok = true;
+            for (let k = 0; k < sustain; k++) {
+              if (Math.abs(slopes[j - k]) > epsSlope) { ok = false; break; }
+            }
+            if (ok) { blackEnd = j; break; }
+          }
+        }
+
+        if (DEBUG_LOGS) console.log('[AUTO LIMIT] detected indices', { whiteStart, blackEnd });
+
+        // Apply soft shoulder for white end
+        let whiteWidth = 0;
+        if (applyBlack && whiteStart != null) {
+          // Backtrack to ensure y0 is meaningfully below End (avoid degenerate knee)
+          let ws = whiteStart;
+          const backLimit = Math.max(0, ws - Math.round(0.10 * last)); // search up to 10% back
+          while (ws > backLimit && (endValue - arr[ws]) < epsY) ws--;
+          if ((endValue - arr[ws]) >= epsY) whiteStart = ws;
+          // Fallback: if still too close to End, force a start earlier than the first near-cap crossing
+          if ((endValue - arr[whiteStart]) < epsY) {
+            const capThresh = Math.max(Math.round(0.02 * endValue), 2 * epsY); // ≥2% or 2×epsY
+            let firstCross = last;
+            for (let i = Math.floor(0.70 * last); i <= last; i++) { if ((endValue - arr[i]) <= epsY) { firstCross = i; break; } }
+            let forced = Math.max(1, firstCross - Math.round(0.05 * last));
+            while (forced > 1 && (endValue - arr[forced]) < capThresh) forced--;
+            whiteStart = Math.max(1, Math.min(whiteStart, forced));
+          }
+          const width = last - whiteStart;
+            const debugBefore = DEBUG_LOGS ? arr.slice(Math.max(0, whiteStart - 2), Math.min(last + 1, whiteStart + Math.max(6, Math.round(0.2 * width)))) : null;
+          if (width >= Math.max(3, minWidthIdx)) {
+            // Ensure the join value is not below the left neighbor to keep monotone
+            const y0 = Math.max(arr[whiteStart], arr[Math.max(0, whiteStart - 1)] || 0);
+            const m0 = Math.max(0, slopes[Math.max(1, whiteStart)]); // incoming slope
+            const m1 = 0; // flat at the endpoint
+            const W = (last - whiteStart) || 1;
+            // C1-continuous cubic Hermite shoulder
+            for (let i = whiteStart; i <= last; i++) {
+              const t = (i - whiteStart) / W;
+              const t2 = t * t, t3 = t2 * t;
+              const h00 = 2*t3 - 3*t2 + 1;
+              const h10 = t3 - 2*t2 + t;
+              const h01 = -2*t3 + 3*t2;
+              const h11 = t3 - t2;
+              let y = h00 * y0 + h10 * m0 * W + h01 * endValue + h11 * m1 * W;
+              y = Math.max(0, Math.min(endValue, y));
+              const prev = (i > 0) ? arr[i-1] : 0;
+              arr[i] = Math.max(prev, Math.round(y)); // enforce monotone non-decreasing
+            }
+            whiteWidth = Math.round((width / last) * 1000) / 10; // percentage with 0.1 precision
+            if (DEBUG_LOGS) {
+              const debugAfter = arr.slice(Math.max(0, whiteStart - 2), Math.min(last + 1, whiteStart + Math.max(6, Math.round(0.2 * width))));
+              console.log('[AUTO LIMIT] black segment', { startIndex: whiteStart, width, before: debugBefore, after: debugAfter });
+            }
+          } else {
+            if (DEBUG_LOGS) console.log('[AUTO LIMIT] white knee too narrow, skipping', { whiteStart, width, minWidthIdx });
+          }
+        }
+
+        // Apply soft toe for black end
+        let blackWidth = 0;
+        if (applyWhite && blackEnd != null) {
+          // Advance to ensure y1 is meaningfully above 0 (avoid degenerate toe)
+          let be = blackEnd;
+          const fwdLimit = Math.min(last, be + Math.round(0.10 * last));
+          while (be < fwdLimit && arr[be] < epsY) be++;
+          if (arr[be] >= epsY) blackEnd = be;
+          // Fallback: if still near 0, force a later join beyond the floor crossing
+          if (arr[blackEnd] < epsY) {
+            const floorThresh = Math.max(Math.round(0.02 * endValue), 2 * epsY);
+            let lastFloor = 0;
+            for (let i = Math.ceil(0.30 * last); i >= 0; i--) { if (arr[i] <= epsY) { lastFloor = i; break; } }
+            let forced = Math.min(last - 1, lastFloor + Math.round(0.05 * last));
+            while (forced < last - 1 && arr[forced] < floorThresh) forced++;
+            blackEnd = Math.min(blackEnd, forced);
+          }
+          const width = blackEnd - 0;
+          const debugBeforeB = DEBUG_LOGS ? arr.slice(Math.max(0, blackEnd - Math.max(6, Math.round(0.2 * width))), Math.min(last + 1, blackEnd + 2)) : null;
+          if (width >= Math.max(3, minWidthIdx)) {
+            const y1 = arr[blackEnd];
+            const m0 = 0; // slope 0 at x=0
+            // outgoing slope at the join (use forward diff if possible)
+            const m1 = Math.max(0, slopes[Math.max(1, blackEnd)]);
+            const W = Math.max(1, blackEnd - 0);
+            for (let i = 0; i <= blackEnd; i++) {
+              const t = i / W;
+              const t2 = t * t, t3 = t2 * t;
+              const h00 = 2*t3 - 3*t2 + 1;
+              const h10 = t3 - 2*t2 + t;
+              const h01 = -2*t3 + 3*t2;
+              const h11 = t3 - t2;
+              let y = h00 * 0 + h10 * m0 * W + h01 * y1 + h11 * m1 * W;
+              y = Math.max(0, Math.min(endValue, y));
+              // Raise toward y but do not exceed the later segment
+              const next = (i < last) ? arr[Math.min(last, i+1)] : y;
+              arr[i] = Math.min(Math.max(arr[i], Math.round(y)), next);
+            }
+            blackWidth = Math.round((width / last) * 1000) / 10;
+            if (DEBUG_LOGS) {
+              const debugAfterB = arr.slice(Math.max(0, blackEnd - Math.max(6, Math.round(0.2 * width))), Math.min(last + 1, blackEnd + 2));
+              console.log('[AUTO LIMIT] white segment', { endIndex: blackEnd, width, before: debugBeforeB, after: debugAfterB });
+            }
+          } else {
+            if (DEBUG_LOGS) console.log('[AUTO LIMIT] black toe too narrow, skipping', { blackEnd, width, minWidthIdx });
+          }
+        }
+
+        // Record meta for UI labels
+        try {
+          if (!window._autoLimitState) window._autoLimitState = {};
+          const meta = { debug: { epsY, epsSlope, sustain, minWidthIdx, whiteStart, blackEnd } };
+          // Store printer-space semantics: right-side = black, left-side = white
+          if (applyBlack && whiteStart != null && whiteWidth > 0) meta.black = { startIndex: whiteStart, widthPercent: whiteWidth };
+          if (applyWhite && blackEnd != null && blackWidth > 0) meta.white = { endIndex: blackEnd, widthPercent: blackWidth };
+          if (channelName) {
+            if (Object.keys(meta).length > 0) window._autoLimitState[channelName] = meta;
+            else if (window._autoLimitState[channelName]) delete window._autoLimitState[channelName];
+          }
+          if (DEBUG_LOGS && channelName) console.log('[AUTO LIMIT] result', channelName, meta);
+        } catch {}
+
+        return arr;
+      } catch { return values; }
+    }
+
+    function median(arr){
+      try {
+        const a = arr.slice().sort((x,y)=>x-y);
+        const n = a.length; if (!n) return 0;
+        const m = Math.floor(n/2);
+        return (n%2) ? a[m] : 0.5*(a[m-1]+a[m]);
+      } catch { return 0; }
     }
 
     
@@ -14579,7 +15012,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           <input type="number" step="1" min="0" max="100" value="${defaultPercent}" class="percent-input w-20 m-0 rounded-lg border border-gray-300 px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
         </td>
         <td class="pl-0 pt-2 pb-1 text-right" style="width:120px;">
-          <input type="number" step="1" min="0" max="64000" value="${defaultEndValue}" class="end-input w-20 m-0 rounded-lg border border-gray-300 px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="number" step="1" min="0" max="65535" value="${defaultEndValue}" class="end-input w-20 m-0 rounded-lg border border-gray-300 px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
         </td>
       `;
       
@@ -15072,7 +15505,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             <input type="number" step="1" min="0" max="100" value="100" class="percent-input w-20 m-0 rounded-lg border border-gray-300 px-2 py-1 text-right invisible" disabled>
           </td>
           <td class="pl-0 pt-2 pb-1 text-right" style="width:120px;">
-            <input type="number" step="1" min="0" max="64000" value="64000" class="end-input w-20 m-0 rounded-lg border border-gray-300 px-2 py-1 text-right invisible" disabled>
+            <input type="number" step="1" min="0" max="65535" value="65535" class="end-input w-20 m-0 rounded-lg border border-gray-300 px-2 py-1 text-right invisible" disabled>
           </td>
         `;
         elements.rows.appendChild(noChannelsRow);
@@ -15314,6 +15747,56 @@ DOMAIN_MAX 1.0 1.0 1.0
     });
 
     // Note: Smoothing slider deprecated. Measurement reconstruction + decimation provide stable curves; fidelity is controlled via Recompute.
+
+    // Initialize Auto endpoint rolloff toggles
+    try {
+      const parseStoredBool = (value) => {
+        if (!value) return null;
+        const v = value.trim().toLowerCase();
+        if (v === '1' || v === 'true') return true;
+        if (v === '0' || v === 'false') return false;
+        return null;
+      };
+
+      let savedWhite = parseStoredBool(localStorage.getItem('autoWhiteLimitV1') || '');
+      let savedBlack = parseStoredBool(localStorage.getItem('autoBlackLimitV1') || '');
+
+      if (savedWhite === null && savedBlack === null) {
+        const legacy = parseStoredBool(localStorage.getItem('autoEndpointRolloffV1') || '');
+        if (legacy !== null) {
+          savedWhite = legacy;
+          savedBlack = legacy;
+          try { localStorage.removeItem('autoEndpointRolloffV1'); } catch {}
+        }
+      }
+
+      if (savedWhite === null) savedWhite = false; // default: white off
+      if (savedBlack === null) savedBlack = true;  // default: black on
+
+      if (elements.autoWhiteLimitToggle) {
+        elements.autoWhiteLimitToggle.checked = savedWhite;
+        elements.autoWhiteLimitToggle.addEventListener('change', (e) => {
+          const enabled = !!e.target.checked;
+          try { localStorage.setItem('autoWhiteLimitV1', enabled ? '1' : '0'); } catch {}
+          showStatus(enabled ? 'Auto white limit enabled' : 'Auto white limit disabled');
+          try { (getCurrentPrinter()?.channels || []).forEach(ch => updateProcessingDetail(ch)); } catch {}
+          try { updateSessionStatus(); } catch {}
+          debouncedPreviewUpdate();
+        });
+      }
+
+      if (elements.autoBlackLimitToggle) {
+        elements.autoBlackLimitToggle.checked = savedBlack;
+        elements.autoBlackLimitToggle.addEventListener('change', (e) => {
+          const enabled = !!e.target.checked;
+          try { localStorage.setItem('autoBlackLimitV1', enabled ? '1' : '0'); } catch {}
+          showStatus(enabled ? 'Auto black limit enabled' : 'Auto black limit disabled');
+          try { (getCurrentPrinter()?.channels || []).forEach(ch => updateProcessingDetail(ch)); } catch {}
+          try { updateSessionStatus(); } catch {}
+          debouncedPreviewUpdate();
+        });
+      }
+    } catch {}
 
     // Sample data loading functions
     function loadSampleData(type) {
@@ -17526,7 +18009,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
 
           <hr />
 
-          <h2 id="quickstart">Quick Start (Beta v2.2)</h2>
+<h2 id="quickstart">Quick Start (Beta 2.3)</h2>
           <ol>
             <li>Choose your printer and set ink limits (per channel).</li>
             <li>Start with Linear Ramp, or</li>
@@ -17548,6 +18031,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li>Recompute key points: simplify Smart Curves with tolerance/max-point controls.</li>
             <li>Lab Tech: AI assistant for Q&amp;A and automation.</li>
             <li>Contrast intent: presets or custom targets; shows Δ vs target; endpoints fixed (use ink limits to change).</li>
+            <li>Auto endpoint rolloff: optional white/black soft knees that detect early plateau and ease into the ink limit with a smooth shoulder/toe (3% proximity threshold).</li>
             <li>Import ACV/LUT as target: in the Custom Intent modal, load <code>.acv</code>/<code>.cube</code> as a target intent (not a correction); includes endpoint anchoring, monotonic enforcement, and blend.</li>
           </ul>
 
@@ -17620,6 +18104,12 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
           <h2>quadGEN Glossary</h2>
           <p>A concise, alphabetized reference to key terms used in quadGEN, QuadToneRIP, and related workflows.</p>
           <dl>
+            <dt>Auto black limit</dt>
+            <dd>Automatic soft toe at the black end: detects an early plateau near 0% output and eases the first segment so the curve approaches 0 with zero slope, preserving shadow separation.</dd>
+
+            <dt>Auto white limit</dt>
+            <dd>Automatic soft shoulder at the white end: detects an early plateau near the ink limit and eases the last segment so the curve reaches the limit exactly at 100% with zero slope, preserving highlight separation.</dd>
+
             <dt>ACV (Photoshop Curves)</dt>
             <dd>Binary curve format used by Adobe Photoshop (<code>.acv</code>). In quadGEN: can be loaded as a global correction or per-channel adapter; anchors can seed editable Smart curve.</dd>
 
@@ -17664,6 +18154,9 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
 
             <dt>Interpolation</dt>
             <dd>Method to form a smooth curve between key points. quadGEN favors monotonic PCHIP for predictable, non-overshooting results.</dd>
+
+            <dt>Endpoint rolloff (shoulder/toe)</dt>
+            <dd>A smooth, monotone easing near the ends of the curve (white shoulder, black toe) that prevents a hard plateau and maintains step separation at the last few percent.</dd>
 
             <dt>Key point</dt>
             <dd>An editable control point of a Smart Curve. Identified by ordinal (1-based). Insert/adjust/delete supported; endpoints often guarded. Coordinates are defined in printer space with the origin at (0,0), where X = input % (0–100) and Y = output ink % (0–100).</dd>
