@@ -1948,13 +1948,16 @@ ARCHITECTURAL NOTES:
                 <span>Black</span>
               </label>
             </div>
-            <div class="flex items-center gap-2 mt-2">
-              <label for="contrastIntentSelect" class="text-xs text-gray-600 font-bold">Intent</label>
-              <select id="contrastIntentSelect" class="standard-dropdown text-xs" style="width: 200px;">
-                <!-- Preset options will be populated dynamically from CONTRAST_INTENT_PRESETS -->
-                <option value="custom">Custom (saved)</option>
-                <option value="enter_custom">Enter Custom…</option>
-              </select>
+            <div class="mt-2">
+              <label for="contrastIntentSelect" class="text-xs text-gray-600 font-bold block mb-1">Intent</label>
+              <div class="flex items-center gap-2">
+                <select id="contrastIntentSelect" class="standard-dropdown text-xs" style="width: 200px;">
+                  <!-- Preset options will be populated dynamically from CONTRAST_INTENT_PRESETS -->
+                  <option value="custom">Custom (saved)</option>
+                  <option value="enter_custom">Enter Custom…</option>
+                </select>
+                <button id="applyIntentToQuadBtn" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-60 disabled:cursor-not-allowed dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-100 dark:disabled:bg-slate-600 dark:disabled:text-slate-400 dark:disabled:opacity-60" disabled title="Load a .quad (no LAB data) to enable intent remap">Apply Intent</button>
+              </div>
             </div>
             
             <!-- Linearization Controls -->
@@ -2589,7 +2592,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta 2.4.0';
+    const APP_VERSION = 'Beta 2.5.0';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2681,6 +2684,24 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
         },
         aboutDialog: []
       },
+      'v2.5.0': {
+        date: '2025-09-17',
+        title: 'Intent remap automation + button polish',
+        sections: {
+          ADDED: [
+            'Apply Intent now bakes the selected preset into the loaded .quad even when no LAB/manual data is active—ideal for branching variants from a master linear profile.',
+            'Lab Tech assistant can call apply_intent_to_loaded_quad() to bake the current preset without manual clicks.'
+          ],
+          CHANGED: [],
+          FIXED: [],
+          REMOVED: [],
+          DOCS: []
+        },
+        aboutDialog: [
+          { label: 'Added', desc: 'Apply Intent to bake contrast intents into your loaded .quad—even without LAB data.' },
+          { label: 'Lab Tech Automation', desc: 'Lab Tech can invoke apply_intent_to_loaded_quad() to bake the current preset on command.' }
+        ]
+      },
       'v2.4.0': {
         date: '2025-09-16',
         title: 'Centralized printer-space pipeline + POPS smoothing defaults',
@@ -2688,20 +2709,23 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           ADDED: [
             'Printer-space sanity fixtures with FEATURE_EXPECTATIONS guide so you can spot curve regressions quickly.',
             'Node scripts cover DataSpace conversions, make256 helpers, and automated intent sweeps; history flow spec stubbed for headless undo/redo.',
-            'Debug-only Intent Tuning panel (enable DEBUG_INTENT_TUNING) to audition smoothing and LAB overrides inside quadGEN.'
+            'Debug-only Intent Tuning panel (enable DEBUG_INTENT_TUNING) to audition smoothing and LAB overrides inside quadGEN.',
+            '“Apply to Loaded Curve” button lets you bake the active intent into a loaded .quad without re-running LAB corrections.'
           ],
           CHANGED: [
             'Measurement rebuild now defaults to POPS-style smoothing (PCHIP with 30% primary + 1×30% post) and LAB bandwidth overrides (K=2, σ_floor=0.036, σ_ceil=0.15, σ_alpha=2.0).',
             'DataSpace now owns every image→printer conversion; loaders tag missing sourceSpace metadata and make256 helpers were split out for clarity.',
             'Undo/redo shares a single timeline so intent swaps, channel edits, and history snapshots stay in sync.',
             'Debug tuning panel drops the experimental intent blend slider to focus on smoothing/LAB controls, and automated intent tolerance is now 8% to match the new defaults.',
-            'Cached per-channel row lookups trim DOM thrash during LAB updates and history playback.'
+            'Cached per-channel row lookups trim DOM thrash during LAB updates and history playback.',
+            'Intent dropdown previews the selected curve on the chart before you bake it into a .quad.'
           ],
           FIXED: [
             'Undo now clears per-channel measurement switches alongside loaded data.',
             'Legacy printer-space datasets without explicit sourceSpace metadata no longer get flipped on reload.',
             'Undo/redo preserves the LAB / Manual L* smoothing hook so scripted smoothing continues to work.',
-            'Contrast intent status banner reports the active preset instead of always showing Linear.'
+            'Contrast intent status banner reports the active preset instead of always showing Linear.',
+            'Intent remap honours existing ink limits, reverting to Linear restores the original .quad curve, and undo/redo preserves that exact shape.'
           ],
           REMOVED: [],
           DOCS: [
@@ -2709,8 +2733,9 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           ]
         },
         aboutDialog: [
-          { label: 'Printer-space Pipeline', desc: 'Refactored data handling: DataSpace now owns every conversion and new fixtures/tests catch double-flip regressions early.' },
-          { label: 'New smoothing Defaults', desc: 'Adjusted intent correction blending: 30% primary + 30% post smoothing with LAB bandwidth overrides.' },
+          { label: 'Printer-space Pipeline', desc: 'DataSpace now owns every conversion and the new fixtures/tests catch double-flip regressions early.' },
+          { label: 'POPS Smoothing Defaults', desc: '30% primary + 30% post smoothing with LAB bandwidth overrides keep LAB rebuilds print-ready out of the box.' },
+          { label: 'Intent Remap', desc: 'Use Apply to Loaded Curve to bake the selected intent into a linearized .quad—no external LUT required. Intent previews now render as soon as you pick a preset.' }
         ]
       },
       'v2.3.0': {
@@ -4091,6 +4116,35 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           return {
             success: false,
             message: `Error ${enabled ? 'enabling' : 'disabling'} channel: ${error.message}`
+          };
+        }
+      }
+
+      /**
+       * Apply the currently selected intent to the loaded .quad (no LAB data)
+       */
+      applyIntentToLoadedQuad() {
+        try {
+          if (!canApplyIntentRemap()) {
+            return {
+              success: false,
+              message: 'Load a .quad (and ensure no LAB/manual data is active) before applying an intent.'
+            };
+          }
+
+          const intentName = contrastIntent?.name || 'Linear';
+          applyIntentToLoadedCurve();
+          this._recordAction('applyIntentToLoadedQuad', { intent: intentName });
+
+          return {
+            success: true,
+            message: `Applied ${intentName} intent to the loaded .quad.`,
+            details: { intent: intentName }
+          };
+        } catch (error) {
+          return {
+            success: false,
+            message: `Error applying intent to loaded .quad: ${error.message}`
           };
         }
       }
@@ -8226,6 +8280,8 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             return quadGenActions.setAutoWhiteLimit(parameters.enabled);
           case 'set_auto_black_limit':
             return quadGenActions.setAutoBlackLimit(parameters.enabled);
+          case 'apply_intent_to_loaded_quad':
+            return quadGenActions.applyIntentToLoadedQuad();
 
           case 'set_per_channel_linearization':
             return quadGenActions.setPerChannelLinearization(parameters.channelName, parameters.enabled);
@@ -8990,6 +9046,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       aiLabelToggle: document.getElementById('aiLabelToggle'),
       globalLinearizationFilename: document.getElementById('globalLinearizationFilename'),
       globalLinearizationDetails: document.getElementById('globalLinearizationDetails'),
+      applyIntentToQuadBtn: document.getElementById('applyIntentToQuadBtn'),
       // Contrast Intent UI
       contrastIntentSelect: document.getElementById('contrastIntentSelect'),
       intentHelpBtn: document.getElementById('intentHelpBtn'),
@@ -9391,6 +9448,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       }
       persistContrastIntent();
       updateIntentDetailLabel();
+      updateIntentDropdownState();
       try { updateSessionStatus(); } catch {}
       recomputeLinearizationForCurrentIntent();
       try { if (typeof updateCustomOptionVisibility === 'function') updateCustomOptionVisibility(); } catch {}
@@ -9425,6 +9483,13 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         const tip = `Intent: ${intentLabel}${extra}`;
         if (elements.contrastIntentSelect) elements.contrastIntentSelect.setAttribute('title', tip);
       } catch {}
+    }
+    function canApplyIntentRemap() {
+      try {
+        const hasQuad = !!(window.loadedQuadData && window.loadedQuadData.curves && Object.keys(window.loadedQuadData.curves).length);
+        const hasGlobalMeasurement = !!linearizationData;
+        return hasQuad && !hasGlobalMeasurement;
+      } catch { return false; }
     }
     function recomputeLinearizationForCurrentIntent(){
       try {
@@ -11279,6 +11344,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       // Draw curves and collect label info
       const labels = [];
       const hasLinearization = (linearizationData && linearizationApplied) || Object.keys(perChannelLinearization).length > 0;
+      const allowIntentPreview = canApplyIntentRemap();
       
       // Build draw order; in Edit Mode draw the selected channel last (on top)
       const isEdit = isEditModeEnabled();
@@ -11326,7 +11392,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         // Draw a faded target reference line (matches current Intent)
         const isAICurve = isSmartCurve(channelName);
-        const showRef = hasLinearization || isAICurve;
+        const showRef = hasLinearization || allowIntentPreview || isAICurve;
         if (showRef) {
           // Build intent-based reference: y = Intent(t) scaled to current End (ink output)
           const refValues = (() => {
@@ -12124,11 +12190,192 @@ DOMAIN_MAX 1.0 1.0 1.0
     let linearizationApplied = false;
     let loadedQuadData = null; // Stores complete curve data from loaded .quad files
     
+    function applyIntentToLoadedCurve() {
+      if (!canApplyIntentRemap()) {
+        showStatus('Load a .quad without global LAB data to remap intent');
+        return;
+      }
+      try {
+        const curves = window.loadedQuadData?.curves;
+        if (!curves || !Object.keys(curves).length) {
+          showStatus('No curve data available for intent remap');
+          return;
+        }
+        const channelList = Array.isArray(window.loadedQuadData?.channels) && window.loadedQuadData.channels.length
+          ? [...window.loadedQuadData.channels]
+          : Object.keys(curves);
+        if (!channelList.length) {
+          showStatus('No channels available for intent remap');
+          return;
+        }
+
+        const intentId = String(contrastIntent?.id || 'linear');
+        const intentName = contrastIntent?.name || 'Linear';
+        const restoringLinear = intentId === 'linear';
+        const actions = [];
+        const updatedChannels = [];
+        const total = TOTAL;
+
+        const prevBatchFlag = CurveHistory.isBatchOperation;
+        CurveHistory.isBatchOperation = true;
+
+        for (const channelName of channelList) {
+          const existing = curves[channelName];
+          if (!Array.isArray(existing) || existing.length === 0) continue;
+
+          try {
+            const oldCurve = existing.slice();
+            const length = existing.length;
+            const denom = Math.max(1, length - 1);
+
+            let newCurve;
+            if (restoringLinear) {
+              const original = window.loadedQuadData?.originalCurves?.[channelName];
+              if (!Array.isArray(original) || original.length !== length) {
+                throw new Error('Original curve unavailable for restoration');
+              }
+              const row = getChannelRow(channelName);
+              const currentEnd = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : total;
+              const baselineEnd = window.loadedQuadData?.baselineEnd?.[channelName] || total;
+              const scale = baselineEnd > 0 ? (currentEnd / baselineEnd) : 0;
+              newCurve = original.map(v => Math.round(Math.max(0, Math.min(total, v * scale))));
+              if (newCurve[0] !== original[0]) newCurve[0] = Math.round(original[0] * scale);
+              if (newCurve[length - 1] !== original[length - 1]) newCurve[length - 1] = Math.round(original[length - 1] * scale);
+            } else {
+              const xs = new Array(length);
+              const ys = new Array(length);
+              for (let i = 0; i < length; i++) {
+                xs[i] = denom === 0 ? 0 : i / denom;
+                ys[i] = clamp01(existing[i] / total);
+              }
+
+              let sampler = null;
+              try {
+                sampler = createPCHIPSpline(xs, ys);
+              } catch (e) {
+                sampler = null;
+              }
+
+              const sample = (t) => {
+                const tt = clamp01(t);
+                if (sampler) {
+                  try {
+                    const val = sampler(tt);
+                    if (Number.isFinite(val)) return clamp01(val);
+                  } catch {}
+                }
+                if (tt <= 0) return ys[0];
+                if (tt >= 1) return ys[length - 1];
+                const pos = tt * denom;
+                const i0 = Math.floor(pos);
+                const i1 = Math.min(length - 1, i0 + 1);
+                const frac = pos - i0;
+                return clamp01(ys[i0] + frac * (ys[i1] - ys[i0]));
+              };
+
+              newCurve = new Array(length);
+              for (let i = 0; i < length; i++) {
+                const inputT = denom === 0 ? 0 : i / denom;
+                const target = clamp01(getTargetRelAt(inputT));
+                const drive = sample(target);
+                newCurve[i] = Math.round(clamp01(drive) * total);
+              }
+              // Ensure endpoints remain clamped to valid range
+              newCurve[0] = Math.max(0, Math.min(total, newCurve[0]));
+              newCurve[length - 1] = Math.max(0, Math.min(total, newCurve[length - 1]));
+            }
+
+            const oldKeyPointsRaw = window.loadedQuadData?.keyPoints?.[channelName] || null;
+            const oldKeyPoints = oldKeyPointsRaw ? oldKeyPointsRaw.map(p => ({ input: p.input, output: p.output })) : null;
+            const oldInterpolation = window.loadedQuadData?.keyPointsMeta?.[channelName]?.interpolationType;
+            const oldSource = window.loadedQuadData?.sources?.[channelName] ?? null;
+
+            curves[channelName] = newCurve;
+
+            let newKeyPoints = null;
+            let newInterpolation = oldInterpolation || 'smooth';
+
+            if (restoringLinear) {
+              try {
+                if (window.loadedQuadData?.keyPoints?.[channelName]) delete window.loadedQuadData.keyPoints[channelName];
+              } catch {}
+              try {
+                if (window.loadedQuadData?.keyPointsMeta?.[channelName]) delete window.loadedQuadData.keyPointsMeta[channelName];
+              } catch {}
+              try {
+                if (window.loadedQuadData?.sources && window.loadedQuadData.sources[channelName] !== undefined) {
+                  delete window.loadedQuadData.sources[channelName];
+                }
+              } catch {}
+            } else {
+              const newKeyPointsRaw = extractAdaptiveKeyPointsFromValues(newCurve, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
+              newKeyPoints = newKeyPointsRaw.map(p => ({ input: p.input, output: p.output }));
+              try {
+                ControlPoints.persist(channelName, newKeyPoints, newInterpolation);
+                if (window.loadedQuadData?.keyPointsMeta?.[channelName] && window.loadedQuadData.keyPointsMeta[channelName].bakedGlobal) {
+                  delete window.loadedQuadData.keyPointsMeta[channelName].bakedGlobal;
+                }
+              } catch (persistErr) {
+                console.warn('Intent remap: failed to persist key points', channelName, persistErr);
+              }
+            }
+
+            if (typeof updateProcessingDetailForce === 'function') {
+              try { updateProcessingDetailForce(channelName); } catch {}
+            }
+
+            actions.push({
+              channelName,
+              type: 'curve',
+              oldValue: oldCurve,
+              newValue: newCurve.slice(),
+              oldKeyPoints,
+              newKeyPoints,
+              oldInterpolation: oldInterpolation,
+              newInterpolation,
+              oldSource,
+              newSource: oldSource,
+              clearKeyPoints: restoringLinear,
+              linearRestore: restoringLinear
+            });
+            updatedChannels.push(channelName);
+          } catch (channelErr) {
+            console.warn('Intent remap: channel update failed', channelName, channelErr);
+          }
+        }
+
+        CurveHistory.isBatchOperation = prevBatchFlag;
+
+        if (!actions.length) {
+          showStatus('No eligible channel data to remap intent');
+          return;
+        }
+
+        const description = restoringLinear ? 'Intent remap → Linear (restore original)' : `Intent remap → ${intentName}`;
+        CurveHistory.recordBatchAction(description, actions);
+
+        updatePreview();
+        try { updateInkChart(); } catch {}
+        try { updateCompactChannelsList(); } catch {}
+        updateSessionStatus();
+        updateIntentDropdownState();
+
+        const statusIntent = restoringLinear ? 'Linear' : intentName;
+        showStatus(`Applied ${statusIntent} intent to ${updatedChannels.length} channel${updatedChannels.length === 1 ? '' : 's'}`);
+      } catch (error) {
+        CurveHistory.isBatchOperation = prevBatchFlag;
+        const msg = error?.message ? `Intent remap failed: ${error.message}` : 'Intent remap failed';
+        console.error(error);
+        showStatus(msg);
+      }
+    }
+
     // Clear loaded quad data
     function clearLoadedQuadData() {
       window.loadedQuadData = null;
       // Update interpolation controls since loaded data is no longer available
       updateInterpolationControls();
+      updateIntentDropdownState();
     }
 
     // Clear all processing-related data (global + per-channel) and reset related UI
@@ -12187,6 +12434,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           if (elements.tuningRestoreBtn) elements.tuningRestoreBtn.disabled = true;
           setTuningStatus('');
         }
+        updateIntentDropdownState();
       } catch (e) {
         console.warn('clearAllProcessingData encountered an issue:', e);
       }
@@ -12206,13 +12454,22 @@ DOMAIN_MAX 1.0 1.0 1.0
       if (!elements.contrastIntentSelect) return;
 
       const hasLinearization = hasAnyLinearization();
-      elements.contrastIntentSelect.disabled = !hasLinearization;
+      const allowRemap = canApplyIntentRemap();
+      const enableControls = hasLinearization || allowRemap;
+
+      if (enableControls) {
+        elements.contrastIntentSelect.disabled = false;
+        elements.contrastIntentSelect.removeAttribute('disabled');
+      } else {
+        elements.contrastIntentSelect.disabled = true;
+        elements.contrastIntentSelect.setAttribute('disabled', '');
+      }
 
       // Find the Intent label
       const intentLabel = document.querySelector('label[for="contrastIntentSelect"]');
 
       // Update visual styling to indicate disabled state
-      if (hasLinearization) {
+      if (enableControls) {
         elements.contrastIntentSelect.style.opacity = '1';
         elements.contrastIntentSelect.style.cursor = 'pointer';
         if (intentLabel) intentLabel.style.opacity = '1';
@@ -12220,6 +12477,22 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.contrastIntentSelect.style.opacity = '0.5';
         elements.contrastIntentSelect.style.cursor = 'not-allowed';
         if (intentLabel) intentLabel.style.opacity = '0.5';
+      }
+
+      const remapBtn = elements.applyIntentToQuadBtn;
+      if (remapBtn) {
+        if (allowRemap) {
+          remapBtn.disabled = false;
+          remapBtn.removeAttribute('disabled');
+        } else {
+          remapBtn.disabled = true;
+          remapBtn.setAttribute('disabled', '');
+        }
+        const intentName = contrastIntent?.name || 'Linear';
+        const tooltip = allowRemap
+          ? `Bake ${intentName} intent into the loaded curve`
+          : 'Load a .quad (without global LAB data) to enable intent remap';
+        remapBtn.setAttribute('title', tooltip);
       }
     }
 
@@ -13118,6 +13391,15 @@ DOMAIN_MAX 1.0 1.0 1.0
                 if (!window.loadedQuadData.curves) window.loadedQuadData.curves = {};
                 window.loadedQuadData.curves[action.channelName] = [...action.newValue];
               }
+
+            if (action.clearKeyPoints) {
+              try {
+                if (window.loadedQuadData?.keyPoints?.[action.channelName]) delete window.loadedQuadData.keyPoints[action.channelName];
+              } catch {}
+              try {
+                if (window.loadedQuadData?.keyPointsMeta?.[action.channelName]) delete window.loadedQuadData.keyPointsMeta[action.channelName];
+              } catch {}
+            }
               
               // Disable per-channel linearization when restoring Smart Curve (keep metadata for UI display)
           if (perChannelLinearization[action.channelName]) {
@@ -13135,9 +13417,8 @@ DOMAIN_MAX 1.0 1.0 1.0
                 if (!window.loadedQuadData.sources) window.loadedQuadData.sources = {};
                 if (action.newSource === null) delete window.loadedQuadData.sources[action.channelName];
                 else window.loadedQuadData.sources[action.channelName] = action.newSource;
-              } else {
-                if (!window.loadedQuadData.sources) window.loadedQuadData.sources = {};
-                window.loadedQuadData.sources[action.channelName] = 'smart';
+              } else if (window.loadedQuadData?.sources?.[action.channelName] !== undefined && action.linearRestore) {
+                delete window.loadedQuadData.sources[action.channelName];
               }
             }
 
@@ -17561,6 +17842,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           } catch (e) { console.warn('Precompute AI key points from .quad failed:', e); }
           
           updatePreview();
+          updateIntentDropdownState();
           
           // If no channels are enabled, enable the first available channel
           try {
@@ -18128,6 +18410,13 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
       });
     }
+
+    const remapHandler = () => {
+      applyIntentToLoadedCurve();
+    };
+    if (elements.applyIntentToQuadBtn) {
+      elements.applyIntentToQuadBtn.addEventListener('click', remapHandler);
+    }
     function setActiveIntentTab(name){
       const tabs=['presets','custom','paste','import'];
       tabs.forEach(t=>{
@@ -18377,6 +18666,7 @@ DOMAIN_MAX 1.0 1.0 1.0
 
     // Initialize dropdowns and custom options
     try { initializePresetDropdowns(); } catch {}
+    try { updateIntentDropdownState(); } catch {}
     try { updateCustomOptionVisibility(); } catch {}
     // Initialize Intent dropdown state based on linearization data
     try { updateIntentDropdownState(); } catch {}
@@ -18695,7 +18985,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
 
           <hr />
 
-<h2 id="quickstart">Quick Start (Beta 2.3)</h2>
+<h2 id="quickstart">Quick Start (Beta 2.4)</h2>
           <ol>
             <li>Choose your printer and set ink limits (per channel).</li>
             <li>Start with Linear Ramp, or</li>
@@ -18711,6 +19001,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li>Supports most Epson printers.</li>
             <li>Quickly export linear ramps with any single ink channel or combination.</li>
             <li>Inputs: <code>.quad</code>, LAB <code>.txt</code>, LUT <code>.cube</code>, <code>.acv</code>, Manual L*.</li>
+            <li>Apply intent remaps directly to a loaded <code>.quad</code> via “Apply to Loaded Curve”.</li>
             <li>Evenly spaced or irregular targets supported.</li>
             <li>Edit Mode: point-based edits at any time.</li>
             <li>Undo/Redo: full history of edits and toggles.</li>
@@ -18729,17 +19020,20 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li>Inkjet linearization: refine monochrome response for QTR printing.</li>
             <li>Curve editing: enter Edit Mode, nudge an ordinal, export.</li>
             <li>Conversion: load LAB/LUT/ACV and export <code>.quad</code>.</li>
+            <li>Intent remap: load your master linearized <code>.quad</code>, audition Gamma/Filmic presets, and bake a contrast variant directly.</li>
           </ul>
 
           <hr />
 
           <h2 id="best">Best Practices</h2>
+          <p class="text-sm text-gray-600 mb-3">Linearize your process once, keep that <code>.quad</code> as a master, and branch from there. You can either bake an intent into the loaded master with “Apply Intent”, or leave the master untouched and make the contrast move upstream in Photoshop—printing through the linear master yields the same result.</p>
           <ul>
             <li>If your process requires a negative, invert it before printing with your <code>.quad</code>.</li>
             <li>Measure the final positive print (not the negative).</li>
             <li>Anchor endpoints and keep curves monotonic.</li>
             <li>Use ink limits to define deepest black (or cleanest white).</li>
             <li>Make incremental edits; use Undo/Redo liberally.</li>
+            <li>Keep a “master” Linear intent <code>.quad</code>. You can bake contrast variants with “Apply Intent”, or do the contrast move in Photoshop and print through the same linear master—both paths land on the same tone curve.</li>
           </ul>
 
           <hr />
@@ -18996,7 +19290,8 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
           </ul>
           <h3>7) Export Corrected <code>.quad</code></h3>
           <ul>
-            <li>Export the corrected <code>.quad</code> for general use.</li>
+            <li>Export the corrected <code>.quad</code> for general use and archive it as your “master” Linear profile.</li>
+            <li>Keep this master untouched; branch contrast variants by either baking presets with <strong>Apply Intent</strong> (when no LAB data is loaded) or doing the contrast move upstream in Photoshop before printing through the master. Both paths land on the same tonal response.</li>
           </ul>
           <h3>8) Enter Edit Mode for Fine Tuning (optional)</h3>
           <ul>
@@ -19017,8 +19312,9 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
           <h3>10) Choose a Contrast Intent (optional)</h3>
           <ul>
             <li>Use the <strong>Intent</strong> dropdown in Global Correction to pick a preset (Linear, Soft, Hard, Filmic) or choose <strong>Enter Custom…</strong> to open the modal.</li>
-            <li><strong>Custom</strong>: apply sliders (Gamma or Filmic‑like) or <strong>Paste CSV/JSON</strong> data; the parser auto‑validates pasted text.</li>
+            <li><strong>Custom</strong>: apply sliders (Gamma or Filmic‑like) or <strong>Paste CSV/JSON</strong> data; the parser auto-validates pasted text.</li>
             <li>Intents shape the target curve only; ingestion and reconstruction are unchanged. Endpoints (0% and 100%) remain fixed — adjust ink limits/end values to move black/white points.</li>
+            <li>When no LAB data is active, the <strong>Apply Intent</strong> button bakes the selected preset into the loaded <code>.quad</code>; use it to spin off contrast-specific variants directly from your master.</li>
           </ul>
           <h3>Notes & Tips</h3>
           <ul>
