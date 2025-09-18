@@ -3781,6 +3781,10 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           // Trigger the input event to update the UI and recalculate
           channelElement.dispatchEvent(new Event('input', { bubbles: true }));
 
+          if (typeof channelRow._syncHistoryCache === 'function') {
+            channelRow._syncHistoryCache();
+          }
+
           this._recordAction('setChannelValue', { channelName, percentage: validatedPercentage });
 
           return {
@@ -3938,6 +3942,10 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           // Trigger the input event to update the UI and recalculate percentage
           endElement.dispatchEvent(new Event('input', { bubbles: true }));
 
+          if (typeof channelRow._syncHistoryCache === 'function') {
+            channelRow._syncHistoryCache();
+          }
+
           this._recordAction('setChannelEndValue', { channelName, endValue: validatedEndValue });
 
           return {
@@ -4022,6 +4030,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                   
                   // Update UI display
                   if (channelRow.refreshDisplayFn) channelRow.refreshDisplayFn();
+                  if (typeof channelRow._syncHistoryCache === 'function') channelRow._syncHistoryCache();
                 }
               }
             }
@@ -4122,6 +4131,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                   
                   // Update UI display
                   if (channelRow.refreshDisplayFn) channelRow.refreshDisplayFn();
+                  if (typeof channelRow._syncHistoryCache === 'function') channelRow._syncHistoryCache();
                 }
               }
             }
@@ -14185,6 +14195,9 @@ DOMAIN_MAX 1.0 1.0 1.0
             if (refreshDisplay) {
               refreshDisplay();
             }
+            if (typeof tr._syncHistoryCache === 'function') {
+              tr._syncHistoryCache();
+            }
           }
         });
         
@@ -16531,6 +16544,54 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
       } catch {}
 
+      // Track input changes with debounced action recording
+      let percentHistoryTimeout = null;
+      let endHistoryTimeout = null;
+      const percentHistoryCache = { value: percentInput.value };
+      const endHistoryCache = { value: endInput.value };
+
+      const syncHistoryCache = () => {
+        percentHistoryCache.value = percentInput.value;
+        endHistoryCache.value = endInput.value;
+      };
+
+      tr._syncHistoryCache = syncHistoryCache;
+      percentInput._historyCache = percentHistoryCache;
+      endInput._historyCache = endHistoryCache;
+
+      const debouncedPercentActionRecord = () => {
+        clearTimeout(percentHistoryTimeout);
+        percentHistoryTimeout = setTimeout(() => {
+          if (CurveHistory.isBatchOperation) return;
+          const currentValue = percentInput.value;
+          if (percentHistoryCache.value !== currentValue) {
+            CurveHistory.recordChannelAction(channelName, 'percentage', percentHistoryCache.value, currentValue);
+            percentHistoryCache.value = currentValue;
+            const pct = parseFloat(currentValue);
+            if (!isNaN(pct)) {
+              showStatus(`${channelName} ink limit changed to ${pct.toFixed(1)}%`);
+            }
+          }
+        }, 1000); // Record action 1 second after user stops typing
+      };
+
+      const debouncedEndActionRecord = () => {
+        clearTimeout(endHistoryTimeout);
+        endHistoryTimeout = setTimeout(() => {
+          if (CurveHistory.isBatchOperation) return;
+          const currentValue = endInput.value;
+          if (endHistoryCache.value !== currentValue) {
+            CurveHistory.recordChannelAction(channelName, 'end', endHistoryCache.value, currentValue);
+            endHistoryCache.value = currentValue;
+            const e = parseInt(currentValue, 10);
+            if (!isNaN(e)) {
+              const pct = InputValidator.computePercentFromEnd(e);
+              showStatus(`${channelName} ink limit changed to ${pct.toFixed(1)}%`);
+            }
+          }
+        }, 1000); // Record action 1 second after user stops typing
+      };
+
       function refreshDisplay() {
         const endVal = InputValidator.clampEnd(endInput.value);
         endInput.value = String(endVal);
@@ -16577,9 +16638,14 @@ DOMAIN_MAX 1.0 1.0 1.0
           percentCell.style.opacity = '1';
           endCell.style.opacity = '1';
         }
-        
+
         // Update checkbox state based on channel status
         enableCheckbox.checked = !isAtZero;
+
+        // Keep undo baselines in sync after programmatic changes (skip while the user is actively editing)
+        if (document.activeElement !== percentInput && document.activeElement !== endInput) {
+          syncHistoryCache();
+        }
       }
       
       // Store refreshDisplay function on the tr element for access from apply functions
@@ -16640,49 +16706,9 @@ DOMAIN_MAX 1.0 1.0 1.0
       
       enableCheckbox.addEventListener('change', handleCheckboxChange);
 
-      // Track input changes with debounced action recording
-      let percentHistoryTimeout = null;
-      let endHistoryTimeout = null;
-      let oldPercentValue = percentInput.value; // Store initial value
-      let oldEndValue = endInput.value; // Store initial value
-      
-      const debouncedPercentActionRecord = (newValue) => {
-        clearTimeout(percentHistoryTimeout);
-        percentHistoryTimeout = setTimeout(() => {
-          // Only record if the value actually changed and not during batch operation
-          if (oldPercentValue !== newValue && !CurveHistory.isBatchOperation) {
-            CurveHistory.recordChannelAction(channelName, 'percentage', oldPercentValue, newValue);
-            oldPercentValue = newValue; // Update for next change
-            // Also announce the change to the user
-            const pct = parseFloat(newValue);
-            if (!isNaN(pct)) {
-              showStatus(`${channelName} ink limit changed to ${pct.toFixed(1)}%`);
-            }
-          }
-        }, 1000); // Record action 1 second after user stops typing
-      };
-      
-      const debouncedEndActionRecord = (newValue) => {
-        clearTimeout(endHistoryTimeout);
-        endHistoryTimeout = setTimeout(() => {
-          // Only record if the value actually changed and not during batch operation
-          if (oldEndValue !== newValue && !CurveHistory.isBatchOperation) {
-            CurveHistory.recordChannelAction(channelName, 'end', oldEndValue, newValue);
-            oldEndValue = newValue; // Update for next change
-            // Also announce the change to the user (convert end ⇒ percent)
-            const e = parseInt(newValue, 10);
-            if (!isNaN(e)) {
-              const pct = InputValidator.computePercentFromEnd(e);
-              showStatus(`${channelName} ink limit changed to ${pct.toFixed(1)}%`);
-            }
-          }
-        }, 1000); // Record action 1 second after user stops typing
-      };
-
       // Use debounced updates to prevent excessive recalculations
       percentInput.addEventListener('input', () => {
-        const newValue = percentInput.value;
-        debouncedPercentActionRecord(newValue); // Record action after typing stops
+        debouncedPercentActionRecord(); // Record action after typing stops
         
         const p = InputValidator.validateInput(percentInput, InputValidator.clampPercent);
         const endVal = InputValidator.computeEndFromPercent(p);
@@ -16707,8 +16733,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       });
 
       endInput.addEventListener('input', () => {
-        const newValue = endInput.value;
-        debouncedEndActionRecord(newValue); // Record action after typing stops
+        debouncedEndActionRecord(); // Record action after typing stops
         
         const e = InputValidator.validateInput(endInput, InputValidator.clampEnd);
         const p = InputValidator.computePercentFromEnd(e);
@@ -18237,6 +18262,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                 // Refresh the row display
                 const refreshFn = row.refreshDisplayFn;
                 if (refreshFn) refreshFn();
+                if (typeof row._syncHistoryCache === 'function') row._syncHistoryCache();
               }
             }
           });
@@ -19402,8 +19428,8 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
 
           <h2 id="install">Installation and Access</h2>
           <ul>
-            <li><strong>Online:</strong> visit <a href="https://david-marsh-photo.github.io/" target="_blank" rel="noopener">https://david-marsh-photo.github.io/</a>.</li>
-            <li><strong>Offline:</strong> right‑click and download this file: <a href="https://david-marsh-photo.github.io/index.html" target="_blank" rel="noopener">https://david-marsh-photo.github.io/index.html</a>, then open it locally (no install required).</li>
+            <li><strong>Online:</strong> visit <a href="https://quadgen.ink/" target="_blank" rel="noopener">https://quadgen.ink/</a>.</li>
+            <li><strong>Offline:</strong> right‑click and download this file: <a href="https://quadgen.ink/index.html" target="_blank" rel="noopener">https://quadgen.ink/index.html</a>, then open it locally (no install required).</li>
             <li><strong>Platforms:</strong> macOS, Windows, Linux (desktop recommended).</li>
             <li><strong>Network note:</strong> AI assistant features require internet; manual editing and exports do not.</li>
           </ul>
