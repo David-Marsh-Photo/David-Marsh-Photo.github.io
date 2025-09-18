@@ -931,6 +931,65 @@ ARCHITECTURAL NOTES:
       border-bottom: 1px solid #e5e7eb;
     }
 
+    .chart-zoom-controls {
+      position: absolute;
+      bottom: -9px;
+      left: -9px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(17,24,39,0.12);
+      background: rgba(255,255,255,0.92);
+      z-index: 12;
+      padding: 0 2px;
+    }
+    .chart-zoom-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 0.35rem 0.55rem;
+      cursor: pointer;
+      border-radius: 0.6rem;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .chart-zoom-btn:hover:not(:disabled) {
+      background: rgba(37,99,235,0.08);
+    }
+    .chart-zoom-btn:active:not(:disabled) {
+      background: rgba(37,99,235,0.14);
+    }
+    .chart-zoom-btn:focus-visible {
+      outline: 2px solid var(--focus-ring, #2563eb);
+      outline-offset: 2px;
+    }
+    .chart-zoom-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+    .chart-zoom-divider {
+      width: 1px;
+      height: 22px;
+      background: rgba(17,24,39,0.12);
+    }
+    [data-theme="dark"] .chart-zoom-controls {
+      background: rgba(17,24,39,0.78);
+      border-color: rgba(148,163,184,0.28);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.45);
+    }
+    [data-theme="dark"] .chart-zoom-btn {
+      color: var(--text);
+    }
+    [data-theme="dark"] .chart-zoom-btn:hover:not(:disabled) {
+      background: rgba(148,163,184,0.16);
+    }
+    [data-theme="dark"] .chart-zoom-divider {
+      background: rgba(229,231,235,0.22);
+    }
+
     /* Dark-mode wrappers for consoles to keep parity */
     [data-theme="dark"] #labTechConsole, [data-theme="dark"] #previewConsole {
       background-color: var(--console-bg) !important;
@@ -1780,9 +1839,15 @@ ARCHITECTURAL NOTES:
         <!-- Graph Section -->
         <div class="lg:col-span-2 space-y-4">
           <div class="bg-white border border-gray-200 rounded-xl p-2 relative">
-            <div class="bg-gray-50 rounded-lg p-2">
+            <div class="bg-gray-50 rounded-lg p-2 relative">
               <canvas id="inkChart" width="950" height="700" class="w-full h-auto max-h-none"></canvas>
-              
+
+              <div class="chart-zoom-controls" aria-label="Adjust chart zoom">
+                <button id="chartZoomOutBtn" type="button" class="chart-zoom-btn" title="Zoom out (show more ink range)">−</button>
+                <div class="chart-zoom-divider" aria-hidden="true"></div>
+                <button id="chartZoomInBtn" type="button" class="chart-zoom-btn" title="Zoom in (magnify ink range)">+</button>
+              </div>
+
               <!-- (Removed) Smoothing Note -->
             </div>
             <!-- Cursor tooltip for X,Y coordinates over the graph -->
@@ -2592,7 +2657,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta 2.5.0';
+    const APP_VERSION = 'Beta 2.5.1';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2683,6 +2748,33 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           DOCS: []
         },
         aboutDialog: []
+      },
+      'v2.5.1': {
+        date: '2025-09-18',
+        title: 'Zoom presets + curve stability',
+        sections: {
+          ADDED: [
+            'Chart zoom controls (+/−) rescale the ink plot, persist per browser, and expose Lab Tech commands (`set_chart_zoom`, `nudge_chart_zoom`).',
+            'Tests/chart_zoom.spec.js exercises the zoom helpers (percent↔Y mapping, persistence, button guards).',
+            'Lab Tech understands simple “zoom in” / “zoom out” phrasing and routes it to the controls.'
+          ],
+          CHANGED: [
+            'Zoom now steps through clean 10% increments and clamps to the highest active ink limit so 100% curves stay visible.',
+            'Graph grids, axes, overlays, and tooltips all derive from the active zoom so the Y-axis always matches what you see.'
+          ],
+          FIXED: [
+            'Undo/redo of Smart key-point edits keeps the rest of the curve stable; only the edited point moves when you step backward or forward.',
+            '“+” now magnifies (lower max) and “−” zooms out, matching expectations.'
+          ],
+          REMOVED: [],
+          DOCS: [
+            'Help → ReadMe & Detailed Workflow, QUADGEN_README.md, and AGENTS.md document the zoom workflow and automation hooks.'
+          ]
+        },
+        aboutDialog: [
+          { label: 'Zoom Presets', desc: 'Use the +/− control (or Lab Tech commands) to step through 10% zoom levels without ever cropping active ink limits.' },
+          { label: 'Stable Undo', desc: 'Smart key-point undo/redo keeps the rest of your curve anchored so only the edited point moves.' }
+        ]
       },
       'v2.5.0': {
         date: '2025-09-17',
@@ -4186,6 +4278,9 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             channels: channels,
             filename: elements.filenameInput ? elements.filenameInput.value : '',
             printIntent: elements.printIntent ? elements.printIntent.value : 'positive',
+            chart: {
+              zoomMaxPercent: getChartZoomPercent()
+            },
             version: APP_VERSION
           };
 
@@ -5045,6 +5140,53 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           return {
             success: false,
             message: `Error setting smoothing percentage: ${error.message}`
+          };
+        }
+      }
+
+      /**
+       * Set the chart zoom to a specific percentage max
+       * @param {number} percent - Desired maximum percent (e.g., 60, 80, 100)
+       */
+      setChartZoom(percent) {
+        try {
+          const before = getChartZoomPercent();
+          const after = setChartZoomPercent(percent, { persist: true, refresh: true });
+          const changed = after !== before;
+          return {
+            success: true,
+            message: changed ? `Chart zoom set to ${after}% max` : `Chart zoom already at ${after}% max`,
+            details: { percent: after, changed }
+          };
+        } catch (error) {
+          return {
+            success: false,
+            message: `Error setting chart zoom: ${error.message}`
+          };
+        }
+      }
+
+      /**
+       * Step the chart zoom in or out by one preset level
+       * @param {number} direction - Positive to zoom in, negative to zoom out
+       */
+      nudgeChartZoom(direction = 1) {
+        try {
+          const before = getChartZoomPercent();
+          const after = stepChartZoom(direction, { persist: true, refresh: true });
+          const changed = after !== before;
+          const message = changed
+            ? `Zoomed ${direction >= 0 ? 'in' : 'out'} to ${after}% max`
+            : `Chart zoom already at limit (${after}% max)`;
+          return {
+            success: true,
+            message,
+            details: { percent: after, changed }
+          };
+        } catch (error) {
+          return {
+            success: false,
+            message: `Error adjusting chart zoom: ${error.message}`
           };
         }
       }
@@ -8296,6 +8438,12 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           case 'set_smoothing_percentage':
             return quadGenActions.setSmoothingPercentage(parameters.percentage);
           
+          case 'set_chart_zoom':
+            return quadGenActions.setChartZoom(parameters.percent);
+
+          case 'nudge_chart_zoom':
+            return quadGenActions.nudgeChartZoom(parameters.direction || 1);
+
           case 'change_printer':
             return quadGenActions.changePrinter(parameters.printerName);
           
@@ -8406,6 +8554,60 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             success: false,
             message: rateLimitCheck.reason,
             response: rateLimitCheck.reason
+          };
+        }
+
+        const normalizedMessage = String(userMessage || '').trim().toLowerCase();
+
+        const zoomInMaxPhrases = [
+          'zoom in as far as possible',
+          'zoom way in',
+          'zoom all the way in',
+          'zoom in all the way'
+        ];
+        const zoomOutMaxPhrases = [
+          'zoom all the way out',
+          'zoom way out',
+          'zoom out as far as possible',
+          'zoom out all the way'
+        ];
+        const includesPhrase = (phrase) => normalizedMessage.includes(phrase);
+
+        if (zoomInMaxPhrases.some(includesPhrase)) {
+          const result = quadGenActions.setChartZoom(0);
+          const reply = result?.message || 'Zoomed in to the minimum allowed range.';
+          return {
+            success: result?.success !== false,
+            message: reply,
+            response: reply,
+            actionsPerformed: true
+          };
+        }
+
+        if (zoomOutMaxPhrases.some(includesPhrase)) {
+          const result = quadGenActions.setChartZoom(100);
+          const reply = result?.message || 'Zoomed out to show the full range.';
+          return {
+            success: result?.success !== false,
+            message: reply,
+            response: reply,
+            actionsPerformed: true
+          };
+        }
+
+        const zoomInRegex = /\bzoom(?:\s+\w+){0,3}\s+in\b/;
+        const zoomOutRegex = /\bzoom(?:\s+\w+){0,3}\s+out\b/;
+        const hasZoomIn = zoomInRegex.test(normalizedMessage);
+        const hasZoomOut = zoomOutRegex.test(normalizedMessage);
+        if ((hasZoomIn || hasZoomOut) && !(hasZoomIn && hasZoomOut)) {
+          const direction = hasZoomIn ? 1 : -1;
+          const result = quadGenActions.nudgeChartZoom(direction);
+          const reply = result?.message || (direction > 0 ? 'Zoomed in.' : 'Zoomed out.');
+          return {
+            success: result?.success !== false,
+            message: reply,
+            response: reply,
+            actionsPerformed: true
           };
         }
 
@@ -8974,6 +9176,8 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       status: document.getElementById('status'),
       inkChart: document.getElementById('inkChart'),
       chartCursorTooltip: document.getElementById('chartCursorTooltip'),
+      chartZoomInBtn: document.getElementById('chartZoomInBtn'),
+      chartZoomOutBtn: document.getElementById('chartZoomOutBtn'),
       filenameInput: document.getElementById('filenameInput'),
       linearizationFile: document.getElementById('linearizationFile'),
       globalLinearizationBtn: document.getElementById('globalLinearizationBtn'),
@@ -9188,6 +9392,199 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
     // Maximum count at which we directly seed source points into AI key points
     // (Above this, we recompute/simplify to an edit‑friendly subset.)
     const DIRECT_SEED_MAX_POINTS = 25;
+
+    const CHART_ZOOM_LEVELS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    const CHART_ZOOM_STORAGE_KEY = 'chartZoomPercentV1';
+    let chartZoomIndex = CHART_ZOOM_LEVELS.length - 1; // default to 100%
+
+    (function restoreChartZoomPreference() {
+      try {
+        const raw = localStorage.getItem(CHART_ZOOM_STORAGE_KEY);
+        if (!raw) return;
+        const saved = parseInt(raw, 10);
+        if (!Number.isFinite(saved)) return;
+        let nearest = CHART_ZOOM_LEVELS[0];
+        let bestDiff = Math.abs(saved - nearest);
+        for (let i = 1; i < CHART_ZOOM_LEVELS.length; i++) {
+          const level = CHART_ZOOM_LEVELS[i];
+          const diff = Math.abs(level - saved);
+          if (diff < bestDiff) {
+            nearest = level;
+            bestDiff = diff;
+          }
+        }
+        const idx = CHART_ZOOM_LEVELS.indexOf(nearest);
+        if (idx >= 0) chartZoomIndex = idx;
+      } catch {}
+    })();
+
+    function getChartZoomPercent() {
+      return CHART_ZOOM_LEVELS[chartZoomIndex] || 100;
+    }
+
+    function persistChartZoom() {
+      try {
+        localStorage.setItem(CHART_ZOOM_STORAGE_KEY, String(getChartZoomPercent()));
+      } catch {}
+    }
+
+    function getHighestActivePercent() {
+      let maxPercent = 0;
+      try {
+        const rowNodes = elements.rows?.children ? Array.from(elements.rows.children) : [];
+        rowNodes.forEach((row) => {
+          if (!row || row.id === 'noChannelsRow') return;
+          const endInput = row.querySelector ? row.querySelector('.end-input') : null;
+          const rawValue = endInput?.value ?? 0;
+          const endVal = (typeof InputValidator?.clampEnd === 'function')
+            ? InputValidator.clampEnd(rawValue)
+            : Number(rawValue) || 0;
+          if (endVal <= 0) return;
+          const percent = (typeof InputValidator?.computePercentFromEnd === 'function')
+            ? InputValidator.computePercentFromEnd(endVal)
+            : (endVal / TOTAL) * 100;
+          if (Number.isFinite(percent)) {
+            maxPercent = Math.max(maxPercent, percent);
+          }
+        });
+      } catch {}
+      return Math.max(0, Math.min(100, maxPercent));
+    }
+
+    function getMinimumAllowedZoomIndex() {
+      const highest = getHighestActivePercent();
+      if (!Number.isFinite(highest) || highest <= 0) return 0;
+      const target = Math.min(100, Math.max(0, Math.ceil(highest / 10) * 10));
+      for (let i = 0; i < CHART_ZOOM_LEVELS.length; i++) {
+        if (CHART_ZOOM_LEVELS[i] >= target) return i;
+      }
+      return CHART_ZOOM_LEVELS.length - 1;
+    }
+
+    function updateChartZoomButtons() {
+      try {
+        const current = getChartZoomPercent();
+        const minIdx = getMinimumAllowedZoomIndex();
+        if (elements.chartZoomInBtn) {
+          const atZoomInLimit = chartZoomIndex <= minIdx;
+          elements.chartZoomInBtn.disabled = atZoomInLimit;
+          elements.chartZoomInBtn.setAttribute('aria-disabled', atZoomInLimit ? 'true' : 'false');
+          elements.chartZoomInBtn.setAttribute('aria-label', `Zoom in (current max ${current}%)`);
+        }
+        if (elements.chartZoomOutBtn) {
+          const atZoomOutLimit = chartZoomIndex >= CHART_ZOOM_LEVELS.length - 1;
+          elements.chartZoomOutBtn.disabled = atZoomOutLimit;
+          elements.chartZoomOutBtn.setAttribute('aria-disabled', atZoomOutLimit ? 'true' : 'false');
+          elements.chartZoomOutBtn.setAttribute('aria-label', `Zoom out (current max ${current}%)`);
+        }
+      } catch {}
+    }
+
+    function setChartZoomIndex(idx, options = {}) {
+      const { persist = true, refresh = true } = options;
+      const minIdx = getMinimumAllowedZoomIndex();
+      const clampedIdx = Math.max(minIdx, Math.min(CHART_ZOOM_LEVELS.length - 1, idx));
+      const changed = clampedIdx !== chartZoomIndex;
+      chartZoomIndex = clampedIdx;
+      if (persist) persistChartZoom();
+      updateChartZoomButtons();
+      if (changed) {
+        try { updateSessionStatus(); } catch {}
+      }
+      if (refresh && changed) {
+        try { updateInkChart(); } catch {}
+      }
+      return getChartZoomPercent();
+    }
+
+    function setChartZoomPercent(percent, options = {}) {
+      const target = Number(percent);
+      if (!Number.isFinite(target)) return getChartZoomPercent();
+      let nearest = CHART_ZOOM_LEVELS[0];
+      let bestDiff = Math.abs(target - nearest);
+      for (let i = 1; i < CHART_ZOOM_LEVELS.length; i++) {
+        const level = CHART_ZOOM_LEVELS[i];
+        const diff = Math.abs(level - target);
+        if (diff < bestDiff) {
+          nearest = level;
+          bestDiff = diff;
+        }
+      }
+      return setChartZoomIndex(CHART_ZOOM_LEVELS.indexOf(nearest), options);
+    }
+
+    function stepChartZoom(direction, options = {}) {
+      const dir = direction >= 0 ? -1 : 1;
+      const idx = chartZoomIndex + dir;
+      return setChartZoomIndex(idx, options);
+    }
+
+    function normalizeDisplayMax(geom) {
+      const raw = Number(geom?.displayMax);
+      if (Number.isFinite(raw) && raw > 0) return raw;
+      return 100;
+    }
+
+    function clampPercentForDisplay(percent, geom) {
+      const max = normalizeDisplayMax(geom);
+      if (!Number.isFinite(percent)) return 0;
+      return Math.max(0, Math.min(max, percent));
+    }
+
+    function mapPercentToY(percent, geom) {
+      const max = normalizeDisplayMax(geom);
+      let chartHeight = Number(geom?.chartHeight);
+      const padding = Number(geom?.padding) || 0;
+      const height = Number(geom?.height) || 0;
+      if (!Number.isFinite(chartHeight) || chartHeight <= 0) {
+        chartHeight = Math.max(0, height - 2 * padding);
+      }
+      const clamped = clampPercentForDisplay(percent, geom);
+      if (chartHeight <= 0) return height - padding;
+      return height - padding - (chartHeight * (clamped / max));
+    }
+
+    function mapYToPercent(yPx, geom) {
+      const max = normalizeDisplayMax(geom);
+      let chartHeight = Number(geom?.chartHeight);
+      const padding = Number(geom?.padding) || 0;
+      const height = Number(geom?.height) || 0;
+      if (!Number.isFinite(chartHeight) || chartHeight <= 0) {
+        chartHeight = Math.max(0, height - 2 * padding);
+      }
+      if (chartHeight <= 0) return 0;
+      const ratio = (height - padding - yPx) / chartHeight;
+      const value = ratio * max;
+      if (!Number.isFinite(value)) return 0;
+      return Math.max(0, Math.min(max, value));
+    }
+
+    function rescaleSmartCurveForInkLimit(channelName, fromPercent, toPercent) {
+      try {
+        if (!channelName) return;
+        const fromPct = Number(fromPercent);
+        const toPct = Number(toPercent);
+        if (!Number.isFinite(fromPct) || !Number.isFinite(toPct)) return;
+        const fromScale = InputValidator.clampPercent(fromPct) / 100;
+        const toScale = InputValidator.clampPercent(toPct) / 100;
+        if (!Number.isFinite(fromScale) || !Number.isFinite(toScale) || fromScale <= 0 || toScale <= 0) return;
+        if (Math.abs(fromScale - toScale) < 1e-6) return;
+        const { points, interpolation } = ControlPoints.get(channelName);
+        if (!points || points.length === 0) return;
+        const factor = fromScale / toScale;
+        if (!Number.isFinite(factor) || factor <= 0) return;
+        const scaledPoints = points.map(p => ({ input: p.input, output: ControlPolicy.clampY(p.output * factor) }));
+        ControlPoints.persist(channelName, scaledPoints, interpolation);
+        try {
+          const curve = quadGenActions._interpolateCurve(scaledPoints, interpolation === 'linear' ? 'linear' : 'smooth');
+          quadGenActions._applyCurveToChannel(channelName, curve, { oldKeyPoints: null, newKeyPoints: scaledPoints.map(pt => ({ input: pt.input, output: pt.output })), oldInterpolation: interpolation, newInterpolation: interpolation });
+        } catch (e) {
+          if (DEBUG_LOGS) console.warn('rescaleSmartCurveForInkLimit apply failed:', e);
+        }
+      } catch (err) {
+        if (DEBUG_LOGS) console.warn('rescaleSmartCurveForInkLimit failed:', err);
+      }
+    }
 
     // clampSimplifierSettings removed; simplifier is managed by Edit Curves panel
 
@@ -11179,6 +11576,13 @@ DOMAIN_MAX 1.0 1.0 1.0
       const rightPadding = padding + 6; // Maintain total width
       const chartWidth = width - leftPadding - rightPadding;
       const chartHeight = height - 2 * padding;
+      const minZoomIdx = getMinimumAllowedZoomIndex();
+      if (chartZoomIndex < minZoomIdx) {
+        setChartZoomIndex(minZoomIdx, { persist: true, refresh: false });
+      }
+
+      const displayMax = normalizeDisplayMax({ displayMax: getChartZoomPercent() });
+      const geom = { leftPadding, chartWidth, padding, chartHeight, height, width, displayMax };
 
       // Lighten/differentiate chart area background per theme
       if (COLOR_BG && COLOR_BG !== 'transparent') {
@@ -11228,14 +11632,22 @@ DOMAIN_MAX 1.0 1.0 1.0
         ctx.stroke();
       }
       
-      // Horizontal grid lines (every 10%)
-      for (let i = 0; i <= 10; i++) {
-        const y = padding + (i * chartHeight / 10);
+      // Horizontal grid lines (dynamic based on zoom)
+      const tickStep = displayMax <= 50 ? 5 : 10;
+      const tickValues = [];
+      for (let value = 0; value <= displayMax; value += tickStep) {
+        tickValues.push(Math.round(value * 100) / 100);
+      }
+      if (tickValues[tickValues.length - 1] !== displayMax) {
+        tickValues.push(displayMax);
+      }
+      tickValues.forEach((value) => {
+        const y = mapPercentToY(value, geom);
         ctx.beginPath();
         ctx.moveTo(leftPadding, y);
         ctx.lineTo(leftPadding + chartWidth, y);
         ctx.stroke();
-      }
+      });
       
       // Draw axes
       ctx.strokeStyle = COLOR_AXIS;
@@ -11302,23 +11714,17 @@ DOMAIN_MAX 1.0 1.0 1.0
         ctx.fillText(`${value}`, x, height - padding + 28);
       }
       
-      // Y-axis labels (0% to 100%)
+      // Y-axis labels (respect current zoom)
       ctx.textAlign = 'right';
       ctx.fillStyle = COLOR_TEXT;
-      // Nudge labels left to account for the vertical gradient width (10px) + 1px gap + ~1px margin
-      // Nudge slightly more to the right for spacing
       const yAxisLabelX = leftPadding - (10 /* gradient */ + 1 /* gap */ + 10 /* original offset */ + 1 /* margin */) + 4;
-      for (let i = 0; i <= 10; i++) {
-        const y = height - padding - (i * chartHeight / 10);
-        const value = i * 10;
-        // Make 0 and 100 bold
-        if (value === 0 || value === 100) {
-          ctx.font = 'bold 12px system-ui';
-        } else {
-          ctx.font = '12px system-ui';
-        }
-        ctx.fillText(`${value}`, yAxisLabelX, y + 4);
-      }
+      tickValues.forEach((value) => {
+        const y = mapPercentToY(value, geom);
+        const isEdge = Math.abs(value) < 0.001 || Math.abs(value - displayMax) < 0.001;
+        ctx.font = isEdge ? 'bold 12px system-ui' : '12px system-ui';
+        const label = (Math.abs(value - Math.round(value)) < 0.001) ? Math.round(value).toString() : value.toFixed(1);
+        ctx.fillText(label, yAxisLabelX, y + 4);
+      });
       
       // Axis titles
       ctx.textAlign = 'center';
@@ -11339,7 +11745,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       ctx.restore();
 
       // Update chart cursor tooltip mapping and listeners
-      setupChartCursorTooltip({ leftPadding, chartWidth, padding, chartHeight, width, height });
+      setupChartCursorTooltip(geom);
       
       // Draw curves and collect label info
       const labels = [];
@@ -11418,7 +11824,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           for (let i = 0; i < refValues.length; i++) {
             const x = leftPadding + (i / (refValues.length - 1)) * chartWidth;
             const valuePercent = (refValues[i] / maxValue) * 100;
-            const y = height - padding - (valuePercent / 100) * chartHeight;
+            const y = mapPercentToY(valuePercent, geom);
             
             if (i === 0) {
               ctx.moveTo(x, y);
@@ -11450,7 +11856,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           for (let i = 0; i < originalValues.length; i++) {
             const x = leftPadding + (i / (originalValues.length - 1)) * chartWidth;
             const valuePercent = (originalValues[i] / maxValue) * 100;
-            const y = height - padding - (valuePercent / 100) * chartHeight;
+            const y = mapPercentToY(valuePercent, geom);
             
             if (i === 0) {
               ctx.moveTo(x, y);
@@ -11476,7 +11882,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         for (let i = 0; i < values.length; i++) {
           const x = leftPadding + (i / (values.length - 1)) * chartWidth;
           const valuePercent = (values[i] / maxValue) * 100;
-          const y = height - padding - (valuePercent / 100) * chartHeight;
+          const y = mapPercentToY(valuePercent, geom);
           
           if (i === 0) {
             ctx.moveTo(x, y);
@@ -11529,7 +11935,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           const showMarkers = !!isSelectedChannel; // hide point boxes on unselected channels
           ctx.save();
           if (dimUnselected) ctx.globalAlpha = 0.5;
-          renderAIKeyPointOverlay(ctx, channelName, values, maxValue, { leftPadding, chartWidth, padding, height }, inkColor, { showLabels: showAIlabels, drawMarkers: showMarkers });
+          renderAIKeyPointOverlay(ctx, channelName, values, maxValue, { leftPadding, chartWidth, padding, height, chartHeight, displayMax }, inkColor, { showLabels: showAIlabels, drawMarkers: showMarkers });
           ctx.restore();
         } else if (isEdit) {
           // Only show adapter overlays (LAB/LUT/ACV) in Edit Mode
@@ -11538,7 +11944,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           ctx.save();
           if (dimUnselected) ctx.globalAlpha = 0.5;
           sets.forEach(set => {
-            renderXPositionsOverlay(ctx, set.xPercents, values, maxValue, { leftPadding, chartWidth, padding, height }, inkColor, showOverlayLabels);
+            renderXPositionsOverlay(ctx, set.xPercents, values, maxValue, { leftPadding, chartWidth, padding, height, chartHeight, displayMax }, inkColor, showOverlayLabels);
           });
           ctx.restore();
         }
@@ -11546,7 +11952,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Store label info for later positioning
         const actualEndValue = values[values.length - 1];
         const actualEndPercent = (actualEndValue / maxValue) * 100;
-        const endY = height - padding - (actualEndPercent / 100) * chartHeight;
+        const endY = mapPercentToY(actualEndPercent, geom);
         
         labels.push({
           channelName,
@@ -11635,7 +12041,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             ctx.save();
             // Ensure full opacity for topmost labels
             ctx.globalAlpha = 1.0;
-            renderAIKeyPointOverlay(ctx, selCh, values, TOTAL, { leftPadding, chartWidth, padding, height }, inkColor, { showLabels: true, drawMarkers: false, requireExplicit: true });
+            renderAIKeyPointOverlay(ctx, selCh, values, TOTAL, { leftPadding, chartWidth, padding, height, chartHeight, displayMax }, inkColor, { showLabels: true, drawMarkers: false, requireExplicit: true });
             ctx.restore();
           }
         }
@@ -11644,6 +12050,8 @@ DOMAIN_MAX 1.0 1.0 1.0
       
       // Animate logo bars only once (avoid re-trigger on mousemove redraws)
       if (!LOGO_ANIMATED_ONCE) { try { animateLogoBars(); } catch {} LOGO_ANIMATED_ONCE = true; }
+
+      try { updateChartZoomButtons(); } catch {}
     }
 
     // Cursor tooltip over the chart: show X,Y in percent (locks to selected channel in Edit Mode)
@@ -11664,15 +12072,12 @@ DOMAIN_MAX 1.0 1.0 1.0
           const scaleY = canvas.height / rect.height;
           const cx = (e.clientX - rect.left) * scaleX;
           const cy = (e.clientY - rect.top) * scaleY;
-          const { leftPadding, chartWidth, padding, chartHeight, width, height } = CHART_CURSOR_MAP;
+          const { leftPadding, chartWidth, padding, chartHeight, width, height, displayMax } = CHART_CURSOR_MAP;
           let xPct = ((cx - leftPadding) / chartWidth) * 100;
-          let yPctRaw = ((height - padding - cy) / chartHeight) * 100;
-          let yPct = yPctRaw;
           xPct = Math.max(0, Math.min(100, xPct));
-          yPctRaw = Math.max(0, Math.min(100, yPctRaw));
-          yPct = Math.max(0, Math.min(100, yPct));
+          let yPct = mapYToPercent(cy, CHART_CURSOR_MAP);
           let drawX = cx;
-          let drawY = height - padding - (yPct / 100) * chartHeight;
+          let drawY = mapPercentToY(yPct, CHART_CURSOR_MAP);
 
           // If Edit Mode is ON and a selected channel exists and is enabled, lock Y to that channel's plot
           try {
@@ -11691,7 +12096,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                   const v = (1 - a) * values[i0] + a * values[i1];
                   const vPct = Math.max(0, Math.min(100, (v / TOTAL) * 100));
                   yPct = vPct; // lock tooltip Y to curve value
-                  drawY = height - padding - (vPct / 100) * chartHeight;
+                  drawY = mapPercentToY(vPct, CHART_CURSOR_MAP);
                   // Draw a bolded circle at (drawX, drawY) using channel color
                   const ctx = canvas.getContext('2d');
                   if (ctx) {
@@ -11872,7 +12277,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             const v = (1 - a) * values[i0] + a * values[i1];
             valuePercent = Math.max(0, Math.min(100, (v / maxValue) * 100));
           }
-          const y = height - padding - (valuePercent / 100) * (height - 2 * padding);
+          const y = mapPercentToY(valuePercent, geom);
           const hx = boxSize / 2;
           const hy = boxSize / 2;
           // Square marker (highlight current selected ordinal)
@@ -11964,7 +12369,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const a = t - i0;
         const v = (1 - a) * values[i0] + a * values[i1];
         const valuePercent = (v / maxValue) * 100;
-        const y = height - padding - (valuePercent / 100) * (height - 2 * padding);
+        const y = mapPercentToY(valuePercent, geom);
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(Math.round(x - hx) + 0.5, Math.round(y - hy) + 0.5, boxSize, boxSize);
         ctx.strokeRect(Math.round(x - hx) + 0.5, Math.round(y - hy) + 0.5, boxSize, boxSize);
@@ -11992,14 +12397,14 @@ DOMAIN_MAX 1.0 1.0 1.0
           const labelBG = isDarkTheme ? '#e5e7eb' : '#1f2937';
           const labelBorder = isDarkTheme ? '#d1d5db' : '#111827';
           const labelTextColor = isDarkTheme ? '#111827' : '#ffffff';
-      ctx.fillStyle = labelBG;
-      ctx.fillRect(bgX, bgY, bgW, bgH);
-      ctx.strokeStyle = labelBorder;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(bgX + 0.5, bgY + 0.5, bgW - 1, bgH - 1);
+          ctx.fillStyle = labelBG;
+          ctx.fillRect(bgX, bgY, bgW, bgH);
+          ctx.strokeStyle = labelBorder;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(bgX + 0.5, bgY + 0.5, bgW - 1, bgH - 1);
 
-      ctx.fillStyle = labelTextColor;
-      ctx.fillText(num, Math.round(labelX) + 0.5, Math.round(labelY) + 0.5);
+          ctx.fillStyle = labelTextColor;
+          ctx.fillText(num, Math.round(labelX) + 0.5, Math.round(labelY) + 0.5);
         }
       });
       ctx.restore();
@@ -12127,6 +12532,18 @@ DOMAIN_MAX 1.0 1.0 1.0
       });
     }
 
+    if (elements.chartZoomInBtn) {
+      elements.chartZoomInBtn.addEventListener('click', () => {
+        stepChartZoom(1);
+      });
+    }
+    if (elements.chartZoomOutBtn) {
+      elements.chartZoomOutBtn.addEventListener('click', () => {
+        stepChartZoom(-1);
+      });
+    }
+    updateChartZoomButtons();
+
     // Update filename input with current settings
     function updateFilename() {
       if (!elements.filenameInput.dataset.userEdited) {
@@ -12176,6 +12593,10 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Include Intent only when non-linear
         if (id !== 'linear') {
           parts.push(`Intent: ${intentLabel}`);
+        }
+        const zoomPercent = getChartZoomPercent();
+        if (zoomPercent && zoomPercent !== 100) {
+          parts.push(`Zoom: ${zoomPercent}% max`);
         }
         const line = parts.join(' • ');
         if (elements.sessionStatus) elements.sessionStatus.textContent = line || '\u00A0';
@@ -13077,6 +13498,7 @@ DOMAIN_MAX 1.0 1.0 1.0
               const endVal = InputValidator.computeEndFromPercent(p);
               const endInput = tr.querySelector('.end-input');
               if (endInput) endInput.value = String(endVal);
+              rescaleSmartCurveForInkLimit(action.channelName, Number(action.newValue), Number(action.oldValue));
               
               // Update UI display
               if (tr.refreshDisplayFn) tr.refreshDisplayFn();
@@ -13094,6 +13516,7 @@ DOMAIN_MAX 1.0 1.0 1.0
               const p = InputValidator.computePercentFromEnd(e);
               const percentageInput = tr.querySelector('.percent-input');
               if (percentageInput) percentageInput.value = p.toFixed(1);
+              rescaleSmartCurveForInkLimit(action.channelName, InputValidator.computePercentFromEnd(Number(action.newValue)), InputValidator.computePercentFromEnd(Number(action.oldValue)));
               
               // Update UI display
               if (tr.refreshDisplayFn) tr.refreshDisplayFn();
@@ -13320,6 +13743,7 @@ DOMAIN_MAX 1.0 1.0 1.0
               const endVal = InputValidator.computeEndFromPercent(p);
               const endInput = tr.querySelector('.end-input');
               if (endInput) endInput.value = String(endVal);
+              rescaleSmartCurveForInkLimit(action.channelName, Number(action.oldValue), Number(action.newValue));
               
               // Update UI display
               if (tr.refreshDisplayFn) tr.refreshDisplayFn();
@@ -13336,6 +13760,7 @@ DOMAIN_MAX 1.0 1.0 1.0
               const p = InputValidator.computePercentFromEnd(e);
               const percentageInput = tr.querySelector('.percent-input');
               if (percentageInput) percentageInput.value = p.toFixed(1);
+              rescaleSmartCurveForInkLimit(action.channelName, InputValidator.computePercentFromEnd(Number(action.oldValue)), InputValidator.computePercentFromEnd(Number(action.newValue)));
               
               // Update UI display
               if (tr.refreshDisplayFn) tr.refreshDisplayFn();
@@ -18985,7 +19410,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
 
           <hr />
 
-<h2 id="quickstart">Quick Start (Beta 2.4)</h2>
+<h2 id="quickstart">Quick Start (Beta 2.5.1)</h2>
           <ol>
             <li>Choose your printer and set ink limits (per channel).</li>
             <li>Start with Linear Ramp, or</li>
@@ -19006,6 +19431,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li>Edit Mode: point-based edits at any time.</li>
             <li>Undo/Redo: full history of edits and toggles.</li>
             <li>Recompute key points: simplify Smart Curves with tolerance/max-point controls.</li>
+            <li>Graph zoom: use the +/− control in the chart corner to rescale the Y-axis in 10% steps when working with low ink limits; zoom automatically clamps to the highest active ink limit so you never crop a 100% curve.</li>
             <li>Lab Tech: AI assistant for Q&amp;A and automation.</li>
             <li>Contrast intent: presets or custom targets; shows Δ vs target; endpoints fixed (use ink limits to change).</li>
             <li>Auto endpoint rolloff: optional white/black soft knees that detect early plateau and ease into the ink limit with a smooth shoulder/toe (3% proximity threshold).</li>
@@ -19034,6 +19460,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li>Use ink limits to define deepest black (or cleanest white).</li>
             <li>Make incremental edits; use Undo/Redo liberally.</li>
             <li>Keep a “master” Linear intent <code>.quad</code>. You can bake contrast variants with “Apply Intent”, or do the contrast move in Photoshop and print through the same linear master—both paths land on the same tone curve.</li>
+            <li>Zoom the chart so low-limit runs fill the plot—tap +/− in the lower-left to move in 10% steps, and the chart auto-expands again if you enable a higher ink limit later.</li>
           </ul>
 
           <hr />
@@ -19319,6 +19746,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
           <h3>Notes & Tips</h3>
           <ul>
             <li>Keep curves smooth, avoid kinks near endpoints.</li>
+            <li>Use the +/− zoom control in the lower-left of the graph to blow up low ink-limit curves; the Y-axis labels reflect the displayed max and the chart auto-expands if a newly enabled channel exceeds it.</li>
             <li>For digital negatives, invert the image in your editor before printing with your <code>.quad</code>.</li>
           </ul>
           <h3>References</h3>
