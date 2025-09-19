@@ -2657,7 +2657,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta 2.5.1';
+    const APP_VERSION = 'Beta 2.5.2';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2678,11 +2678,11 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       try {
         if (flag) localStorage.setItem(INTENT_TUNING_STORAGE_KEY, '1');
         else localStorage.removeItem(INTENT_TUNING_STORAGE_KEY);
-      } catch {}
+      } catch (err) {}
     }
     function loadIntentTuningFlag() {
       try { return localStorage.getItem(INTENT_TUNING_STORAGE_KEY) === '1'; }
-      catch { return false; }
+      catch (err) { return false; }
     }
     const DEBUG_INTENT_TUNING = (() => {
       if (typeof window !== 'undefined' && typeof window.DEBUG_INTENT_TUNING === 'boolean') {
@@ -2749,6 +2749,30 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
         },
         aboutDialog: []
       },
+      'v2.5.2': {
+        date: '2025-09-19',
+        title: 'LAB revert guard + debug trims',
+        sections: {
+          ADDED: [
+            'Lab Tech now understands extended zoom phrases like “zoom way in” or “zoom all the way out,” mapping them to the chart controls automatically.',
+            'Automated smoke test (`tests/load_quad_smoke.spec.js`) verifies `.quad` loading succeeds without runtime errors.'
+          ],
+          CHANGED: [],
+          FIXED: [
+            'Edit Mode now seeds Smart curves from every LAB patch (up to 64) and restores the original measurement ink limit after Smart edits, so toggling Edit Mode or reverting no longer hides patches or shrinks endpoints.',
+            'Revert to Measurement now clears LAB linearization data before restoring the .quad, eliminating shrunken endpoints when Edit Mode is re-enabled.'
+          ],
+          REMOVED: [],
+          DOCS: [
+            'Updated in-app ReadMe installation links and `docs/quadgen_user_guide.md` to point to the primary domain `https://quadgen.ink/`.',
+            'Replaced “master” terminology with “reference” in documentation and in-app help to reflect preferred language.',
+            'Added a glossary entry defining “reference curve” to keep Help → Glossary aligned with the new terminology.'
+          ]
+        },
+        aboutDialog: [
+          { label: 'LAB Revert Guard', desc: 'Global revert now restores the original measurement ink limit, so Edit Mode comes back with the full patch set intact.' }
+        ]
+      },
       'v2.5.1': {
         date: '2025-09-18',
         title: 'Zoom presets + curve stability',
@@ -2781,7 +2805,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
         title: 'Intent remap automation + button polish',
         sections: {
           ADDED: [
-            'Apply Intent now bakes the selected preset into the loaded .quad even when no LAB/manual data is active—ideal for branching variants from a master linear profile.',
+            'Apply Intent now bakes the selected preset into the loaded .quad even when no LAB/manual data is active—ideal for branching variants from a reference linear profile.',
             'Lab Tech assistant can call apply_intent_to_loaded_quad() to bake the current preset without manual clicks.'
           ],
           CHANGED: [],
@@ -3812,7 +3836,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           }
           if (!btn) {
             // Fallback: inline perform same logic as click handler
-            try { CurveHistory.captureState('Before: Revert Global to Measurement'); } catch {}
+            try { CurveHistory.captureState('Before: Revert Global to Measurement'); } catch (err) {}
             const savedSel = (isEditModeEnabled() && typeof EDIT !== 'undefined' && EDIT && EDIT.selectedChannel) ? EDIT.selectedChannel : null;
             const chs = (getCurrentPrinter()?.channels || []).slice();
             chs.forEach((ch) => {
@@ -3821,17 +3845,17 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                 if (window.loadedQuadData?.keyPoints?.[ch]) delete window.loadedQuadData.keyPoints[ch];
                 if (window.loadedQuadData?.keyPointsMeta?.[ch]) delete window.loadedQuadData.keyPointsMeta[ch];
                 if (window.loadedQuadData?.sources?.[ch]) delete window.loadedQuadData.sources[ch];
-              } catch {}
+              } catch (err) {}
             });
             if (elements.globalLinearizationToggle) {
               elements.globalLinearizationToggle.disabled = false;
               elements.globalLinearizationToggle.checked = true;
             }
-            try { linearizationData.edited = false; } catch {}
+            try { linearizationData.edited = false; } catch (err) {}
             refreshGlobalLinearizationDisplay();
             updateInterpolationControls();
             updatePreview();
-            try { const chans = getCurrentPrinter().channels; chans.forEach((name)=> updateProcessingDetail(name)); } catch {}
+            try { const chans = getCurrentPrinter().channels; chans.forEach((name)=> updateProcessingDetail(name)); } catch (err) {}
             showStatus('Reverted to measurement (global)');
             updateRevertButtonsState();
             try {
@@ -3845,7 +3869,9 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                   updateInkChart();
                 }
               }
-            } catch {}
+            } catch (err) {
+              if (DEBUG_LOGS && console) console.warn('[EDIT] Edit-mode priming skipped due to error:', err);
+            }
             return { success: true, message: 'Reverted to measurement (global)' };
           }
           btn.click();
@@ -3868,17 +3894,17 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           }
           if (btn) { btn.click(); return { success: true, message: `Reverted ${channelName} to measurement` }; }
           // Fallback: inline logic
-          try { CurveHistory.captureState(`Before: Revert ${channelName} to Measurement`); } catch {}
+          try { CurveHistory.captureState(`Before: Revert ${channelName} to Measurement`); } catch (err) {}
           try {
             if (window.loadedQuadData?.curves?.[channelName]) delete window.loadedQuadData.curves[channelName];
             if (window.loadedQuadData?.keyPoints?.[channelName]) delete window.loadedQuadData.keyPoints[channelName];
             if (window.loadedQuadData?.keyPointsMeta?.[channelName]) delete window.loadedQuadData.keyPointsMeta[channelName];
             if (window.loadedQuadData?.sources?.[channelName]) delete window.loadedQuadData.sources[channelName];
-          } catch {}
+          } catch (err) {}
           perChannelEnabled[channelName] = true;
           const perToggle = tr.querySelector('.per-channel-toggle');
           if (perToggle) { perToggle.disabled = false; perToggle.checked = true; }
-          try { perChannelLinearization[channelName].edited = false; } catch {}
+          try { perChannelLinearization[channelName].edited = false; } catch (err) {}
           refreshPerChannelLinearizationDisplay(channelName);
           updateInterpolationControls();
           updateProcessingDetail(channelName);
@@ -4401,14 +4427,14 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             const gain = isFinite(params.filmicGain) ? Number(params.filmicGain) : 0.55;
             const shoulder = isFinite(params.shoulder) ? Number(params.shoulder) : 0.35;
             setContrastIntent('filmic', { filmicGain: gain, shoulder }, 'preset');
-            try { saveCustomPrefs({ gain, shoulder }); } catch {}
+            try { saveCustomPrefs({ gain, shoulder }); } catch (err) {}
             return { success: true, message: `Intent set to Filmic (gain=${gain.toFixed(2)}, shoulder=${shoulder.toFixed(2)})` };
           }
           if (p === 'gamma') {
             const g = isFinite(params.gamma) ? Number(params.gamma) : 1.00;
             // Explicit gamma mapped to custom_gamma so the exact value is used
             setContrastIntent('custom_gamma', { gamma: g }, 'custom');
-            try { saveCustomPrefs({ gamma: g }); } catch {}
+            try { saveCustomPrefs({ gamma: g }); } catch (err) {}
             return { success: true, message: `Custom Gamma intent applied (γ=${g.toFixed(2)})` };
           }
           return { success: false, message: `Unknown preset '${preset}'. Use linear | soft | hard | filmic | gamma.` };
@@ -4425,11 +4451,11 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           const shoulder = isFinite(params.shoulder) ? Number(params.shoulder) : 0.35;
           // Follow UI rule: if gain/shoulder deviate from defaults, treat as filmic; otherwise gamma
           if (Math.abs(gain - 0.55) > 1e-3 || Math.abs(shoulder - 0.35) > 1e-3) {
-            try { saveCustomPrefs({ gain, shoulder }); } catch {}
+            try { saveCustomPrefs({ gain, shoulder }); } catch (err) {}
             setContrastIntent('custom_filmic', { gain, shoulder }, 'custom');
             return { success: true, message: `Applied Custom Filmic intent (gain=${gain.toFixed(2)}, shoulder=${shoulder.toFixed(2)})` };
           } else {
-            try { saveCustomPrefs({ gamma: g }); } catch {}
+            try { saveCustomPrefs({ gamma: g }); } catch (err) {}
             setContrastIntent('custom_gamma', { gamma: g }, 'custom');
             return { success: true, message: `Applied Custom Gamma intent (γ=${g.toFixed(2)})` };
           }
@@ -4447,7 +4473,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           const parsed = parseIntentPaste(t);
           if (parsed && parsed.ok && typeof parsed.targetFn === 'function') {
             const name = parsed.name || 'Custom (pasted)';
-            try { saveCustomPrefs({ pasteText: t }); } catch {}
+            try { saveCustomPrefs({ pasteText: t }); } catch (err) {}
             setContrastIntent('custom_points', { name, targetFn: parsed.targetFn }, 'paste');
             return { success: true, message: `Applied Custom (pasted) intent${name ? `: ${name}` : ''}` };
           }
@@ -4462,7 +4488,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
         try {
           const info = { id: contrastIntent?.id || 'linear', name: contrastIntent?.name || 'Linear', params: contrastIntent?.params || {} };
           let hasSaved = false;
-          try { hasSaved = hasSavedCustomIntent(); } catch {}
+          try { hasSaved = hasSavedCustomIntent(); } catch (err) {}
           return { success: true, message: 'OK', data: { ...info, hasSavedCustom: !!hasSaved } };
         } catch (e) {
           return { success: false, message: `Error reading contrast intent: ${e.message}` };
@@ -4576,7 +4602,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             // Set per-channel linearization data (use the same variables as file loading)
             perChannelLinearization[channelName] = normalizeLinearizationEntry(parseResult);
             perChannelEnabled[channelName] = true;
-            try { updateRevertButtonsState(); } catch {}
+            try { updateRevertButtonsState(); } catch (err) {}
 
             // Update UI toggle for this channel
             const channelRow = getChannelRow(channelName);
@@ -4720,7 +4746,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             // Set per-channel linearization data (use the same variables as file loading)
             perChannelLinearization[channelName] = normalizeLinearizationEntry(parseResult);
             perChannelEnabled[channelName] = true;
-            try { updateRevertButtonsState(); } catch {}
+            try { updateRevertButtonsState(); } catch (err) {}
 
             // Update UI toggle for this channel
             const channelRow = getChannelRow(channelName);
@@ -4805,7 +4831,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           this._recordAction('copyCurveToChannel', { sourceChannel, targetChannel });
           updatePreview();
           // Refresh Edit Curves channel dropdown now that printer/channels are set
-          try { if (typeof edit_populateChannelSelect === 'function') edit_populateChannelSelect(); } catch {}
+          try { if (typeof edit_populateChannelSelect === 'function') edit_populateChannelSelect(); } catch (err) {}
 
           return {
             success: true,
@@ -5924,7 +5950,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
               if (extras && typeof extras === 'object' && typeof extras.oldBakedGlobal === 'undefined') {
                 extras.oldBakedGlobal = !!_existingMeta.bakedGlobal;
               }
-            } catch {}
+            } catch (err) {}
 
             // Attach source transition metadata for accurate undo/redo labeling
             if (!extras || typeof extras !== 'object') extras = {};
@@ -6089,7 +6115,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
               ...(window.loadedQuadData.keyPointsMeta[channelName] || {}),
               interpolationType: (interpolationType === 'linear' ? 'linear' : 'smooth')
             };
-          } catch {}
+          } catch (err) {}
           const applied = this._applyCurveToChannel(channelName, curve, extras);
           if (!applied.success) return applied;
           // Mark any contributing linearization as edited for display
@@ -6118,8 +6144,11 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           channelName = this._resolveChannel(channelName);
           const row = getChannelRow(channelName);
           const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input').value) : TOTAL;
-          // Always use the currently plotted curve so recompute respects global/per-channel corrections and End
-          const values = make256(endVal, channelName, true);
+          if (DEBUG_LOGS) console.log(`[DEBUG RECOMPUTE] ${channelName} recompute using End: ${endVal} (baseline: ${window.loadedQuadData?.baselineEnd?.[channelName]})`);
+          // Use original curve data for Smart key point generation to prevent LAB corrections from being baked into key points
+          // LAB corrections should be applied on top of Smart Curves, not captured within them
+          const values = make256(endVal, channelName, false);
+          if (DEBUG_LOGS) console.log(`[DEBUG RECOMPUTE] ${channelName} curve values max: ${Math.max(...values)}, effective scaling: ${Math.max(...values) / 65535 * 100}%`);
           const maxErrorPercent = Math.max(0.05, Math.min(5, options.maxErrorPercent || KP_SIMPLIFY.maxErrorPercent || 1.0));
       const maxPoints = Math.max(2, Math.min(21, options.maxPoints || KP_SIMPLIFY.maxPoints || 21));
           const keyPoints = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent, maxPoints });
@@ -6150,9 +6179,9 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                     }
                   }
                 }
-              } catch {}
+              } catch (err) {}
             }
-          } catch {}
+          } catch (err) {}
           return res;
         } catch (e) {
           return { success: false, message: `Error simplifying Smart key points: ${e.message}` };
@@ -6161,7 +6190,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
       /**
        * Set AI key points for multiple channels as a single batch action
-       * entries: [{ channelName, keyPoints, interpolationType }]
+       * entries: [{ channelName, keyPoints, interpolationType, seedMeta? }]
        */
       setAIKeyPointsBatch(entries = []) {
         try {
@@ -6178,6 +6207,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           for (const entry of entries) {
             try {
               let { channelName, keyPoints, interpolationType } = entry || {};
+              const seedMeta = entry?.seedMeta;
               channelName = this._resolveChannel(channelName);
               if (!Array.isArray(keyPoints) || keyPoints.length < 2) {
                 errors.push(`${channelName}: at least 2 key points required`);
@@ -6199,11 +6229,19 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
               try {
                 if (!window.loadedQuadData) window.loadedQuadData = {};
                 if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
-                window.loadedQuadData.keyPointsMeta[channelName] = {
-                  ...(window.loadedQuadData.keyPointsMeta[channelName] || {}),
+                const prevMeta = window.loadedQuadData.keyPointsMeta[channelName] || {};
+                let nextMeta = {
+                  ...prevMeta,
                   interpolationType: (interp === 'linear' ? 'linear' : 'smooth')
                 };
-              } catch {}
+                if (seedMeta && seedMeta.measurementSeed) {
+                  nextMeta = { ...nextMeta, measurementSeed: seedMeta.measurementSeed };
+                } else if (nextMeta.measurementSeed) {
+                  const { measurementSeed, ...rest } = nextMeta;
+                  nextMeta = rest;
+                }
+                window.loadedQuadData.keyPointsMeta[channelName] = nextMeta;
+              } catch (err) {}
 
               const extras = { oldKeyPoints: oldKP, newKeyPoints: norm.map(p => ({ input: p.input, output: p.output })), oldInterpolation: oldInterp, newInterpolation: interp };
               const applied = this._applyCurveToChannel(channelName, curve, extras);
@@ -6244,7 +6282,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           try {
             const current = getCurrentPrinter();
             current.channels.forEach((name) => { if (typeof updateProcessingDetail === 'function') updateProcessingDetail(name); });
-          } catch {}
+          } catch (err) {}
 
           if (errors.length > 0 && results.length === 0) {
             return { success: false, message: `All operations failed: ${errors.join('; ')}` };
@@ -6396,7 +6434,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                   const desiredAbs = Math.max(0, Math.min(100, params.outputPercent));
                   if (scale > 0) return Math.max(0, Math.min(100, desiredAbs / scale));
                   return desiredAbs; // End=0 edge case
-                } catch { return newOutput; }
+                } catch (err) { return newOutput; }
               })()
             : null;
 
@@ -8180,14 +8218,14 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             txt = txt.slice(txt.length - this.systemContextMaxChars);
             this.systemContextBuffer = txt.split('\n').slice(-this.systemContextMaxLines);
           }
-        } catch {}
+        } catch (err) {}
       }
 
       getSystemContext() {
         try {
           if (!this.systemContextBuffer || this.systemContextBuffer.length === 0) return '';
           return this.systemContextBuffer.join('\n');
-        } catch { return ''; }
+        } catch (err) { return ''; }
       }
 
       // (Tool gating removed - always include tools for assistant)
@@ -8813,7 +8851,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
               });
 
               respText = await response.text();
-              try { data = JSON.parse(respText); } catch { data = {}; }
+              try { data = JSON.parse(respText); } catch (err) { data = {}; }
 
               if (response.ok) break;
 
@@ -8842,7 +8880,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
               const servedProvider = response.headers.get('X-Model-Provider') || provider;
               const connectMsg = `AI connected → provider: ${servedProvider}, model: ${servedModel}`;
               if (DEBUG_AI || DEBUG_LOGS) console.log(connectMsg);
-              try { if (shouldShowAssistantStatus() && typeof addChatMessage === 'function') addChatMessage('system', connectMsg); } catch {}
+              try { if (shouldShowAssistantStatus() && typeof addChatMessage === 'function') addChatMessage('system', connectMsg); } catch (err) {}
               this._modelLogged = true;
             }
 
@@ -8879,7 +8917,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
             for (const call of toolCalls) {
               if (call.type === 'function' && call.function?.name) {
                 let args = {};
-                try { args = JSON.parse(call.function.arguments || '{}'); } catch {}
+                try { args = JSON.parse(call.function.arguments || '{}'); } catch (err) {}
                   if (DEBUG_AI || DEBUG_LOGS) console.log('🔧 Function call (OpenAI):', call.function.name, args);
                   const result = this.executeFunctionCall({ name: call.function.name, parameters: args }, userMessage);
                   functionResults.push({ function: call.function.name, parameters: args, result });
@@ -8937,7 +8975,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
                   const peakPct = Math.round(Math.abs(peak.d));
                   const at = Math.round(peak.x);
                   return `Effect: ${zone.toLowerCase()} ${action} ${peakPct}% @ ${at}% → ${outcome}; ${endpointsNote}.`;
-                } catch { return ''; }
+                } catch (err) { return ''; }
               };
 
               let lastKP = null;
@@ -9374,7 +9412,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         if (isMeasurement) { globalBtn.disabled = false; globalBtn.removeAttribute('disabled'); }
         else { globalBtn.disabled = true; globalBtn.setAttribute('disabled','disabled'); }
       }
-    } catch {}
+    } catch (err) {}
     try {
       // Per-channel revert: enabled only if per-channel measurement is present
       const rows = Array.from(elements.rows?.children || []);
@@ -9392,7 +9430,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         // Reserve space: hide visually but keep layout when disabled
         btn.classList.toggle('invisible', btn.disabled);
       });
-    } catch {}
+    } catch (err) {}
   }
 
   // No display orientation or Y semantics toggles in stable layout
@@ -9402,6 +9440,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
     // Maximum count at which we directly seed source points into AI key points
     // (Above this, we recompute/simplify to an edit‑friendly subset.)
     const DIRECT_SEED_MAX_POINTS = 25;
+    const DIRECT_SEED_LAB_MAX_POINTS = 64;
 
     const CHART_ZOOM_LEVELS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
     const CHART_ZOOM_STORAGE_KEY = 'chartZoomPercentV1';
@@ -9425,7 +9464,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         }
         const idx = CHART_ZOOM_LEVELS.indexOf(nearest);
         if (idx >= 0) chartZoomIndex = idx;
-      } catch {}
+      } catch (err) {}
     })();
 
     function getChartZoomPercent() {
@@ -9435,7 +9474,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
     function persistChartZoom() {
       try {
         localStorage.setItem(CHART_ZOOM_STORAGE_KEY, String(getChartZoomPercent()));
-      } catch {}
+      } catch (err) {}
     }
 
     function getHighestActivePercent() {
@@ -9457,7 +9496,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
             maxPercent = Math.max(maxPercent, percent);
           }
         });
-      } catch {}
+      } catch (err) {}
       return Math.max(0, Math.min(100, maxPercent));
     }
 
@@ -9487,7 +9526,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
           elements.chartZoomOutBtn.setAttribute('aria-disabled', atZoomOutLimit ? 'true' : 'false');
           elements.chartZoomOutBtn.setAttribute('aria-label', `Zoom out (current max ${current}%)`);
         }
-      } catch {}
+      } catch (err) {}
     }
 
     function setChartZoomIndex(idx, options = {}) {
@@ -9499,10 +9538,10 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       if (persist) persistChartZoom();
       updateChartZoomButtons();
       if (changed) {
-        try { updateSessionStatus(); } catch {}
+        try { updateSessionStatus(); } catch (err) {}
       }
       if (refresh && changed) {
-        try { updateInkChart(); } catch {}
+        try { updateInkChart(); } catch (err) {}
       }
       return getChartZoomPercent();
     }
@@ -9610,7 +9649,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       try {
         if (!elements.labTechIcon) return;
         elements.labTechIcon.textContent = (aiConnected === true) ? '⚡' : (aiConnected === false ? '🚫' : '💬');
-      } catch {}
+      } catch (err) {}
     }
 
     // Contrast Intent state and helpers
@@ -9670,7 +9709,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         for (let i=0;i<n;i++) xs[i] = i/(n-1);
         const pchip = createPCHIPSpline(xs, samples.map(v=>clamp01(Number(v)||0)));
         return (t)=> clamp01(pchip(clamp01(t)));
-      } catch { return (t)=>clamp01(t); }
+      } catch (err) { return (t)=>clamp01(t); }
     }
 
     // Cache for expensive intent transformations
@@ -9799,7 +9838,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       return clamp01(t);
     }
 
-    function persistContrastIntent(){ try { localStorage.setItem('contrastIntentV1', JSON.stringify({ id: contrastIntent.id, name: contrastIntent.name, source: contrastIntent.source||'preset', params: contrastIntent.params||{}, hasPoints: !!contrastIntent.targetFn })); } catch {} }
+    function persistContrastIntent(){ try { localStorage.setItem('contrastIntentV1', JSON.stringify({ id: contrastIntent.id, name: contrastIntent.name, source: contrastIntent.source||'preset', params: contrastIntent.params||{}, hasPoints: !!contrastIntent.targetFn })); } catch (err) {} }
     function setContrastIntent(newId, params, source){
       const id = newId || 'linear';
       const preset = getPreset(id);
@@ -9830,7 +9869,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       // Clear intent cache when intent changes
       _intentCache = { id: null, targetFn: null };
       // Mark that a custom intent exists so the main dropdown can show "Custom"
-      try { if (String(id).startsWith('custom')) localStorage.setItem('hasCustomIntentV1', '1'); } catch {}
+      try { if (String(id).startsWith('custom')) localStorage.setItem('hasCustomIntentV1', '1'); } catch (err) {}
       // Persist "last applied custom" kind so 'Custom (saved)' restores the most recent from any tab
       try {
         if (String(id).startsWith('custom')) {
@@ -9846,7 +9885,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
             localStorage.setItem('lastCustomKindV1', 'filmic');
           }
         }
-      } catch {}
+      } catch (err) {}
       if (elements.contrastIntentSelect) {
         const idStr = String(id);
         const opts = Array.from(elements.contrastIntentSelect.options).map(o=>o.value);
@@ -9856,13 +9895,13 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       persistContrastIntent();
       updateIntentDetailLabel();
       updateIntentDropdownState();
-      try { updateSessionStatus(); } catch {}
+      try { updateSessionStatus(); } catch (err) {}
       recomputeLinearizationForCurrentIntent();
-      try { if (typeof updateCustomOptionVisibility === 'function') updateCustomOptionVisibility(); } catch {}
+      try { if (typeof updateCustomOptionVisibility === 'function') updateCustomOptionVisibility(); } catch (err) {}
       try {
         CurveHistory.recordUIAction('intent', prev, { id, name, source: contrastIntent.source, params: p, targetFn }, `Change Contrast Intent → ${name}`);
-      } catch {}
-      try { updateInkChart(); } catch {}
+      } catch (err) {}
+      try { updateInkChart(); } catch (err) {}
     }
     function updateIntentDetailLabel(){
       try {
@@ -9889,14 +9928,14 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         }
         const tip = `Intent: ${intentLabel}${extra}`;
         if (elements.contrastIntentSelect) elements.contrastIntentSelect.setAttribute('title', tip);
-      } catch {}
+      } catch (err) {}
     }
     function canApplyIntentRemap() {
       try {
         const hasQuad = !!(window.loadedQuadData && window.loadedQuadData.curves && Object.keys(window.loadedQuadData.curves).length);
         const hasGlobalMeasurement = !!linearizationData;
         return hasQuad && !hasGlobalMeasurement;
-      } catch { return false; }
+      } catch (err) { return false; }
     }
     function recomputeLinearizationForCurrentIntent(){
       try {
@@ -9910,13 +9949,13 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
           rebuilt.filename = linearizationData.filename || 'LAB-Data';
           linearizationData = normalizeLinearizationEntry(rebuilt);
           elements.globalLinearizationInfo.classList.remove('hidden');
-          updateInterpolationControls(); updatePreview(); try { postGlobalDeltaChatSummary(); } catch {}
+          updateInterpolationControls(); updatePreview(); try { postGlobalDeltaChatSummary(); } catch (err) {}
         } else if (fmt.includes('MANUAL') && Array.isArray(linearizationData.originalData)) {
           const rebuilt = buildManualLinearizationFromOriginal(linearizationData.originalData);
           rebuilt.filename = linearizationData.filename || 'Manual L* Entry';
           linearizationData = normalizeLinearizationEntry(rebuilt);
           elements.globalLinearizationInfo.classList.remove('hidden');
-          updateInterpolationControls(); updatePreview(); try { postGlobalDeltaChatSummary(); } catch {}
+          updateInterpolationControls(); updatePreview(); try { postGlobalDeltaChatSummary(); } catch (err) {}
         }
       } catch (e) { console.warn('Recompute intent failed:', e); }
     }
@@ -10080,7 +10119,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         try {
           const rev = document.getElementById('revertGlobalToMeasurementBtn');
           if (rev) { rev.disabled = false; rev.removeAttribute('disabled'); }
-        } catch {}
+        } catch (err) {}
       }
     }
 
@@ -10133,16 +10172,16 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       const detailsEl = elements.globalLinearizationDetails;
       const targets = [fnameEl, infoEl, detailsEl].filter(Boolean);
       if (targets.length > 0 && window.MutationObserver){
-        const mo = new MutationObserver(() => { try { updateRevertButtonsState(); } catch {} });
+        const mo = new MutationObserver(() => { try { updateRevertButtonsState(); } catch (err) {} });
         targets.forEach(t => mo.observe(t, { attributes: true, attributeFilter: ['class'], childList: true, characterData: true, subtree: true }));
         // Initial sync
-        try { updateRevertButtonsState(); } catch {}
+        try { updateRevertButtonsState(); } catch (err) {}
       }
-    } catch {}
+    } catch (err) {}
 
     // Theme handling
     const THEME_KEY = 'quadgen.theme';
-    function getSystemPrefersDark(){ try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch { return false; } }
+    function getSystemPrefersDark(){ try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (err) { return false; } }
     function applyTheme(theme, persist = true){
       try {
         const root = document.documentElement;
@@ -10154,8 +10193,8 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
           elements.themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
           elements.themeToggle.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
         }
-        try { updateInkChart(); } catch {}
-      } catch {}
+        try { updateInkChart(); } catch (err) {}
+      } catch (err) {}
     }
     (function initTheme(){
       if (!ENABLE_DARK_MODE) return;
@@ -10171,7 +10210,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
           };
           if (mq.addEventListener) mq.addEventListener('change', onChange); else mq.addListener(onChange);
         }
-      } catch {}
+      } catch (err) {}
       if (elements.themeToggle){
         elements.themeToggle.addEventListener('click', ()=>{
           const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -10343,7 +10382,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           }
         }
         if (label){ label.textContent = on ? '◈ Edit Mode: ON' : '⟐ Edit Mode: OFF'; }
-      } catch {}
+      } catch (err) {}
       // On first enable of Edit Mode, silently pre-create AI key points for all channels that need them
       try {
         if (on && !window.__EDIT_MODE_PRIMED) {
@@ -10353,100 +10392,126 @@ DOMAIN_MAX 1.0 1.0 1.0
           const persistOnly = [];
           channels.forEach((ch) => {
             try {
+              const per = perChannelLinearization[ch];
+              const perFmt = (per?.format || '').toUpperCase();
+              const hasPerLAB = (perFmt.includes('LAB') || perFmt.includes('MANUAL')) && Array.isArray(per?.originalData) && per.originalData.length > 0;
+              const glbFmt = (linearizationData?.format || '').toUpperCase();
+              const hasGlobalLAB = (glbFmt.includes('LAB') || glbFmt.includes('MANUAL')) && Array.isArray(linearizationData?.originalData) && linearizationData.originalData.length > 0;
+              const measurementContext = (() => {
+                if (hasPerLAB) return { scope: 'per', format: perFmt, count: per.originalData.length || 0 };
+                if (hasGlobalLAB) return { scope: 'global', format: glbFmt, count: linearizationData.originalData.length || 0 };
+                return null;
+              })();
+
               const existing = ControlPoints.get(ch)?.points;
-              if (existing && existing.length >= 2) return; // already has AI points
+              const existingMeta = window.loadedQuadData?.keyPointsMeta?.[ch] || {};
+              let skipExisting = false;
+              if (existing && existing.length >= 2) {
+                if (!measurementContext) {
+                  skipExisting = true;
+                } else {
+                  const seed = existingMeta.measurementSeed;
+                  if (seed && seed.scope === measurementContext.scope && seed.format === measurementContext.format && seed.count === measurementContext.count && existing.length === measurementContext.count) {
+                    skipExisting = true;
+                  }
+                }
+              }
+              if (existing && existing.length >= 2 && skipExisting) return; // already aligned with source
+
               // If a correction is already applied (global or per-channel), avoid applying Smart curve during priming
               const hasGlobalApplied = !!(linearizationApplied && linearizationData);
-              const hasPerApplied = !!(perChannelLinearization[ch] && perChannelEnabled[ch]);
+              const hasPerApplied = !!(per && perChannelEnabled[ch]);
               const applyInPrime = !(hasGlobalApplied || hasPerApplied);
-              // ACV sources (per-channel or global): seed directly from anchors without simplification
-              try {
-                const per = perChannelLinearization[ch];
-                const perFmt = (per?.format || '').toUpperCase();
-                const hasPerACVAnchors = perFmt === 'ACV' && Array.isArray(per?.controlPointsTransformed) && per.controlPointsTransformed.length >= 2;
-                if (hasPerACVAnchors) {
-                  const anchors = per.controlPointsTransformed.map(p => ({ input: p.input, output: p.output }));
-                  if (anchors.length >= 2) {
-                    const row = getChannelRow(ch);
-                    const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : 0;
+
+              const hasPerACVAnchors = perFmt === 'ACV' && Array.isArray(per?.controlPointsTransformed) && per.controlPointsTransformed.length >= 2;
+              if (hasPerACVAnchors) {
+                const anchors = per.controlPointsTransformed.map(p => ({ input: p.input, output: p.output }));
+                if (anchors.length >= 2) {
+                  const row = getChannelRow(ch);
+                  const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : 0;
                   if (!applyInPrime || endVal === 0) persistOnly.push({ channelName: ch, keyPoints: anchors, interpolationType: 'smooth' });
-                    else entries.push({ channelName: ch, keyPoints: anchors, interpolationType: 'smooth' });
-                    return;
-                  }
+                  else entries.push({ channelName: ch, keyPoints: anchors, interpolationType: 'smooth' });
+                  return;
                 }
-                const hasPerLAB = (perFmt.includes('LAB') || perFmt.includes('MANUAL')) && Array.isArray(per?.originalData) && per.originalData.length > 0;
-                if (hasPerLAB) {
+              }
+
+              if (hasPerLAB) {
+                const row = getChannelRow(ch);
+                const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : TOTAL;
+                const sampleEnd = endVal > 0 ? endVal : TOTAL;
+                const values = make256(sampleEnd, ch, true);
+                let kps;
+                if (per.originalData.length <= DIRECT_SEED_MAX_POINTS) {
+                  const Nvals = values.length - 1;
+                  kps = per.originalData.map(d => {
+                    const x = Math.max(0, Math.min(100, Number(d.input ?? d.GRAY ?? d.gray ?? 0)));
+                    const t = (x / 100) * Nvals;
+                    const i0 = Math.floor(t);
+                    const i1 = Math.min(Nvals, Math.ceil(t));
+                    const a = t - i0;
+                    const v = (1 - a) * values[i0] + a * values[i1];
+                    const outPct = Math.max(0, Math.min(100, (v / TOTAL) * 100));
+                    return { input: x, output: outPct };
+                  });
+                } else {
+                  kps = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
+                }
+                if (Array.isArray(kps) && kps.length >= 2) {
+                  const row2 = getChannelRow(ch);
+                  const e2 = row2 ? InputValidator.clampEnd(row2.querySelector('.end-input')?.value || 0) : 0;
+                  const seedMeta = { measurementSeed: { scope: 'per', format: perFmt, count: per.originalData.length || 0 } };
+                  if (e2 === 0) persistOnly.push({ channelName: ch, keyPoints: kps, interpolationType: 'smooth', seedMeta });
+                  else entries.push({ channelName: ch, keyPoints: kps, interpolationType: 'smooth', seedMeta });
+                  return;
+                }
+              }
+
+              const hasGlobalACVAnchors = glbFmt === 'ACV' && Array.isArray(linearizationData?.controlPointsTransformed) && linearizationData.controlPointsTransformed.length >= 2;
+              if (hasGlobalACVAnchors) {
+                const anchors = linearizationData.controlPointsTransformed.map(p => ({ input: p.input, output: p.output }));
+                if (anchors.length >= 2) {
                   const row = getChannelRow(ch);
-                  const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : TOTAL;
-                  const sampleEnd = endVal > 0 ? endVal : TOTAL; // for disabled channels, sample at full scale
-                  const values = make256(sampleEnd, ch, true);
-                  let kps;
-                  if (per.originalData.length <= DIRECT_SEED_MAX_POINTS) {
-                    const Nvals = values.length - 1;
-                    kps = per.originalData.map(d => {
-                      const x = Math.max(0, Math.min(100, Number(d.input ?? d.GRAY ?? d.gray ?? 0)));
-                      const t = (x / 100) * Nvals;
-                      const i0 = Math.floor(t);
-                      const i1 = Math.min(Nvals, Math.ceil(t));
-                      const a = t - i0;
-                      const v = (1 - a) * values[i0] + a * values[i1];
-                      const outPct = Math.max(0, Math.min(100, (v / TOTAL) * 100));
-                      return { input: x, output: outPct };
-                    });
-                  } else {
-                    kps = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
-                  }
-                  if (Array.isArray(kps) && kps.length >= 2) {
-                    const row2 = getChannelRow(ch);
-                    const e2 = row2 ? InputValidator.clampEnd(row2.querySelector('.end-input')?.value || 0) : 0;
-                    if (e2 === 0) persistOnly.push({ channelName: ch, keyPoints: kps, interpolationType: 'smooth' });
-                    else entries.push({ channelName: ch, keyPoints: kps, interpolationType: 'smooth' });
-                    return;
-                  }
+                  const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : 0;
+                  if (endVal === 0) persistOnly.push({ channelName: ch, keyPoints: anchors, interpolationType: 'smooth' });
+                  else entries.push({ channelName: ch, keyPoints: anchors, interpolationType: 'smooth' });
+                  return;
                 }
-                const glbFmt = (linearizationData?.format || '').toUpperCase();
-                const hasGlobalACVAnchors = glbFmt === 'ACV' && Array.isArray(linearizationData?.controlPointsTransformed) && linearizationData.controlPointsTransformed.length >= 2;
-                if (hasGlobalACVAnchors) {
-                  const anchors = linearizationData.controlPointsTransformed.map(p => ({ input: p.input, output: p.output }));
-                  if (anchors.length >= 2) {
-                    const row = getChannelRow(ch);
-                    const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : 0;
-                    if (endVal === 0) persistOnly.push({ channelName: ch, keyPoints: anchors, interpolationType: 'smooth' });
-                    else entries.push({ channelName: ch, keyPoints: anchors, interpolationType: 'smooth' });
-                    return;
-                  }
+              }
+
+              if (hasGlobalLAB) {
+                const row = getChannelRow(ch);
+                const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : TOTAL;
+                const sampleEnd = endVal > 0 ? endVal : TOTAL;
+                const values = make256(sampleEnd, ch, true);
+                let kps;
+                if (linearizationData.originalData.length <= DIRECT_SEED_MAX_POINTS) {
+                  const Nvals = values.length - 1;
+                  kps = linearizationData.originalData.map(d => {
+                    const x = Math.max(0, Math.min(100, Number(d.input ?? d.GRAY ?? d.gray ?? 0)));
+                    const t = (x / 100) * Nvals;
+                    const i0 = Math.floor(t);
+                    const i1 = Math.min(Nvals, Math.ceil(t));
+                    const a = t - i0;
+                    const v = (1 - a) * values[i0] + a * values[i1];
+                    const outPct = Math.max(0, Math.min(100, (v / TOTAL) * 100));
+                    return { input: x, output: outPct };
+                  });
+                } else {
+                  kps = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
                 }
-                const hasGlobalLAB = (glbFmt.includes('LAB') || glbFmt.includes('MANUAL')) && Array.isArray(linearizationData?.originalData) && linearizationData.originalData.length > 0;
-                if (hasGlobalLAB) {
-                  const row = getChannelRow(ch);
-                  const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : TOTAL;
-                  const sampleEnd = endVal > 0 ? endVal : TOTAL;
-                  const values = make256(sampleEnd, ch, true);
-                  let kps;
-                  if (linearizationData.originalData.length <= DIRECT_SEED_MAX_POINTS) {
-                    const Nvals = values.length - 1;
-                    kps = linearizationData.originalData.map(d => {
-                      const x = Math.max(0, Math.min(100, Number(d.input ?? d.GRAY ?? d.gray ?? 0)));
-                      const t = (x / 100) * Nvals;
-                      const i0 = Math.floor(t);
-                      const i1 = Math.min(Nvals, Math.ceil(t));
-                      const a = t - i0;
-                      const v = (1 - a) * values[i0] + a * values[i1];
-                      const outPct = Math.max(0, Math.min(100, (v / TOTAL) * 100));
-                      return { input: x, output: outPct };
-                    });
-                  } else {
-                    kps = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
-                  }
-                  if (Array.isArray(kps) && kps.length >= 2) {
-                    const row2 = getChannelRow(ch);
-                    const e2 = row2 ? InputValidator.clampEnd(row2.querySelector('.end-input')?.value || 0) : 0;
-                    if (!applyInPrime || e2 === 0) persistOnly.push({ channelName: ch, keyPoints: kps, interpolationType: 'smooth' });
-                    else entries.push({ channelName: ch, keyPoints: kps, interpolationType: 'smooth' });
-                    return;
-                  }
+                if (Array.isArray(kps) && kps.length >= 2) {
+                  const row2 = getChannelRow(ch);
+                  const e2 = row2 ? InputValidator.clampEnd(row2.querySelector('.end-input')?.value || 0) : 0;
+                  const seedMeta = { measurementSeed: { scope: 'global', format: glbFmt, count: linearizationData.originalData.length || 0 } };
+                  if (!applyInPrime || e2 === 0) persistOnly.push({ channelName: ch, keyPoints: kps, interpolationType: 'smooth', seedMeta });
+                  else entries.push({ channelName: ch, keyPoints: kps, interpolationType: 'smooth', seedMeta });
+                  return;
                 }
-              } catch {}
+              }
+            } catch (err) {
+              if (DEBUG_LOGS && console) console.warn('[EDIT] Edit-mode priming skipped due to error:', err);
+            }
+            try {
               // Prefer raw loaded .quad curve if present; otherwise use displayed curve
               let values = (window.loadedQuadData?.curves?.[ch] && Array.isArray(window.loadedQuadData.curves[ch]))
                 ? window.loadedQuadData.curves[ch]
@@ -10464,14 +10529,37 @@ DOMAIN_MAX 1.0 1.0 1.0
                 if (!applyInPrime || endVal === 0) persistOnly.push({ channelName: ch, keyPoints, interpolationType: 'smooth' });
                 else entries.push({ channelName: ch, keyPoints, interpolationType: 'smooth' });
               }
-            } catch {}
+            } catch (err) {
+              if (DEBUG_LOGS && console) console.warn('[EDIT] Fallback priming failed:', err);
+            }
           });
           if (entries.length > 0) {
-            try { quadGenActions.setSmartKeyPointsBatch(entries); } catch {}
+            try { quadGenActions.setSmartKeyPointsBatch(entries); }
+            catch (err) {
+              if (DEBUG_LOGS && console) console.warn('[EDIT] Batch priming failed:', err);
+            }
           }
           // Persist-only for disabled channels (no curve apply; no enable)
           if (persistOnly.length > 0) {
-            try { persistOnly.forEach(e => { ControlPoints.persist(e.channelName, e.keyPoints, e.interpolationType || 'smooth'); }); } catch {}
+            try {
+              persistOnly.forEach(e => {
+                ControlPoints.persist(e.channelName, e.keyPoints, e.interpolationType || 'smooth');
+                if (!window.loadedQuadData) window.loadedQuadData = {};
+                if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
+                const prevMeta = window.loadedQuadData.keyPointsMeta[e.channelName] || {};
+                if (e.seedMeta && e.seedMeta.measurementSeed) {
+                  window.loadedQuadData.keyPointsMeta[e.channelName] = {
+                    ...prevMeta,
+                    measurementSeed: e.seedMeta.measurementSeed
+                  };
+                } else if (prevMeta.measurementSeed) {
+                  const { measurementSeed, ...rest } = prevMeta;
+                  window.loadedQuadData.keyPointsMeta[e.channelName] = rest;
+                }
+              });
+            } catch (err) {
+              if (DEBUG_LOGS && console) console.warn('[EDIT] Persist-only priming failed:', err);
+            }
           }
           // If a global correction is active, mark newly created Smart points as baked-from-global
           try {
@@ -10493,16 +10581,16 @@ DOMAIN_MAX 1.0 1.0 1.0
                       }
                     }
                   }
-                } catch {}
+                } catch (err) {}
               };
               // Only mark channels where Smart curves were actually applied (entries),
               // not those where we only persisted key points for overlay (persistOnly).
               entries.forEach(e => setBaked(e.channelName));
             }
-          } catch {}
+          } catch (err) {}
           window.__EDIT_MODE_PRIMED = true;
         }
-      } catch {}
+      } catch (err) {}
       // Defensive: when turning ON with a global correction active, ensure existing Smart points are marked baked
       try {
         if (on && linearizationApplied && linearizationData && window.loadedQuadData?.keyPoints) {
@@ -10516,10 +10604,10 @@ DOMAIN_MAX 1.0 1.0 1.0
                   window.loadedQuadData.keyPointsMeta[ch] = { ...prev, bakedGlobal: true };
                 }
               }
-            } catch {}
+            } catch (err) {}
           });
         }
-      } catch {}
+      } catch (err) {}
       // Enable/disable panel controls and refresh chart overlays
       try {
         if (on) {
@@ -10529,7 +10617,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         if (typeof updateInterpolationControls === 'function') updateInterpolationControls();
         if (typeof updateInkChart === 'function') updateInkChart();
-      } catch {}
+      } catch (err) {}
       // Record UI history for edit mode toggle (only when state actually changes)
       try {
         if (prev !== !!on) {
@@ -10539,7 +10627,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             CurveHistory.recordUIAction('editMode', prev, !!on, desc);
           }
         }
-      } catch {}
+      } catch (err) {}
     }
 
     function edit_isChannelEnabled(ch){
@@ -10547,7 +10635,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const row = getChannelRow(ch);
         const endVal = InputValidator.clampEnd(row?.querySelector('.end-input')?.value || 0);
         return endVal > 0;
-      } catch { return false; }
+      } catch (err) { return false; }
     }
 
     function edit_populateChannelSelect(){
@@ -10620,7 +10708,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         setDisabled(elements.editRecomputeBtn, disable);
         if (elements.editXYInput) elements.editXYInput.disabled = disable;
         if (elements.editPointIndex) elements.editPointIndex.classList.toggle('is-disabled', disable);
-      } catch {}
+      } catch (err) {}
       // Ensure AI key points exist so we can meaningfully edit/cycle
       try {
         const pts = ControlPoints.get(ch)?.points || [];
@@ -10648,7 +10736,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (elements.editRecomputeBtn) elements.editRecomputeBtn.disabled = !on;
         if (elements.editDeleteBtn) elements.editDeleteBtn.disabled = !on;
         if (elements.editPointIndex) elements.editPointIndex.classList.toggle('is-disabled', !on);
-      } catch {}
+      } catch (err) {}
     }
 
     function edit_refreshPointIndex(){
@@ -10668,7 +10756,7 @@ DOMAIN_MAX 1.0 1.0 1.0
               const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : 0;
               const scale = (InputValidator.computePercentFromEnd(endVal)) / 100;
               yAbs = Math.max(0, Math.min(100, (scale > 0) ? (p.output * scale) : 0));
-            } catch {}
+            } catch (err) {}
             const xDisp = Math.round(p.input*100)/100;
             const yDisp = Math.round(yAbs*100)/100;
             elements.editXYInput.value = `${xDisp},${yDisp}`;
@@ -10676,7 +10764,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         // Re-render chart overlays so the selected point highlight updates immediately
         if (typeof updateInkChart === 'function') { updateInkChart(); }
-      } catch {}
+      } catch (err) {}
     }
 
     function edit_cyclePoint(dir){
@@ -10709,7 +10797,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           const curAbs = Math.max(0, Math.min(100, (scale > 0 && p) ? (p.output * scale) : 0));
           const nextAbs = Math.max(0, Math.min(100, curAbs + deltaY * step));
           params.outputPercent = nextAbs;
-        } catch {}
+        } catch (err) {}
       }
       const res = quadGenActions.adjustSmartKeyPointByIndex(ch, EDIT.selectedOrdinal, params);
       if (!res?.success){ showStatus(res?.message || 'Edit failed'); return; }
@@ -10771,7 +10859,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       showStatus(`Recomputed ${ch} key points (${maxPts} max, ${maxError}% max error)`);
       EDIT.selectedOrdinal = Math.min(EDIT.selectedOrdinal, (ControlPoints.get(ch)?.points?.length || 1));
       edit_refreshPointIndex();
-      try { updateRevertButtonsState(); } catch {}
+      try { updateRevertButtonsState(); } catch (err) {}
     }
 
     function edit_delete(){
@@ -10814,7 +10902,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       try {
         if (elements.editMaxError) elements.editMaxError.value = String(KP_SIMPLIFY.maxErrorPercent);
         if (elements.editMaxPoints) elements.editMaxPoints.value = String(KP_SIMPLIFY.maxPoints);
-      } catch {}
+      } catch (err) {}
       // Channel select
       if (elements.editChannelSelect){
         elements.editChannelSelect.addEventListener('change', () => {
@@ -10822,7 +10910,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           EDIT.selectedChannel = elements.editChannelSelect.value || null;
           EDIT.selectedOrdinal = 1;
           edit_refreshState();
-          try { updateInkChart(); } catch {}
+          try { updateInkChart(); } catch (err) {}
         });
       }
       // Channel cycle buttons
@@ -10836,7 +10924,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         EDIT.selectedChannel = sel.value || null;
         EDIT.selectedOrdinal = 1;
         edit_refreshState();
-        try { updateInkChart(); } catch {}
+        try { updateInkChart(); } catch (err) {}
       }
       if (elements.editChannelPrev){ elements.editChannelPrev.addEventListener('click', ()=> edit_cycleChannel(-1)); }
       if (elements.editChannelNext){ elements.editChannelNext.addEventListener('click', ()=> edit_cycleChannel(+1)); }
@@ -10875,11 +10963,11 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.rows.addEventListener('input', (e)=>{
           const t = e.target;
           if (t && (t.classList?.contains('end-input') || t.classList?.contains('percent-input'))){
-            setTimeout(()=>{ try { edit_populateChannelSelect(); } catch {} }, 0);
+            setTimeout(()=>{ try { edit_populateChannelSelect(); } catch (err) {} }, 0);
           }
         });
         elements.rows.addEventListener('channelsChanged', ()=>{
-          setTimeout(()=>{ try { edit_populateChannelSelect(); } catch {} }, 0);
+          setTimeout(()=>{ try { edit_populateChannelSelect(); } catch (err) {} }, 0);
         });
       }
     }
@@ -10908,7 +10996,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         Object.keys(src).forEach((ch) => {
           if (src[ch] === 'ai') src[ch] = 'smart';
         });
-      } catch {}
+      } catch (err) {}
     }
 
     // Helper: treat both historical 'ai' and new 'smart' as Smart Curve source
@@ -10920,7 +11008,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       try {
         const tag = window.loadedQuadData?.sources?.[channelName];
         return isSmartCurveSourceTag(tag);
-      } catch {
+      } catch (err) {
         return false;
       }
     }
@@ -10930,7 +11018,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       try {
         const el = document.getElementById('aiShowStatusToggle');
         return !el || !!el.checked; // default to true if toggle missing
-      } catch { return true; }
+      } catch (err) { return true; }
     }
     // Back-compat wrapper
     function shouldShowAIStatus() { return shouldShowAssistantStatus(); }
@@ -10957,7 +11045,7 @@ DOMAIN_MAX 1.0 1.0 1.0
               __lastStatusChat = { text: message, ts: now };
             }
           }
-        } catch {}
+        } catch (err) {}
       }
       setTimeout(() => {
         if (elements.status.textContent === message) {
@@ -11079,7 +11167,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             }
           }
           return smart;
-        } catch { return false; }
+        } catch (err) { return false; }
       }
 
       // Consolidated display: if a Smart Curve is active and there is a loaded per‑channel source that is disabled,
@@ -11147,7 +11235,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           if (autoWhiteOn && meta.white && isFinite(meta.white.widthPercent)) parts.push(`W ${meta.white.widthPercent.toFixed(1)}%`);
           if (parts.length) segmentsApplied.push(`Auto limit: ${parts.join(', ')}`);
         }
-      } catch {}
+      } catch (err) {}
 
       // Build display text; show each applied segment on a new line.
       if (segmentsApplied.length === 0) {
@@ -11175,7 +11263,7 @@ DOMAIN_MAX 1.0 1.0 1.0
     function escapeHTML(s){
       try {
         return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
-      } catch { return s; }
+      } catch (err) { return s; }
     }
     function hexToRgb(hex){
       try {
@@ -11185,7 +11273,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const num = parseInt(h, 16);
         if (isNaN(num) || h.length !== 6) return {r:0,g:0,b:0};
         return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
-      } catch { return {r:0,g:0,b:0}; }
+      } catch (err) { return {r:0,g:0,b:0}; }
     }
     function srgbToLinear(c){
       const cs = c / 255;
@@ -11204,7 +11292,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const contrastBlack = (L + 0.05) / 0.05;
         // Prefer higher contrast; use near-black token for black, white for white
         return (contrastBlack >= contrastWhite) ? '#111827' : '#ffffff';
-      } catch { return '#111827'; }
+      } catch (err) { return '#111827'; }
     }
     function highlightQuad(text){
       try {
@@ -11262,7 +11350,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           })() : '';
           return `<span class="quad-line"${attr}${styleVars}>${inner}</span>`;
         }).join('');
-      } catch { return escapeHTML(String(text || '')); }
+      } catch (err) { return escapeHTML(String(text || '')); }
     }
 
     function ensurePreviewCopyHandler(){
@@ -11274,10 +11362,10 @@ DOMAIN_MAX 1.0 1.0 1.0
             const raw = el.dataset.raw || el.textContent || '';
             e.clipboardData.setData('text/plain', raw);
             e.preventDefault();
-          } catch {}
+          } catch (err) {}
         });
         el.dataset.copyHandlerAttached = 'true';
-      } catch {}
+      } catch (err) {}
     }
 
     function updatePreview(options = {}) {
@@ -11294,17 +11382,17 @@ DOMAIN_MAX 1.0 1.0 1.0
               const digits = String(Math.max(1, total)).length;
               elements.previewFull.style.setProperty('--lnw', `calc(${digits}ch + 2ch)`);
               elements.previewFull.style.setProperty('--lngap', '1ch');
-            } catch {}
+            } catch (err) {}
           }
           ensurePreviewCopyHandler();
           if (!options.onlyNotes) {
             updateInkChart();
             updateFilename(); // Update filename when preview updates
-            try { updateSessionStatus(); } catch {}
+            try { updateSessionStatus(); } catch (err) {}
             // Delta UI disabled; summaries are posted to Lab Tech chat instead
             showStatus("Preview updated");
           }
-          try { updateRevertButtonsState(); } catch {}
+          try { updateRevertButtonsState(); } catch (err) {}
         } catch (error) {
           console.error('Preview update error:', error);
           showStatus("Error updating preview");
@@ -11444,7 +11532,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         el.textContent = `Δ vs target (${intentName}): ${maxLabel}, ${minLabel}${zeroLabel}`;
         el.title = 'Delta computed vs selected target (contrast intent)';
       } catch (e) {
-        try { elements.deltaSummary.textContent=''; } catch {}
+        try { elements.deltaSummary.textContent=''; } catch (err) {}
       }
     }
 
@@ -11511,7 +11599,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const zeroLabel = zeroAt!=null ? `, zero ≈ ${(zeroAt*100).toFixed(1)}% input` : '';
         const intentName = (contrastIntent?.name) || 'Linear';
         return `Δ vs target (${intentName}): ${maxLabel}, ${minLabel}${zeroLabel}`;
-      } catch { return ''; }
+      } catch (err) { return ''; }
     }
 
     function buildPerChannelChangeSummaryAllChannelsText() {
@@ -11539,7 +11627,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         });
         if (parts.length === 0) return '';
         return `Channel changes (max/min vs original): ${parts.join('; ')}`;
-      } catch { return ''; }
+      } catch (err) { return ''; }
     }
 
     function postGlobalDeltaChatSummary() {
@@ -11548,7 +11636,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const line2 = buildPerChannelChangeSummaryAllChannelsText();
         if (line1) addChatMessage('system', line1);
         if (line2) addChatMessage('system', line2);
-      } catch {}
+      } catch (err) {}
     }
 
     // Graph semantics: ink mapping (output vs input). Y=X = no correction; dips (Y<X) lighten; humps (Y>X) darken.
@@ -11775,7 +11863,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             const aSel = (aName === selectedName) ? 1 : 0;
             const bSel = (bName === selectedName) ? 1 : 0;
             return aSel - bSel; // selected (1) sorts after non-selected (0)
-          } catch { return 0; }
+          } catch (err) { return 0; }
         });
       
       drawRows.forEach((row, index) => {
@@ -11794,7 +11882,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const values = make256(endVal, channelName, true);
         const maxValue = TOTAL; // 65535
         
-        if (DEBUG_LOGS) console.log('DEBUG: Chart values for', channelName, {
+        if (DEBUG_LOGS && window.DEBUG_CHART_VALUES === true) console.log('DEBUG: Chart values for', channelName, {
           valuesCount: values.length,
           valuesMin: Math.min(...values),
           valuesMax: Math.max(...values),
@@ -11834,7 +11922,8 @@ DOMAIN_MAX 1.0 1.0 1.0
           for (let i = 0; i < refValues.length; i++) {
             const x = leftPadding + (i / (refValues.length - 1)) * chartWidth;
             const valuePercent = (refValues[i] / maxValue) * 100;
-            const y = mapPercentToY(valuePercent, geom);
+          const chartPercent = Math.max(0, Math.min(displayMax, valuePercent));
+          const y = mapPercentToY(chartPercent, geom);
             
             if (i === 0) {
               ctx.moveTo(x, y);
@@ -11892,7 +11981,9 @@ DOMAIN_MAX 1.0 1.0 1.0
         for (let i = 0; i < values.length; i++) {
           const x = leftPadding + (i / (values.length - 1)) * chartWidth;
           const valuePercent = (values[i] / maxValue) * 100;
-          const y = mapPercentToY(valuePercent, geom);
+          const displayMax = normalizeDisplayMax(geom);
+          const chartPercent = Math.max(0, Math.min(displayMax, valuePercent));
+          const y = mapPercentToY(chartPercent, geom);
           
           if (i === 0) {
             ctx.moveTo(x, y);
@@ -11927,7 +12018,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           if (autoBlackOn && meta.black && isFinite(meta.black.startIndex)) drawMarker(meta.black.startIndex, '#3b82f6');
           if (autoWhiteOn && meta.white && isFinite(meta.white.endIndex)) drawMarker(meta.white.endIndex, '#ef4444');
         }
-      } catch {}
+      } catch (err) {}
         
         // Lightweight overlay: key points visibility follows Edit Mode
         // Prefer explicit AI key points when available; otherwise show adapter overlays (ACV/LUT/LAB)
@@ -11935,7 +12026,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         try {
           const cp = (typeof ControlPoints !== 'undefined' && ControlPoints && ControlPoints.get) ? ControlPoints.get(channelName) : null;
           hasAIKeyPoints = !!(cp && Array.isArray(cp.points) && cp.points.length > 0);
-        } catch {}
+        } catch (err) {}
         if (!hasAIKeyPoints) {
           const aiPts = window.loadedQuadData?.keyPoints?.[channelName];
           hasAIKeyPoints = Array.isArray(aiPts) && aiPts.length > 0;
@@ -12056,12 +12147,12 @@ DOMAIN_MAX 1.0 1.0 1.0
           }
         }
       }
-    } catch {}
+    } catch (err) {}
       
       // Animate logo bars only once (avoid re-trigger on mousemove redraws)
-      if (!LOGO_ANIMATED_ONCE) { try { animateLogoBars(); } catch {} LOGO_ANIMATED_ONCE = true; }
+      if (!LOGO_ANIMATED_ONCE) { try { animateLogoBars(); } catch (err) {} LOGO_ANIMATED_ONCE = true; }
 
-      try { updateChartZoomButtons(); } catch {}
+      try { updateChartZoomButtons(); } catch (err) {}
     }
 
     // Cursor tooltip over the chart: show X,Y in percent (locks to selected channel in Edit Mode)
@@ -12076,7 +12167,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const onMove = (e)=>{
           if (!CHART_CURSOR_MAP) return;
           // Re-render chart to clear prior cursor marker overlay
-          try { updateInkChart(); } catch {}
+          try { updateInkChart(); } catch (err) {}
           const rect = canvas.getBoundingClientRect();
           const scaleX = canvas.width / rect.width;
           const scaleY = canvas.height / rect.height;
@@ -12122,7 +12213,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                 }
               }
             }
-          } catch {}
+          } catch (err) {}
 
           const canInsert = (function(){
             try {
@@ -12132,7 +12223,7 @@ DOMAIN_MAX 1.0 1.0 1.0
               if (!row) return false;
               const endVal = InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0);
               return endVal > 0;
-            } catch { return false; }
+            } catch (err) { return false; }
           })();
           tip.innerHTML = `${xPct.toFixed(1)}, ${yPct.toFixed(1)}${canInsert ? '<br>click to add point' : ''}`;
           const contRect = container.getBoundingClientRect();
@@ -12142,7 +12233,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           tip.style.top = `${top}px`;
           tip.classList.remove('hidden');
         };
-        const onLeave = ()=>{ tip.classList.add('hidden'); try { updateInkChart(); } catch {} };
+        const onLeave = ()=>{ tip.classList.add('hidden'); try { updateInkChart(); } catch (err) {} };
         const onClick = (e)=>{
           try {
             if (!isEditModeEnabled() || !EDIT || !EDIT.selectedChannel) return;
@@ -12181,7 +12272,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                   EDIT.selectedOrdinal = idx + 1;
                   edit_refreshPointIndex();
                 }
-              } catch {}
+              } catch (err) {}
               updateProcessingDetail(selCh);
               updatePreview();
             } else if (res && !res.success && res.message) {
@@ -12210,7 +12301,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         try {
           const cp = (typeof ControlPoints !== 'undefined' && ControlPoints && ControlPoints.get) ? ControlPoints.get(channelName) : null;
           if (cp && Array.isArray(cp.points) && cp.points.length > 0) points = cp.points.slice();
-        } catch {}
+        } catch (err) {}
         if (!points || points.length === 0) {
           const aiPoints = window.loadedQuadData?.keyPoints?.[channelName];
           if (Array.isArray(aiPoints) && aiPoints.length > 0) points = aiPoints.slice();
@@ -12224,7 +12315,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           const endVal = InputValidator.clampEnd(row?.querySelector('.end-input')?.value || 0);
           const endPct = InputValidator.computePercentFromEnd(endVal);
           scale = Math.max(0, endPct) / 100; // fraction of TOTAL
-        } catch {}
+        } catch (err) {}
 
         // Fallback: if no explicit points, derive marker positions from current curve
         if ((!points || points.length === 0) && !requireExplicit) {
@@ -12270,24 +12361,19 @@ DOMAIN_MAX 1.0 1.0 1.0
         const isSelectedChannel = (typeof EDIT !== 'undefined' && EDIT && EDIT.selectedChannel === channelName);
         const selectedOrdinal = isSelectedChannel ? (EDIT.selectedOrdinal || 1) : -1;
 
+        const displayMax = normalizeDisplayMax(geom);
         sortedPoints.forEach((pt, i) => {
           const xNorm = Math.max(0, Math.min(1, (pt.input || 0) / 100));
           const x = leftPadding + xNorm * chartWidth;
           // Convert pre‑scale stored output (0..100) to absolute chart percent using current End scale
-          let valuePercent;
-          if (typeof pt.output === 'number' && isFinite(pt.output)) {
-            const pre = Math.max(0, Math.min(100, Number(pt.output)));
-            valuePercent = Math.max(0, Math.min(100, pre * scale));
-          } else {
-            // Fallback: sample absolute Y from the plotted curve values
-            const t = xNorm * (values.length - 1);
-            const i0 = Math.floor(t);
-            const i1 = Math.min(values.length - 1, i0 + 1);
-            const a = t - i0;
-            const v = (1 - a) * values[i0] + a * values[i1];
-            valuePercent = Math.max(0, Math.min(100, (v / maxValue) * 100));
-          }
-          const y = mapPercentToY(valuePercent, geom);
+          const t = xNorm * (values.length - 1);
+          const i0 = Math.floor(t);
+          const i1 = Math.min(values.length - 1, i0 + 1);
+          const a = t - i0;
+          const v = (1 - a) * values[i0] + a * values[i1];
+          const absolutePercent = Math.max(0, Math.min(100, (v / maxValue) * 100));
+          const chartPercent = Math.max(0, Math.min(displayMax, absolutePercent));
+          const y = mapPercentToY(chartPercent, geom);
           const hx = boxSize / 2;
           const hy = boxSize / 2;
           // Square marker (highlight current selected ordinal)
@@ -12313,8 +12399,10 @@ DOMAIN_MAX 1.0 1.0 1.0
           // Label positioning
           let labelX = x;
           let labelY = y - hy - 3;
-          if (valuePercent <= 5) labelX += 8;
-          if (valuePercent >= 95) labelX -= 8;
+          const lowClamp = displayMax * 0.05;
+          const highClamp = displayMax - lowClamp;
+          if (chartPercent <= lowClamp) labelX += 8;
+          if (chartPercent >= highClamp) labelX -= 8;
           const minY = padding + 8;
           const maxY = height - padding - 2;
           if (labelY < minY) labelY = minY;
@@ -12337,7 +12425,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           try {
             const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})/i.exec(String(inkColor));
             if (m) { r = parseInt(m[1], 16); g = parseInt(m[2], 16); b = parseInt(m[3], 16); }
-          } catch {}
+          } catch (err) {}
           const yiq = (r * 299 + g * 587 + b * 114) / 1000;
           const labelTextColor = yiq >= 140 ? '#000000' : '#FFFFFF';
           ctx.fillStyle = inkColor;
@@ -12387,8 +12475,10 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (showLabels) {
           let labelX = x;
           let labelY = y - hy - 3;
-          if (valuePercent <= 5) labelX += 8;
-          if (valuePercent >= 95) labelX -= 8;
+          const lowClamp = displayMax * 0.05;
+          const highClamp = displayMax - lowClamp;
+          if (chartPercent <= lowClamp) labelX += 8;
+          if (chartPercent >= highClamp) labelX -= 8;
           const minY = padding + 8;
           const maxY = height - padding - 2;
           if (labelY < minY) labelY = minY;
@@ -12531,7 +12621,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (id === 'pops_standard') return 'POPS';
         if (id === 'custom_points') return 'CUST';
         return 'LIN';
-      } catch { return 'LIN'; }
+      } catch (err) { return 'LIN'; }
     }
 
     // Toggle listeners
@@ -12582,7 +12672,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           if (linearizationData && linearizationApplied) {
             globalName = (elements.globalLinearizationFilename?.textContent || linearizationData.filename || 'data');
           }
-        } catch {}
+        } catch (err) {}
         // Build concise intent label
         const id = String(contrastIntent?.id || 'linear');
         const name = contrastIntent?.name || 'Linear';
@@ -12610,7 +12700,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         const line = parts.join(' • ');
         if (elements.sessionStatus) elements.sessionStatus.textContent = line || '\u00A0';
-      } catch {}
+      } catch (err) {}
     }
 
     // ---- Linearization utilities ----
@@ -12693,7 +12783,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                   try {
                     const val = sampler(tt);
                     if (Number.isFinite(val)) return clamp01(val);
-                  } catch {}
+                  } catch (err) {}
                 }
                 if (tt <= 0) return ys[0];
                 if (tt >= 1) return ys[length - 1];
@@ -12729,15 +12819,15 @@ DOMAIN_MAX 1.0 1.0 1.0
             if (restoringLinear) {
               try {
                 if (window.loadedQuadData?.keyPoints?.[channelName]) delete window.loadedQuadData.keyPoints[channelName];
-              } catch {}
+              } catch (err) {}
               try {
                 if (window.loadedQuadData?.keyPointsMeta?.[channelName]) delete window.loadedQuadData.keyPointsMeta[channelName];
-              } catch {}
+              } catch (err) {}
               try {
                 if (window.loadedQuadData?.sources && window.loadedQuadData.sources[channelName] !== undefined) {
                   delete window.loadedQuadData.sources[channelName];
                 }
-              } catch {}
+              } catch (err) {}
             } else {
               const newKeyPointsRaw = extractAdaptiveKeyPointsFromValues(newCurve, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
               newKeyPoints = newKeyPointsRaw.map(p => ({ input: p.input, output: p.output }));
@@ -12752,7 +12842,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             }
 
             if (typeof updateProcessingDetailForce === 'function') {
-              try { updateProcessingDetailForce(channelName); } catch {}
+              try { updateProcessingDetailForce(channelName); } catch (err) {}
             }
 
             actions.push({
@@ -12786,8 +12876,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         CurveHistory.recordBatchAction(description, actions);
 
         updatePreview();
-        try { updateInkChart(); } catch {}
-        try { updateCompactChannelsList(); } catch {}
+        try { updateInkChart(); } catch (err) {}
+        try { updateCompactChannelsList(); } catch (err) {}
         updateSessionStatus();
         updateIntentDropdownState();
 
@@ -13365,7 +13455,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             message = `Undid: ${label}`;
           }
 
-          try { normalizeSmartSourcesInLoadedData(); } catch {}
+          try { normalizeSmartSourcesInLoadedData(); } catch (err) {}
           this.updateUndoButton();
           this.updateRedoButton();
           
@@ -13591,7 +13681,7 @@ DOMAIN_MAX 1.0 1.0 1.0
               // Disable per-channel linearization when restoring Smart Curve (keep metadata for UI display)
           if (perChannelLinearization[action.channelName]) {
             perChannelEnabled[action.channelName] = false;
-            try { updateRevertButtonsState(); } catch {}
+            try { updateRevertButtonsState(); } catch (err) {}
           }
               
               const perChannelToggle = tr.querySelector('.per-channel-toggle');
@@ -13692,7 +13782,7 @@ DOMAIN_MAX 1.0 1.0 1.0
               // Disable per-channel linearization when restoring Smart Curve (keep metadata for UI display)
           if (perChannelLinearization[action.channelName]) {
             perChannelEnabled[action.channelName] = false;
-            try { updateRevertButtonsState(); } catch {}
+            try { updateRevertButtonsState(); } catch (err) {}
           }
               
               const perChannelToggle = tr.querySelector('.per-channel-toggle');
@@ -13830,16 +13920,16 @@ DOMAIN_MAX 1.0 1.0 1.0
             if (action.clearKeyPoints) {
               try {
                 if (window.loadedQuadData?.keyPoints?.[action.channelName]) delete window.loadedQuadData.keyPoints[action.channelName];
-              } catch {}
+              } catch (err) {}
               try {
                 if (window.loadedQuadData?.keyPointsMeta?.[action.channelName]) delete window.loadedQuadData.keyPointsMeta[action.channelName];
-              } catch {}
+              } catch (err) {}
             }
               
               // Disable per-channel linearization when restoring Smart Curve (keep metadata for UI display)
           if (perChannelLinearization[action.channelName]) {
             perChannelEnabled[action.channelName] = false;
-            try { updateRevertButtonsState(); } catch {}
+            try { updateRevertButtonsState(); } catch (err) {}
           }
               
               const perChannelToggle = tr.querySelector('.per-channel-toggle');
@@ -13902,7 +13992,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             this.history.shift();
           }
 
-          try { normalizeSmartSourcesInLoadedData(); } catch {}
+          try { normalizeSmartSourcesInLoadedData(); } catch (err) {}
           this.updateUndoButton();
           this.updateRedoButton();
           
@@ -14101,7 +14191,7 @@ DOMAIN_MAX 1.0 1.0 1.0
               // Disable per-channel linearization when restoring Smart Curve
           if (perChannelLinearization[action.channelName]) {
             delete perChannelLinearization[action.channelName];
-            try { updateRevertButtonsState(); } catch {}
+            try { updateRevertButtonsState(); } catch (err) {}
           }
               perChannelEnabled[action.channelName] = false;
               
@@ -14217,7 +14307,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           const disp = getEditedDisplayName(baseName, !!linearizationData.edited);
           if (elements.globalLinearizationFilename) elements.globalLinearizationFilename.textContent = disp;
         if (elements.globalLinearizationDetails) elements.globalLinearizationDetails.textContent = ` - ${getBasePointCountLabel(linearizationData)} (${(linearizationData.format||'').toString().split(' ')[0] || ''})`;
-        try { updateIntentDetailLabel(); } catch {}
+        try { updateIntentDetailLabel(); } catch (err) {}
           if (elements.globalLinearizationInfo) elements.globalLinearizationInfo.classList.remove('hidden');
           if (elements.globalLinearizationHint) elements.globalLinearizationHint.classList.add('hidden');
           if (elements.globalLinearizationBtn) elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: ${disp}`);
@@ -14236,7 +14326,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           if (elements.globalLinearizationBtn) elements.globalLinearizationBtn.setAttribute('data-tooltip', 'Load LUT.cube, LABdata.txt, or .acv curve files');
         }
         // Refresh edited display state for global filename (idempotent)
-        try { refreshGlobalLinearizationDisplay(); } catch {}
+        try { refreshGlobalLinearizationDisplay(); } catch (err) {}
         
         // Restore per-channel linearization (replace rather than merge so undo can remove channels)
         const restoredPerChannel = LinearizationState.rehydrateMap(state.perChannelLinearization);
@@ -14264,7 +14354,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           });
         }
 
-        try { updateRevertButtonsState(); } catch {}
+        try { updateRevertButtonsState(); } catch (err) {}
         
         // Update UI and preview
         updateInterpolationControls();
@@ -14275,7 +14365,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           channelNames.forEach((name) => {
             if (typeof updateProcessingDetail === 'function') updateProcessingDetail(name);
           });
-        } catch {}
+        } catch (err) {}
         
         // Clear flag after restore is complete
         this.isRestoring = false;
@@ -14859,8 +14949,12 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
 
         const existing = ControlPoints.get(channelName).points;
-        if (existing && existing.length >= 2) return { success: true };
+        if (existing && existing.length >= 2) {
+          if (DEBUG_LOGS && console) console.log('[EDIT] ensureKP existing reuse', { channelName, count: existing.length });
+          return { success: true };
+        }
 
+        if (DEBUG_LOGS && console) console.log('[EDIT] ensureKP start', { channelName, hasPer: !!perChannelLinearization[channelName], globalFormat: linearizationData?.format });
         // Prefer per-channel linearization source
         let candidate = [];
         const per = perChannelLinearization[channelName];
@@ -14885,19 +14979,15 @@ DOMAIN_MAX 1.0 1.0 1.0
             const sampleEnd = endVal > 0 ? endVal : TOTAL;
             const values = make256(sampleEnd, channelName, true);
             const orig = Array.isArray(per.originalData) ? per.originalData : null;
-            if (orig && orig.length > 0 && orig.length <= DIRECT_SEED_MAX_POINTS) {
-              // Seed at measured Patch % positions by sampling the plotted mapping
-              const Nvals = values.length - 1;
-              candidate = orig.map(d => {
+            if (DEBUG_LOGS && console) console.log('[EDIT] ensureKP per LAB source', { channelName, count: orig?.length || 0 });
+            if (orig && orig.length > 0) {
+              const limited = orig.slice(0, DIRECT_SEED_LAB_MAX_POINTS).map(d => {
                 const x = Math.max(0, Math.min(100, Number(d.input ?? d.GRAY ?? d.gray ?? 0)));
-                const t = (x / 100) * Nvals;
-                const i0 = Math.floor(t);
-                const i1 = Math.min(Nvals, Math.ceil(t));
-                const a = t - i0;
-                const v = (1 - a) * values[i0] + a * values[i1];
-                const outPct = Math.max(0, Math.min(100, (v / TOTAL) * 100));
+                const patch = per.originalData.find(p => Math.abs(Number(p.input ?? p.GRAY ?? p.gray ?? 0) - x) < 1e-6);
+                const outPct = patch && Number.isFinite(patch.lab) ? Math.max(0, Math.min(100, 100 - patch.lab)) : Math.max(0, Math.min(100, (values[Math.round((x/100)*(values.length-1))] / TOTAL) * 100));
                 return { input: x, output: outPct };
               });
+              candidate = limited;
             } else {
               candidate = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
             }
@@ -14936,18 +15026,30 @@ DOMAIN_MAX 1.0 1.0 1.0
             const endVal = row ? InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0) : TOTAL;
             const values = make256(endVal, channelName, true);
             const orig = Array.isArray(linearizationData.originalData) ? linearizationData.originalData : null;
-            if (orig && orig.length > 0 && orig.length <= DIRECT_SEED_MAX_POINTS) {
-              const Nvals = values.length - 1;
-              candidate = orig.map(d => {
+            if (DEBUG_LOGS && console) console.log('[EDIT] ensureKP global LAB source', { channelName, count: orig?.length || 0 });
+            if (orig && orig.length > 0) {
+              // First pass: generate raw LAB-derived values
+              const rawPoints = orig.slice(0, DIRECT_SEED_LAB_MAX_POINTS).map(d => {
                 const x = Math.max(0, Math.min(100, Number(d.input ?? d.GRAY ?? d.gray ?? 0)));
-                const t = (x / 100) * Nvals;
-                const i0 = Math.floor(t);
-                const i1 = Math.min(Nvals, Math.ceil(t));
-                const a = t - i0;
-                const v = (1 - a) * values[i0] + a * values[i1];
-                const outPct = Math.max(0, Math.min(100, (v / TOTAL) * 100));
-                return { input: x, output: outPct };
+                const patch = linearizationData.originalData.find(p => Math.abs(Number(p.input ?? p.GRAY ?? p.gray ?? 0) - x) < 1e-6);
+                const rawOutPct = patch && Number.isFinite(patch.lab) ? Math.max(0, Math.min(100, 100 - patch.lab)) : Math.max(0, Math.min(100, (values[Math.round((x/100)*(values.length-1))] / TOTAL) * 100));
+                return { input: x, output: rawOutPct };
               });
+
+              // Calculate scaling factor to match original curve range
+              const originalEndpoint = Math.max(0, Math.min(100, (values[values.length - 1] / TOTAL) * 100));
+
+              // Find the LAB-derived value that corresponds to 100% input (should map to originalEndpoint)
+              const endpointRaw = rawPoints.find(p => p.input === 100)?.output || Math.max(...rawPoints.map(p => p.output));
+              const scaleFactor = endpointRaw > 0 ? originalEndpoint / endpointRaw : 1;
+              if (DEBUG_LOGS) console.log(`[DEBUG LAB SCALING] ${channelName}: originalEndpoint=${originalEndpoint.toFixed(2)}%, endpointRaw=${endpointRaw.toFixed(2)}%, scaleFactor=${scaleFactor.toFixed(3)}`);
+
+              // Second pass: scale all LAB-derived values to match original curve amplitude
+              const limited = rawPoints.map(p => ({
+                input: p.input,
+                output: Math.max(0, Math.min(100, p.output * scaleFactor))
+              }));
+              candidate = limited;
             } else {
               candidate = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
             }
@@ -14975,6 +15077,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           // Use adaptive simplification (RDP) to create a compact, edit-friendly set
           candidate = extractAdaptiveKeyPointsFromValues(values, { maxErrorPercent: KP_SIMPLIFY.maxErrorPercent, maxPoints: KP_SIMPLIFY.maxPoints });
         }
+        if (DEBUG_LOGS && console) console.log('[EDIT] ensureKP candidate summary', { channelName, count: candidate.length });
         // If channel is disabled (End=0), persist key points only and avoid applying/enabling the channel
         try {
           const row = getChannelRow(channelName);
@@ -14983,9 +15086,10 @@ DOMAIN_MAX 1.0 1.0 1.0
             ControlPoints.persist(channelName, candidate, interpolationType);
             return { success: true };
           }
-        } catch {}
+        } catch (err) {}
         // Otherwise, persist and apply curve normally
         const res = quadGenActions.setSmartKeyPoints(channelName, candidate, interpolationType);
+        if (DEBUG_LOGS && console) console.log('[EDIT] ensureKP applied', { channelName, success: res?.success, count: candidate.length, message: res?.message });
         if (res && res.success) return { success: true };
         return { success: false, message: res?.message || 'Failed to create Smart key points' };
       } catch (e) {
@@ -16053,7 +16157,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             if (curveMax >= TOTAL * 0.99 && typeof baseline === 'number' && baseline > 0) {
               treatAsSmart = true;
             }
-          } catch {}
+          } catch (err) {}
         }
 
         if (treatAsSmart) {
@@ -16347,10 +16451,10 @@ DOMAIN_MAX 1.0 1.0 1.0
             else if (window._autoLimitState[channelName]) delete window._autoLimitState[channelName];
           }
           if (DEBUG_LOGS && channelName) console.log('[AUTO LIMIT] result', channelName, meta);
-        } catch {}
+        } catch (err) {}
 
         return arr;
-      } catch { return values; }
+      } catch (err) { return values; }
     }
 
     function median(arr){
@@ -16359,7 +16463,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const n = a.length; if (!n) return 0;
         const m = Math.floor(n/2);
         return (n%2) ? a[m] : 0.5*(a[m-1]+a[m]);
-      } catch { return 0; }
+      } catch (err) { return 0; }
     }
 
     
@@ -16462,7 +16566,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             // Set flag to prevent ensureEditableKeyPointsForChannel from restoring data during revert
             window._REVERT_IN_PROGRESS = true;
 
-            try { CurveHistory.captureState(`Before: Revert ${channelName} to Measurement`); } catch {}
+            try { CurveHistory.captureState(`Before: Revert ${channelName} to Measurement`); } catch (err) {}
             // Clear Smart curve and points for this channel
             try {
               const hasSmart = (typeof isSmartCurve === 'function') ? isSmartCurve(channelName) : false;
@@ -16484,25 +16588,25 @@ DOMAIN_MAX 1.0 1.0 1.0
                     window.loadedQuadData.curves[channelName] = [...orig];
                     restored = true;
                   }
-                } catch {}
+                } catch (err) {}
                 // If we couldn't restore from history and a curve exists, leave it as-is; otherwise fall back to no curve
                 if (!restored && window.loadedQuadData?.curves?.[channelName]) {
                   // keep existing curve
                 }
               }
-            } catch {}
+            } catch (err) {}
             const hasMeasNow = !!perChannelLinearization[channelName];
             // Re-enable per-channel measurement if available; otherwise clear Smart UI state
               if (hasMeasNow) {
                 perChannelEnabled[channelName] = true;
                 if (perChannelToggle) { perChannelToggle.disabled = false; perChannelToggle.checked = true; }
-                try { perChannelLinearization[channelName].edited = false; } catch {}
+                try { perChannelLinearization[channelName].edited = false; } catch (err) {}
                 refreshPerChannelLinearizationDisplay(channelName);
               } else {
                 if (perChannelToggle) { perChannelToggle.disabled = false; perChannelToggle.checked = false; }
               }
             // Refresh row UI to drop any Smart-specific visuals
-            try { if (tr.refreshDisplayFn) tr.refreshDisplayFn(); } catch {}
+            try { if (tr.refreshDisplayFn) tr.refreshDisplayFn(); } catch (err) {}
             updateInterpolationControls();
             // Force immediate update of processing detail to reflect cleared Smart curve status
             setTimeout(() => {
@@ -16512,8 +16616,8 @@ DOMAIN_MAX 1.0 1.0 1.0
             try {
               if (hasMeasNow) showStatus(`Reverted ${channelName} to measurement`);
               else showStatus(`Cleared Smart on ${channelName} (restored loaded .quad)`);
-            } catch {}
-            try { updateRevertButtonsState(); } catch {}
+            } catch (err) {}
+            try { updateRevertButtonsState(); } catch (err) {}
             // Restore prior selection if still enabled
             try {
               if (savedSel && isEditModeEnabled()) {
@@ -16526,7 +16630,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                   updateInkChart();
                 }
               }
-            } catch {}
+            } catch (err) {}
 
             // Clear the revert flag
             window._REVERT_IN_PROGRESS = false;
@@ -16539,10 +16643,10 @@ DOMAIN_MAX 1.0 1.0 1.0
             if (!btn.disabled) btn.title = hasMeas ? `Revert ${channelName} to measurement source` : `Clear Smart (restore loaded .quad)`;
             // Reserve space: hide visually but keep layout when disabled
             btn.classList.toggle('invisible', btn.disabled);
-          } catch {}
+          } catch (err) {}
           btnGroup.appendChild(btn);
         }
-      } catch {}
+      } catch (err) {}
 
       // Track input changes with debounced action recording
       let percentHistoryTimeout = null;
@@ -16613,7 +16717,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             if (!btn.disabled) btn.title = hasMeas ? `Revert ${channelName} to measurement source` : `Clear Smart (restore loaded .quad)`;
             btn.classList.toggle('invisible', btn.disabled);
           }
-        } catch {}
+        } catch (err) {}
 
         // Handle ultra-compact layout for disabled channels
         if (isAtZero) {
@@ -16701,7 +16805,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         refreshDisplay();
         debouncedPreviewUpdate();
-        try { if (elements.rows) elements.rows.dispatchEvent(new Event('channelsChanged', { bubbles: true })); } catch {}
+        try { if (elements.rows) elements.rows.dispatchEvent(new Event('channelsChanged', { bubbles: true })); } catch (err) {}
       };
       
       enableCheckbox.addEventListener('change', handleCheckboxChange);
@@ -16734,9 +16838,10 @@ DOMAIN_MAX 1.0 1.0 1.0
 
       endInput.addEventListener('input', () => {
         debouncedEndActionRecord(); // Record action after typing stops
-        
+
         const e = InputValidator.validateInput(endInput, InputValidator.clampEnd);
         const p = InputValidator.computePercentFromEnd(e);
+        if (DEBUG_LOGS) console.log(`[DEBUG END CHANGE] ${tr.dataset.channel}: End changed to ${e} (${p.toFixed(1)}%) via end input`);
         percentInput.value = p.toFixed(1);
         
         // If user manually changes from 0 to non-0, clear disabled state
@@ -16807,12 +16912,12 @@ DOMAIN_MAX 1.0 1.0 1.0
             if (fmtLower.includes('lab') || fmtLower.includes('manual')) {
               methodNote = ' (CIE density; Gaussian-weighted reconstruction with PCHIP interpolation)';
             }
-          } catch {}
+          } catch (err) {}
           showStatus(`Loaded per-channel correction for ${channelName}: ${parsed.samples.length} points${methodNote}`);
           }
           debouncedPreviewUpdate();
           // Capture an after-state so undo/redo works for per-channel loads as well
-          try { CurveHistory.captureState(`After: Load Per-Channel Linearization (${channelName})`); } catch {}
+          try { CurveHistory.captureState(`After: Load Per-Channel Linearization (${channelName})`); } catch (err) {}
           // No intent mismatch warning (Positive-only workflow)
           
           // Update processing detail for this channel
@@ -16925,7 +17030,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           </td>
         `;
         elements.rows.appendChild(noChannelsRow);
-        try { updateRevertButtonsState(); } catch {}
+        try { updateRevertButtonsState(); } catch (err) {}
         
         // Setup event listeners after DOM update
         Array.from(elements.rows.children).forEach(tr => {
@@ -16939,7 +17044,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         setTimeout(() => updateCompactChannelsList(), 100);
 
         // Repopulate Edit Curves channel dropdown to reflect new printer
-        setTimeout(() => { try { edit_populateChannelSelect(); } catch {} }, 0);
+        setTimeout(() => { try { edit_populateChannelSelect(); } catch (err) {} }, 0);
 
         elements.channelInfo.innerHTML = "Channels: " + p.channels.map(ch => {
           const color = INK_COLORS[ch] || '#000000';
@@ -17033,7 +17138,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             lines.push(intentLine);
             // Also add compact tag used in filename
             lines.push(`#   Intent tag: ${getIntentFilenameTag()}`);
-          } catch {}
+          } catch (err) {}
         }
         
         // Per-channel linearization
@@ -17182,7 +17287,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (legacy !== null) {
           savedWhite = legacy;
           savedBlack = legacy;
-          try { localStorage.removeItem('autoEndpointRolloffV1'); } catch {}
+          try { localStorage.removeItem('autoEndpointRolloffV1'); } catch (err) {}
         }
       }
 
@@ -17193,10 +17298,10 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.autoWhiteLimitToggle.checked = savedWhite;
         elements.autoWhiteLimitToggle.addEventListener('change', (e) => {
           const enabled = !!e.target.checked;
-          try { localStorage.setItem('autoWhiteLimitV1', enabled ? '1' : '0'); } catch {}
+          try { localStorage.setItem('autoWhiteLimitV1', enabled ? '1' : '0'); } catch (err) {}
           showStatus(enabled ? 'Auto white limit enabled' : 'Auto white limit disabled');
-          try { (getCurrentPrinter()?.channels || []).forEach(ch => updateProcessingDetail(ch)); } catch {}
-          try { updateSessionStatus(); } catch {}
+          try { (getCurrentPrinter()?.channels || []).forEach(ch => updateProcessingDetail(ch)); } catch (err) {}
+          try { updateSessionStatus(); } catch (err) {}
           debouncedPreviewUpdate();
         });
       }
@@ -17205,14 +17310,14 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.autoBlackLimitToggle.checked = savedBlack;
         elements.autoBlackLimitToggle.addEventListener('change', (e) => {
           const enabled = !!e.target.checked;
-          try { localStorage.setItem('autoBlackLimitV1', enabled ? '1' : '0'); } catch {}
+          try { localStorage.setItem('autoBlackLimitV1', enabled ? '1' : '0'); } catch (err) {}
           showStatus(enabled ? 'Auto black limit enabled' : 'Auto black limit disabled');
-          try { (getCurrentPrinter()?.channels || []).forEach(ch => updateProcessingDetail(ch)); } catch {}
-          try { updateSessionStatus(); } catch {}
+          try { (getCurrentPrinter()?.channels || []).forEach(ch => updateProcessingDetail(ch)); } catch (err) {}
+          try { updateSessionStatus(); } catch (err) {}
           debouncedPreviewUpdate();
         });
       }
-    } catch {}
+    } catch (err) {}
 
     // Sample data loading functions
     function loadSampleData(type) {
@@ -17245,8 +17350,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: ${filename}`);
         elements.globalLinearizationToggle.disabled = false;
         elements.globalLinearizationToggle.checked = true;
-        try { updateRevertButtonsState(); } catch {}
-        try { const rev = document.getElementById('revertGlobalToMeasurementBtn'); if (rev) { rev.disabled = false; rev.removeAttribute('disabled'); } } catch {}
+        try { updateRevertButtonsState(); } catch (err) {}
+        try { const rev = document.getElementById('revertGlobalToMeasurementBtn'); if (rev) { rev.disabled = false; rev.removeAttribute('disabled'); } } catch (err) {}
         
         // Show file info
         elements.globalLinearizationInfo.classList.remove('hidden');
@@ -17345,13 +17450,20 @@ DOMAIN_MAX 1.0 1.0 1.0
         try {
           const fmt = String(linearizationData?.format || '').toUpperCase();
           const isMeasurement = !!linearizationData && (fmt.includes('LAB') || fmt.includes('MANUAL')) && Array.isArray(linearizationData.originalData);
-          if (!isMeasurement) return;
-        } catch {}
+          if (DEBUG_LOGS) console.log(`[DEBUG REVERT] Button clicked: fmt="${fmt}", hasLinearizationData=${!!linearizationData}, hasOriginalData=${Array.isArray(linearizationData?.originalData)}, isMeasurement=${isMeasurement}`);
+          if (!isMeasurement) {
+            if (DEBUG_LOGS) console.log('[DEBUG REVERT] Guard check failed - exiting');
+            return;
+          }
+        } catch (err) {
+          if (DEBUG_LOGS) console.log('[DEBUG REVERT] Guard check error:', err);
+        }
           const savedSel = (isEditModeEnabled() && typeof EDIT !== 'undefined' && EDIT && EDIT.selectedChannel) ? EDIT.selectedChannel : null;
           try {
             CurveHistory.captureState('Before: Revert Global to Measurement');
-          } catch {}
+          } catch (err) {}
           const chs = (getCurrentPrinter()?.channels || []).slice();
+          const baselineResetQueue = [];
           chs.forEach((ch) => {
             try {
               // Only clear Smart-derived curves/points; preserve file-loaded .quad curves
@@ -17367,28 +17479,70 @@ DOMAIN_MAX 1.0 1.0 1.0
                     // If no original is available, remove the Smart curve (will fall back to linear)
                     if (window.loadedQuadData?.curves?.[ch]) delete window.loadedQuadData.curves[ch];
                   }
-                } catch {}
+                } catch (err) {}
                 if (window.loadedQuadData?.keyPoints?.[ch]) delete window.loadedQuadData.keyPoints[ch];
                 if (window.loadedQuadData?.keyPointsMeta?.[ch]) delete window.loadedQuadData.keyPointsMeta[ch];
                 if (window.loadedQuadData?.sources?.[ch]) delete window.loadedQuadData.sources[ch];
               }
-            } catch {}
+              const baselineEnd = window.loadedQuadData?.baselineEnd?.[ch];
+              if (DEBUG_LOGS) console.log(`[DEBUG REVERT] ${ch} baseline check: ${baselineEnd} (current End: ${row?.querySelector('.end-input')?.value})`);
+              if (Number.isFinite(baselineEnd)) {
+                baselineResetQueue.push({ channel: ch, baselineEnd });
+              }
+            } catch (err) {}
           });
+          if (baselineResetQueue.length > 0) {
+            const prevBatchState = (typeof CurveHistory !== 'undefined' && CurveHistory) ? CurveHistory.isBatchOperation : null;
+            try {
+              if (typeof CurveHistory !== 'undefined' && CurveHistory) CurveHistory.isBatchOperation = true;
+              baselineResetQueue.forEach(({ channel, baselineEnd }) => {
+                try {
+                  const row = getChannelRow(channel);
+                  if (!row) return;
+                  const endInput = row.querySelector('.end-input');
+                  if (!endInput) return;
+                  const currentEnd = endInput.value;
+                  const endVal = InputValidator.clampEnd(baselineEnd);
+                  if (DEBUG_LOGS) console.log(`[DEBUG REVERT] Restoring ${channel}: ${currentEnd} -> ${endVal} (baseline: ${baselineEnd})`);
+                  const percentInput = row.querySelector('.percent-input');
+                  if (percentInput) {
+                    const pct = InputValidator.computePercentFromEnd(endVal);
+                    percentInput.value = pct.toFixed(1);
+                    percentInput.dispatchEvent(new Event('input', { bubbles: true }));
+                  } else {
+                    endInput.value = String(endVal);
+                    endInput.dispatchEvent(new Event('input', { bubbles: true }));
+                  }
+                  if (typeof row.refreshDisplayFn === 'function') row.refreshDisplayFn();
+                  if (DEBUG_LOGS) console.log(`[DEBUG REVERT] ${channel} End after restore: ${endInput.value}`);
+                } catch (channelErr) {
+                  if (DEBUG_LOGS && console) console.warn('[REVERT] Baseline end restore skipped for', channel, channelErr);
+                }
+              });
+            } catch (restoreErr) {
+              if (DEBUG_LOGS && console) console.warn('[REVERT] Baseline end restore failed:', restoreErr);
+            } finally {
+              if (typeof CurveHistory !== 'undefined' && CurveHistory && prevBatchState !== null) {
+                CurveHistory.isBatchOperation = prevBatchState;
+              }
+            }
+          }
           if (elements.globalLinearizationToggle) {
             elements.globalLinearizationToggle.disabled = false;
             elements.globalLinearizationToggle.checked = true;
           }
-          // Clear edited flag on global measurement (we are reverting to the loaded source)
-          if (linearizationData) { try { linearizationData.edited = false; } catch {} }
-          linearizationApplied = !!linearizationData;
+          // Clear LAB data completely - revert to original .quad state before any measurements
+          if (DEBUG_LOGS) console.log('[DEBUG REVERT] Clearing linearization data');
+          linearizationData = null;
+          linearizationApplied = false;
           updateInterpolationControls();
           // Refresh filename/details to drop the Edited prefix
-          try { refreshGlobalLinearizationDisplay(); } catch {}
+          try { refreshGlobalLinearizationDisplay(); } catch (err) {}
           updatePreview();
         try {
           const chans = getCurrentPrinter().channels;
           chans.forEach((name)=> updateProcessingDetail(name));
-        } catch {}
+        } catch (err) {}
         showStatus('Reverted to measurement (global)');
         updateRevertButtonsState();
         // Restore prior Edit selection to avoid defaulting to MK
@@ -17403,7 +17557,7 @@ DOMAIN_MAX 1.0 1.0 1.0
               updateInkChart();
             }
           }
-        } catch {}
+        } catch (err) {}
       });
     }
 
@@ -17432,8 +17586,8 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: ${file.name} (${getBasePointCountLabel(parsed)})`);
         elements.globalLinearizationToggle.disabled = false;
         elements.globalLinearizationToggle.checked = true;
-        try { updateRevertButtonsState(); } catch {}
-        try { const rev = document.getElementById('revertGlobalToMeasurementBtn'); if (rev) { rev.disabled = false; rev.removeAttribute('disabled'); } } catch {}
+        try { updateRevertButtonsState(); } catch (err) {}
+        try { const rev = document.getElementById('revertGlobalToMeasurementBtn'); if (rev) { rev.disabled = false; rev.removeAttribute('disabled'); } } catch (err) {}
         
         // Show file info below Data Source label
         // Set base filename and refresh display with edited prefix logic
@@ -17450,7 +17604,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         else if (nameLower.endsWith('.cube') || fmtLower === '1dlut' || parsed.is3DLUT) typeLabel = 'LUT';
         else typeLabel = (parsed.format || '').toUpperCase();
         elements.globalLinearizationDetails.textContent = ` - ${ptsLabel} (${typeLabel})`;
-        try { updateIntentDetailLabel(); } catch {}
+        try { updateIntentDetailLabel(); } catch (err) {}
         elements.globalLinearizationInfo.classList.remove('hidden');
         if (elements.globalLinearizationHint) elements.globalLinearizationHint.classList.add('hidden');
         
@@ -17462,7 +17616,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Show appropriate status message based on LUT type
       if (parsed.is3DLUT) {
           showStatus(`Loaded 3D LUT and extracted ${parsed.samples.length} neutral axis points as a global correction from ${file.name} (${parsed.lutSize}³ grid)`);
-          try { postGlobalDeltaChatSummary(); } catch {}
+          try { postGlobalDeltaChatSummary(); } catch (err) {}
       } else {
           // Append small method note for LAB/Manual L* datasets
           let methodNote = '';
@@ -17471,13 +17625,13 @@ DOMAIN_MAX 1.0 1.0 1.0
             if (fmtLower.includes('lab') || fmtLower.includes('manual')) {
               methodNote = ' (CIE density; Gaussian-weighted reconstruction with PCHIP interpolation)';
             }
-          } catch {}
+          } catch (err) {}
           showStatus(`Loaded and applied ${parsed.samples.length} data points as a global correction from ${file.name}${methodNote}`);
-          try { postGlobalDeltaChatSummary(); } catch {}
+          try { postGlobalDeltaChatSummary(); } catch (err) {}
       }
         debouncedPreviewUpdate(); // Update preview to show the applied linearization
         // Capture an after-state so undo/redo works symmetrically
-        try { CurveHistory.captureState('After: Load Global Linearization'); } catch {}
+        try { CurveHistory.captureState('After: Load Global Linearization'); } catch (err) {}
         
         // Update processing details for all channels since global affects all
         const channelNames = getCurrentPrinter().channels;
@@ -17497,7 +17651,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.globalLinearizationBtn.setAttribute('data-tooltip', 'Load LUT.cube, LABdata.txt, or .acv curve files');
         elements.globalLinearizationToggle.disabled = true;
         elements.globalLinearizationToggle.checked = false;
-        try { updateRevertButtonsState(); } catch {}
+        try { updateRevertButtonsState(); } catch (err) {}
         
         // Hide file info and show hint again
         elements.globalLinearizationInfo.classList.add('hidden');
@@ -17520,7 +17674,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         linearizationApplied = e.target.checked;
         if (linearizationApplied) {
           showStatus('Global linearization enabled');
-          try { postGlobalDeltaChatSummary(); } catch {}
+          try { postGlobalDeltaChatSummary(); } catch (err) {}
         } else {
           showStatus('Global linearization disabled');
         }
@@ -17543,7 +17697,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         updateFilename();
         
         debouncedPreviewUpdate();
-        try { updateRevertButtonsState(); } catch {}
+        try { updateRevertButtonsState(); } catch (err) {}
       }
     });
 
@@ -17781,7 +17935,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           }
           aiHistoryIndex = aiCommandHistory.length; // reset pointer to one past end
         }
-      } catch {}
+      } catch (err) {}
       // Add user message to chat
       addChatMessage('user', message);
       // Show processing status in chat as well
@@ -17857,7 +18011,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         if (role === 'system' && typeof claudeAssistant?.addSystemContext === 'function') {
           claudeAssistant.addSystemContext(message);
         }
-      } catch {}
+      } catch (err) {}
     }
 
     if (elements.sendMessageBtn) elements.sendMessageBtn.addEventListener('click', sendChatMessage);
@@ -18227,7 +18381,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             const arr = parsed.curves?.[ch];
             if (Array.isArray(arr)) window.loadedQuadData.originalCurves[ch] = arr.slice();
           });
-        } catch {}
+        } catch (err) {}
         // Normalize any legacy source tags immediately after load
         normalizeSmartSourcesInLoadedData();
         
@@ -18268,14 +18422,21 @@ DOMAIN_MAX 1.0 1.0 1.0
           });
 
           // Record baseline End per channel for scaling loaded .quad uniformly when End changes
+          // CRITICAL: Only capture baseline on initial .quad load, never overwrite existing baselines
           try {
             if (!window.loadedQuadData.baselineEnd) window.loadedQuadData.baselineEnd = {};
             const rows2 = Array.from(elements.rows.children).filter(tr => tr.id !== 'noChannelsRow');
             rows2.forEach((row) => {
               const ch = row.getAttribute('data-channel');
-              const endVal = InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0);
-              if (ch) window.loadedQuadData.baselineEnd[ch] = endVal;
+              if (ch && !Number.isFinite(window.loadedQuadData.baselineEnd[ch])) {
+                const endVal = InputValidator.clampEnd(row.querySelector('.end-input')?.value || 0);
+                window.loadedQuadData.baselineEnd[ch] = endVal;
+                if (DEBUG_LOGS) console.log(`[DEBUG BASELINE] Captured initial baseline for ${ch}: ${endVal}`);
+              } else if (ch && DEBUG_LOGS) {
+                console.log(`[DEBUG BASELINE] Skipped ${ch}, already has baseline: ${window.loadedQuadData.baselineEnd[ch]}`);
+              }
             });
+            if (DEBUG_LOGS) console.log('[DEBUG BASELINE] Full baseline state:', window.loadedQuadData.baselineEnd);
           } catch (e) { console.warn('Baseline End capture failed:', e); }
 
           // Precompute editable AI key points from the loaded .quad curves using the same
@@ -18305,7 +18466,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                 quadGenActions.enableDisableChannel(firstCh, true);
               }
             }
-          } catch {}
+          } catch (err) {}
           
           // Refresh Edit Curves dropdown and set selection to first enabled channel in the .quad
           try {
@@ -18319,7 +18480,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                 if (typeof edit_refreshState === 'function') edit_refreshState();
               }
             }
-          } catch {}
+          } catch (err) {}
           
           // Set the filename input to copy of the loaded file (remove .quad extension)
           const baseName = file.name.replace(/\.quad$/i, '');
@@ -18658,7 +18819,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       try {
         document.documentElement.classList.add('overflow-hidden');
         document.body.classList.add('overflow-hidden');
-      } catch {}
+      } catch (err) {}
     });
     
     elements.closeLstarModal.addEventListener('click', () => {
@@ -18666,7 +18827,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       try {
         document.documentElement.classList.remove('overflow-hidden');
         document.body.classList.remove('overflow-hidden');
-      } catch {}
+      } catch (err) {}
     });
     
     elements.cancelLstar.addEventListener('click', () => {
@@ -18674,7 +18835,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       try {
         document.documentElement.classList.remove('overflow-hidden');
         document.body.classList.remove('overflow-hidden');
-      } catch {}
+      } catch (err) {}
     });
     
     elements.lstarModal.addEventListener('click', (e) => {
@@ -18683,7 +18844,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         try {
           document.documentElement.classList.remove('overflow-hidden');
           document.body.classList.remove('overflow-hidden');
-        } catch {}
+        } catch (err) {}
       }
     });
     
@@ -18731,13 +18892,13 @@ DOMAIN_MAX 1.0 1.0 1.0
         elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: Manual L* (${getBasePointCountLabel(correctionData)})`);
         elements.globalLinearizationToggle.disabled = false;
         elements.globalLinearizationToggle.checked = true;
-        try { updateRevertButtonsState(); } catch {}
+        try { updateRevertButtonsState(); } catch (err) {}
         
         // Show file info
         elements.globalLinearizationInfo.classList.remove('hidden');
         elements.globalLinearizationFilename.textContent = `Manual L* Entry`;
         elements.globalLinearizationDetails.textContent = ` (${getBasePointCountLabel(correctionData)})`;
-        try { updateIntentDetailLabel(); } catch {}
+        try { updateIntentDetailLabel(); } catch (err) {}
         if (elements.globalLinearizationHint) elements.globalLinearizationHint.classList.add('hidden');
         
         // Save the values for re-population
@@ -18756,7 +18917,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         // Status note: CIE density; Gaussian-weighted reconstruction with PCHIP interpolation (Manual L*)
         showStatus(`Applied manual L* correction curve (${getBasePointCountLabel(correctionData)}) (CIE density; Gaussian-weighted reconstruction with PCHIP interpolation)`);
-        try { postGlobalDeltaChatSummary(); } catch {}
+        try { postGlobalDeltaChatSummary(); } catch (err) {}
       } catch (error) {
         console.error('Error processing L* values:', error);
         showStatus(`Error processing L* values: ${error.message}`);
@@ -18791,7 +18952,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       elements.contrastIntentSelect.addEventListener('change', (e)=>{
         const v = e.target.value;
         if (v === 'enter_custom') {
-          try { document.documentElement.classList.add('overflow-hidden'); document.body.classList.add('overflow-hidden'); } catch {}
+          try { document.documentElement.classList.add('overflow-hidden'); document.body.classList.add('overflow-hidden'); } catch (err) {}
           elements.intentModal.classList.remove('hidden');
           try {
             elements.intentPresetSelect.value = contrastIntent?.id || 'linear';
@@ -18800,15 +18961,15 @@ DOMAIN_MAX 1.0 1.0 1.0
             // Jump to Custom tab for quicker edits
             setActiveIntentTab('custom');
             // Validate any prefilled paste data on open
-            try { if (typeof scheduleAutoParseForPasteArea === 'function') scheduleAutoParseForPasteArea(); } catch {}
+            try { if (typeof scheduleAutoParseForPasteArea === 'function') scheduleAutoParseForPasteArea(); } catch (err) {}
             // Reset the dropdown away from 'enter_custom' so selecting it again will fire 'change'
             try {
               const idStr = String(contrastIntent?.id || 'linear');
               const desired = idStr.startsWith('custom') ? 'custom' : idStr;
               const opts = Array.from(elements.contrastIntentSelect.options).map(o=>o.value);
               elements.contrastIntentSelect.value = opts.includes(desired) ? desired : (opts.includes('linear') ? 'linear' : opts[0]);
-            } catch {}
-          } catch {}
+            } catch (err) {}
+          } catch (err) {}
         } else {
           if (v === 'custom') {
             // Apply existing custom intent or build from saved prefs/paste
@@ -18828,7 +18989,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                   setContrastIntent('custom_points', { name: nm, targetFn: fn }, 'custom');
                   applied = true;
                 }
-              } catch {}
+              } catch (err) {}
               if (!applied && prefs.pasteText && parseIntentPaste) {
                 try {
                   const parsed = parseIntentPaste(String(prefs.pasteText));
@@ -18836,7 +18997,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                     setContrastIntent('custom_points', { name: parsed.name || 'Custom (pasted)', targetFn: parsed.targetFn }, 'custom');
                     applied = true;
                   }
-                } catch {}
+                } catch (err) {}
               }
               if (!applied) {
                 const g = Number(prefs.gamma||1.00), gain = Number(prefs.gain||0.55), shoulder = Number(prefs.shoulder||0.35);
@@ -18886,7 +19047,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       }
       // If switching to Paste tab, auto-validate current text
       if (name === 'paste') {
-        try { if (typeof scheduleAutoParseForPasteArea === 'function') scheduleAutoParseForPasteArea(); } catch {}
+        try { if (typeof scheduleAutoParseForPasteArea === 'function') scheduleAutoParseForPasteArea(); } catch (err) {}
       }
     }
     function updatePresetDescription(){
@@ -18903,23 +19064,23 @@ DOMAIN_MAX 1.0 1.0 1.0
       `;
     }
     const CUSTOM_PREFS_KEY = 'contrastIntentCustomPrefsV1';
-    function loadCustomPrefs(){ try { const j = JSON.parse(localStorage.getItem(CUSTOM_PREFS_KEY)||'{}'); return { gamma: Number(j.gamma??1.00)||1.00, gain: Number(j.gain??0.55)||0.55, shoulder: Number(j.shoulder??0.35)||0.35, pasteText: String(j.pasteText||'') }; } catch { return { gamma:1.00, gain:0.55, shoulder:0.35, pasteText:'' }; } }
-    function saveCustomPrefs(upd){ try { const cur=loadCustomPrefs(); const nxt={...cur, ...upd}; localStorage.setItem(CUSTOM_PREFS_KEY, JSON.stringify(nxt)); } catch {} }
-    function syncPresetControlValuesFromState(){ const id=contrastIntent?.id||'linear'; const prefs = loadCustomPrefs(); if(id==='soft'||id==='hard'||id==='custom_gamma'){ const g=(contrastIntent?.params?.gamma!=null)?contrastIntent.params.gamma:prefs.gamma; elements.intentGamma.value=g; elements.intentGammaVal.textContent=Number(g).toFixed(2);} else { elements.intentGamma.value=prefs.gamma; elements.intentGammaVal.textContent=Number(prefs.gamma).toFixed(2);} if(id==='filmic'||id==='custom_filmic'){ const g=(contrastIntent?.params?.filmicGain!=null)?contrastIntent.params.filmicGain:(contrastIntent?.params?.gain!=null?contrastIntent.params.gain:prefs.gain); const s=(contrastIntent?.params?.shoulder!=null)?contrastIntent.params.shoulder:prefs.shoulder; elements.intentFilmicGain.value=g; elements.intentFilmicGainVal.textContent=Number(g).toFixed(2); elements.intentShoulder.value=s; elements.intentShoulderVal.textContent=Number(s).toFixed(2);} else { elements.intentFilmicGain.value=prefs.gain; elements.intentFilmicGainVal.textContent=Number(prefs.gain).toFixed(2); elements.intentShoulder.value=prefs.shoulder; elements.intentShoulderVal.textContent=Number(prefs.shoulder).toFixed(2);} elements.customGamma.value=prefs.gamma; elements.customGammaVal.textContent=Number(prefs.gamma).toFixed(2); elements.customGain.value=prefs.gain; elements.customGainVal.textContent=Number(prefs.gain).toFixed(2); elements.customShoulder.value=prefs.shoulder; elements.customShoulderVal.textContent=Number(prefs.shoulder).toFixed(2); try{ updateRangeFill(elements.customGamma); updateRangeFill(elements.customGain); updateRangeFill(elements.customShoulder);}catch{} if (elements.intentPasteArea) elements.intentPasteArea.value = prefs.pasteText || ''; }
+    function loadCustomPrefs(){ try { const j = JSON.parse(localStorage.getItem(CUSTOM_PREFS_KEY)||'{}'); return { gamma: Number(j.gamma??1.00)||1.00, gain: Number(j.gain??0.55)||0.55, shoulder: Number(j.shoulder??0.35)||0.35, pasteText: String(j.pasteText||'') }; } catch (err) { return { gamma:1.00, gain:0.55, shoulder:0.35, pasteText:'' }; } }
+    function saveCustomPrefs(upd){ try { const cur=loadCustomPrefs(); const nxt={...cur, ...upd}; localStorage.setItem(CUSTOM_PREFS_KEY, JSON.stringify(nxt)); } catch (err) {} }
+    function syncPresetControlValuesFromState(){ const id=contrastIntent?.id||'linear'; const prefs = loadCustomPrefs(); if(id==='soft'||id==='hard'||id==='custom_gamma'){ const g=(contrastIntent?.params?.gamma!=null)?contrastIntent.params.gamma:prefs.gamma; elements.intentGamma.value=g; elements.intentGammaVal.textContent=Number(g).toFixed(2);} else { elements.intentGamma.value=prefs.gamma; elements.intentGammaVal.textContent=Number(prefs.gamma).toFixed(2);} if(id==='filmic'||id==='custom_filmic'){ const g=(contrastIntent?.params?.filmicGain!=null)?contrastIntent.params.filmicGain:(contrastIntent?.params?.gain!=null?contrastIntent.params.gain:prefs.gain); const s=(contrastIntent?.params?.shoulder!=null)?contrastIntent.params.shoulder:prefs.shoulder; elements.intentFilmicGain.value=g; elements.intentFilmicGainVal.textContent=Number(g).toFixed(2); elements.intentShoulder.value=s; elements.intentShoulderVal.textContent=Number(s).toFixed(2);} else { elements.intentFilmicGain.value=prefs.gain; elements.intentFilmicGainVal.textContent=Number(prefs.gain).toFixed(2); elements.intentShoulder.value=prefs.shoulder; elements.intentShoulderVal.textContent=Number(prefs.shoulder).toFixed(2);} elements.customGamma.value=prefs.gamma; elements.customGammaVal.textContent=Number(prefs.gamma).toFixed(2); elements.customGain.value=prefs.gain; elements.customGainVal.textContent=Number(prefs.gain).toFixed(2); elements.customShoulder.value=prefs.shoulder; elements.customShoulderVal.textContent=Number(prefs.shoulder).toFixed(2); try{ updateRangeFill(elements.customGamma); updateRangeFill(elements.customGain); updateRangeFill(elements.customShoulder);}catch (err) {} if (elements.intentPasteArea) elements.intentPasteArea.value = prefs.pasteText || ''; }
     (elements.intentTabs||[]).forEach(btn=>{ btn.addEventListener('click', ()=> setActiveIntentTab(btn.getAttribute('data-intent-tab'))); });
     if (elements.intentPresetSelect) { elements.intentPresetSelect.addEventListener('change', ()=>{ updatePresetDescription(); }); }
     if (elements.intentGamma) { elements.intentGamma.addEventListener('input', ()=>{ elements.intentGammaVal.textContent = Number(elements.intentGamma.value).toFixed(2); }); }
     if (elements.intentFilmicGain) { elements.intentFilmicGain.addEventListener('input', ()=>{ elements.intentFilmicGainVal.textContent = Number(elements.intentFilmicGain.value).toFixed(2); }); }
     if (elements.intentShoulder) { elements.intentShoulder.addEventListener('input', ()=>{ elements.intentShoulderVal.textContent = Number(elements.intentShoulder.value).toFixed(2); }); }
-    function updateRangeFill(el){ try { const min=Number(el.min??0), max=Number(el.max??100), val=Number(el.value??0); const pct=Math.max(0, Math.min(100, ((val-min)/(max-min))*100)); el.style.setProperty('--percent', pct+'%'); } catch {} }
+    function updateRangeFill(el){ try { const min=Number(el.min??0), max=Number(el.max??100), val=Number(el.value??0); const pct=Math.max(0, Math.min(100, ((val-min)/(max-min))*100)); el.style.setProperty('--percent', pct+'%'); } catch (err) {} }
     if (elements.customGamma) { elements.customGamma.addEventListener('input', ()=>{ elements.customGammaVal.textContent = Number(elements.customGamma.value).toFixed(2); updateRangeFill(elements.customGamma); }); }
     if (elements.customGain) { elements.customGain.addEventListener('input', ()=>{ elements.customGainVal.textContent = Number(elements.customGain.value).toFixed(2); updateRangeFill(elements.customGain); }); }
     if (elements.customShoulder) { elements.customShoulder.addEventListener('input', ()=>{ elements.customShoulderVal.textContent = Number(elements.customShoulder.value).toFixed(2); updateRangeFill(elements.customShoulder); }); }
     function closeIntentModal(){
       elements.intentModal.classList.add('hidden');
-      try { document.documentElement.classList.remove('overflow-hidden'); document.body.classList.remove('overflow-hidden'); } catch {}
+      try { document.documentElement.classList.remove('overflow-hidden'); document.body.classList.remove('overflow-hidden'); } catch (err) {}
       // No dynamic height; content uses a fixed CSS height
-      try { if (elements.intentContent) elements.intentContent.style.height = ''; } catch {}
+      try { if (elements.intentContent) elements.intentContent.style.height = ''; } catch (err) {}
     }
     if (elements.closeIntentModal) elements.closeIntentModal.addEventListener('click', closeIntentModal);
     if (elements.cancelIntentBtn) elements.cancelIntentBtn.addEventListener('click', closeIntentModal);
@@ -18967,7 +19128,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         const baseName = intentImportState.filename ? `Custom (imported: ${intentImportState.filename})` : 'Custom (imported)';
         setContrastIntent('custom_points', { name: baseName, targetFn }, 'import');
         // Persist imported samples so Custom (saved) can restore this target later
-        try { localStorage.setItem('customIntentSamplesV1', JSON.stringify({ samples: ys, filename: intentImportState.filename||'', kind: intentImportState.kind||'' })); localStorage.setItem('hasCustomIntentV1','1'); } catch {}
+        try { localStorage.setItem('customIntentSamplesV1', JSON.stringify({ samples: ys, filename: intentImportState.filename||'', kind: intentImportState.kind||'' })); localStorage.setItem('hasCustomIntentV1','1'); } catch (err) {}
         closeIntentModal();
       }
     });
@@ -19007,17 +19168,17 @@ DOMAIN_MAX 1.0 1.0 1.0
       try {
         if (String(contrastIntent?.id||'').startsWith('custom')) return true;
         if (localStorage.getItem('hasCustomIntentV1') === '1') return true;
-      } catch {}
+      } catch (err) {}
       try {
         const prefs = loadCustomPrefs ? loadCustomPrefs() : null;
         if (!prefs) return false;
         const txt = String(prefs.pasteText||'').trim();
-        if (txt){ try { if (typeof parseIntentPaste === 'function'){ const parsed = parseIntentPaste(txt); if (parsed && parsed.ok) return true; } else { return true; } } catch {} }
+        if (txt){ try { if (typeof parseIntentPaste === 'function'){ const parsed = parseIntentPaste(txt); if (parsed && parsed.ok) return true; } else { return true; } } catch (err) {} }
         const g = Number(prefs.gamma||1.00), gain = Number(prefs.gain||0.55), shoulder = Number(prefs.shoulder||0.35);
         if (Math.abs(g-1.00)>1e-3 || Math.abs(gain-0.55)>1e-3 || Math.abs(shoulder-0.35)>1e-3) return true;
         // Imported samples persisted
-        try { const saved = JSON.parse(localStorage.getItem('customIntentSamplesV1')||'null'); if (saved && Array.isArray(saved.samples) && saved.samples.length>=2) return true; } catch {}
-      } catch {}
+        try { const saved = JSON.parse(localStorage.getItem('customIntentSamplesV1')||'null'); if (saved && Array.isArray(saved.samples) && saved.samples.length>=2) return true; } catch (err) {}
+      } catch (err) {}
       return false;
     }
     function updateCustomOptionVisibility(){
@@ -19040,7 +19201,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             sel.removeChild(customOpt);
           }
         }
-      } catch {}
+      } catch (err) {}
     }
 
     // Auto-parse when user types or pastes into the paste area (debounced)
@@ -19116,11 +19277,11 @@ DOMAIN_MAX 1.0 1.0 1.0
     }
 
     // Initialize dropdowns and custom options
-    try { initializePresetDropdowns(); } catch {}
-    try { updateIntentDropdownState(); } catch {}
-    try { updateCustomOptionVisibility(); } catch {}
+    try { initializePresetDropdowns(); } catch (err) {}
+    try { updateIntentDropdownState(); } catch (err) {}
+    try { updateCustomOptionVisibility(); } catch (err) {}
     // Initialize Intent dropdown state based on linearization data
-    try { updateIntentDropdownState(); } catch {}
+    try { updateIntentDropdownState(); } catch (err) {}
     function parseIntentPaste(text){
       try {
         if (!text) return { ok:false, error: 'No data provided' };
@@ -19213,7 +19374,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         try {
           const firstNums = (lines[0].match(numberRegex) || []).map(Number).filter(n=>isFinite(n));
           if (firstNums.length === 0 && /[A-Za-z]/.test(lines[0])) { labelOnlyFirst = true; labelName = lines[0].trim(); }
-        } catch {}
+        } catch (err) {}
         const header = lines[0].toLowerCase();
         let colT=-1, colRel=-1, colAbs=-1, colL=-1;
         const headers = header.split(/[,\t]/).map(h=>h.trim());
@@ -19287,7 +19448,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             commonName = Object.keys(freq).sort((a,b)=>freq[b]-freq[a])[0] || '';
           }
           if (!commonName && labelOnlyFirst && labelName) commonName = labelName;
-        } catch {}
+        } catch (err) {}
         return { ok:true, targetFn: fn, name: commonName ? `Custom (${commonName})` : 'Custom (pasted)' };
       } catch (e) { return { ok:false, error: e.message }; }
     }
@@ -19321,7 +19482,7 @@ DOMAIN_MAX 1.0 1.0 1.0
     // Minimal Markdown renderer for Help popup
     function renderMarkdown(md){
       // Strip leading top-level title if it's just the app name
-      try { md = md.replace(/^\s*#\s*quadGEN\s*(?:\r?\n|$)/i, ''); } catch {}
+      try { md = md.replace(/^\s*#\s*quadGEN\s*(?:\r?\n|$)/i, ''); } catch (err) {}
       function esc(s){
         return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       }
@@ -19472,20 +19633,20 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li>Inkjet linearization: refine monochrome response for QTR printing.</li>
             <li>Curve editing: enter Edit Mode, nudge an ordinal, export.</li>
             <li>Conversion: load LAB/LUT/ACV and export <code>.quad</code>.</li>
-            <li>Intent remap: load your master linearized <code>.quad</code>, audition Gamma/Filmic presets, and bake a contrast variant directly.</li>
+            <li>Intent remap: load your reference linearized <code>.quad</code>, audition Gamma/Filmic presets, and bake a contrast variant directly.</li>
           </ul>
 
           <hr />
 
           <h2 id="best">Best Practices</h2>
-          <p class="text-sm text-gray-600 mb-3">Linearize your process once, keep that <code>.quad</code> as a master, and branch from there. You can either bake an intent into the loaded master with “Apply Intent”, or leave the master untouched and make the contrast move upstream in Photoshop—printing through the linear master yields the same result.</p>
+          <p class="text-sm text-gray-600 mb-3">Linearize your process once, keep that <code>.quad</code> as a reference, and branch from there. You can either bake an intent into the loaded reference with “Apply Intent”, or leave the reference untouched and make the contrast move upstream in Photoshop—printing through the linear reference yields the same result.</p>
           <ul>
             <li>If your process requires a negative, invert it before printing with your <code>.quad</code>.</li>
             <li>Measure the final positive print (not the negative).</li>
             <li>Anchor endpoints and keep curves monotonic.</li>
             <li>Use ink limits to define deepest black (or cleanest white).</li>
             <li>Make incremental edits; use Undo/Redo liberally.</li>
-            <li>Keep a “master” Linear intent <code>.quad</code>. You can bake contrast variants with “Apply Intent”, or do the contrast move in Photoshop and print through the same linear master—both paths land on the same tone curve.</li>
+            <li>Keep a “reference” Linear intent <code>.quad</code>. You can bake contrast variants with “Apply Intent”, or do the contrast move in Photoshop and print through the same linear reference—both paths land on the same tone curve.</li>
             <li>Zoom the chart so low-limit runs fill the plot—tap +/− in the lower-left to move in 10% steps, and the chart auto-expands again if you enable a higher ink limit later.</li>
           </ul>
 
@@ -19611,6 +19772,9 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
 
             <dt>Max points</dt>
             <dd>The upper limit on the number of Key points that quadGEN will generate when creating a Smart curve. Above this threshold, imported data (e.g., ACV/LUT/LAB) is simplified or interpolated to maintain performance and stability. Maximum is 25 points.</dd>
+
+            <dt>Reference curve</dt>
+            <dd>A fully linearized <code>.quad</code> kept as the authoritative baseline for a printer/process. Branch contrast variants from this reference (Apply Intent or upstream edits) while preserving the trusted linear response.</dd>
 
             <dt>Output Ink Level %</dt>
             <dd>Y-axis value representing the ink output (0–100%) after applying the curve and current End; higher values mean more ink (darker).</dd>
@@ -19743,8 +19907,8 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
           </ul>
           <h3>7) Export Corrected <code>.quad</code></h3>
           <ul>
-            <li>Export the corrected <code>.quad</code> for general use and archive it as your “master” Linear profile.</li>
-            <li>Keep this master untouched; branch contrast variants by either baking presets with <strong>Apply Intent</strong> (when no LAB data is loaded) or doing the contrast move upstream in Photoshop before printing through the master. Both paths land on the same tonal response.</li>
+            <li>Export the corrected <code>.quad</code> for general use and archive it as your “reference” Linear profile.</li>
+            <li>Keep this reference untouched; branch contrast variants by either baking presets with <strong>Apply Intent</strong> (when no LAB data is loaded) or doing the contrast move upstream in Photoshop before printing through the reference. Both paths land on the same tonal response.</li>
           </ul>
           <h3>8) Enter Edit Mode for Fine Tuning (optional)</h3>
           <ul>
@@ -19767,7 +19931,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li>Use the <strong>Intent</strong> dropdown in Global Correction to pick a preset (Linear, Soft, Hard, Filmic) or choose <strong>Enter Custom…</strong> to open the modal.</li>
             <li><strong>Custom</strong>: apply sliders (Gamma or Filmic‑like) or <strong>Paste CSV/JSON</strong> data; the parser auto-validates pasted text.</li>
             <li>Intents shape the target curve only; ingestion and reconstruction are unchanged. Endpoints (0% and 100%) remain fixed — adjust ink limits/end values to move black/white points.</li>
-            <li>When no LAB data is active, the <strong>Apply Intent</strong> button bakes the selected preset into the loaded <code>.quad</code>; use it to spin off contrast-specific variants directly from your master.</li>
+            <li>When no LAB data is active, the <strong>Apply Intent</strong> button bakes the selected preset into the loaded <code>.quad</code>; use it to spin off contrast-specific variants directly from your reference.</li>
           </ul>
           <h3>Notes & Tips</h3>
           <ul>
@@ -19837,7 +20001,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
 
     // Help popup content (initialize tabs and default content)
     function populateHelp() {
-      try { document.getElementById('helpAppVersion').textContent = APP_VERSION; } catch {}
+      try { document.getElementById('helpAppVersion').textContent = APP_VERSION; } catch (err) {}
       setHelpActiveTab('readme');
     }
 
@@ -19854,7 +20018,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
               The correction process involves: 1) Load a .quad file, 2) Test print and measure results, 3) Load measurement data to create corrections, 4) Export corrected .quad and repeat until linear.
             </p>
             <p class="text-xs">
-              For complete step-by-step guidance, see <button onclick="try{if(elements.intentHelpPopup){elements.intentHelpPopup.classList.add('hidden');}setHelpActiveTab('workflow');if(elements.helpPopup){elements.helpPopup.classList.remove('hidden');lockBodyScroll();}}catch{}" class="underline hover:text-gray-800">Detailed Workflow in the main Help</button>.
+              For complete step-by-step guidance, see <button onclick="try{if(elements.intentHelpPopup){elements.intentHelpPopup.classList.add('hidden');}setHelpActiveTab('workflow');if(elements.helpPopup){elements.helpPopup.classList.remove('hidden');lockBodyScroll();}}catch (err) {}" class="underline hover:text-gray-800">Detailed Workflow in the main Help</button>.
             </p>
           </div>
 
@@ -19974,12 +20138,12 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
         elements.editModeHelpPopup.classList.add('hidden');
       }
       // Re-enable body scroll if no help popups remain open
-      try { unlockBodyScrollIfNoHelpOpen(); } catch {}
+      try { unlockBodyScrollIfNoHelpOpen(); } catch (err) {}
     });
 
     // Help popup functionality
     // Helpers to lock/unlock body scroll when help popups are open
-    function lockBodyScroll(){ try { document.body.style.overflow = 'hidden'; } catch {} }
+    function lockBodyScroll(){ try { document.body.style.overflow = 'hidden'; } catch (err) {} }
     function unlockBodyScrollIfNoHelpOpen(){
       try {
         const anyOpen = (
@@ -19988,7 +20152,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
           (elements.editModeHelpPopup && !elements.editModeHelpPopup.classList.contains('hidden'))
         );
         if (!anyOpen) { document.body.style.overflow = ''; }
-      } catch {}
+      } catch (err) {}
     }
 
     if (elements.helpBtn) {
@@ -20019,7 +20183,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
           elements.helpPopup.classList.remove('hidden');
           // Scroll to Edit Mode section once visible
           setTimeout(() => {
-            try { document.getElementById('helpEditModeSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+            try { document.getElementById('helpEditModeSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (err) {}
           }, 0);
         }
       });
@@ -20044,7 +20208,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
     // Global Correction Help button: open main Help with Detailed Workflow tab
     if (elements.globalCorrectionHelpBtn) {
       elements.globalCorrectionHelpBtn.addEventListener('click', () => {
-        try { setHelpActiveTab('workflow'); } catch {}
+        try { setHelpActiveTab('workflow'); } catch (err) {}
         if (elements.helpPopup) { elements.helpPopup.classList.remove('hidden'); lockBodyScroll(); }
       });
     }
@@ -20109,7 +20273,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
       document.title = `quadGEN ${APP_VERSION}`;
       document.getElementById('appVersion').textContent = APP_VERSION;
       
-      try { document.getElementById('helpAppVersion').textContent = APP_VERSION; } catch {}
+      try { document.getElementById('helpAppVersion').textContent = APP_VERSION; } catch (err) {}
     }
     
     // Initial setup with error handling
