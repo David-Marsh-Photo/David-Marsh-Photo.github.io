@@ -299,7 +299,7 @@ UI COMPONENTS:
   * Full combined text available on hover via `title`
 
 PIPELINE INFORMATION DISPLAYED:
-- Smart Curve: shows key-point count when present (e.g., "Smart Curve (N key points)")
+- Smart Curve: shows key point count when present (e.g., "Smart Curve (N key points)")
 - Per-Channel: format • filename (count) when enabled
 - Global: format • filename (count) when enabled
 - Linear ramp when no processing is applied
@@ -2059,7 +2059,7 @@ ARCHITECTURAL NOTES:
                   <input type="number" id="editMaxError" class="w-20 px-2 py-1 text-xs border border-gray-300 rounded" min="0.05" max="5" step="0.05" value="0.25">
                 </label>
                 <label class="text-xs text-gray-700 flex flex-col items-center">
-                  <span class="mb-1">Max points</span>
+                  <span class="mb-1">Max Key Points</span>
                   <input type="number" id="editMaxPoints" class="w-16 px-2 py-1 text-xs border border-gray-300 rounded" min="2" max="21" step="1" value="21">
                 </label>
                 <button id="editRecomputeBtn" class="px-3 py-1.5 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition-colors font-bold">↻ Recompute</button>
@@ -2081,25 +2081,25 @@ ARCHITECTURAL NOTES:
               <div class="mt-1 text-center"><span id="editChannelState" class="text-xs text-gray-500"></span></div>
             </div>
 
-          <!-- Selected point tools -->
+          <!-- Selected Key Point tools -->
           <div class="border border-gray-200 rounded-lg p-3 relative">
-              <span class="absolute top-0 left-2 -translate-y-1/2 bg-white px-2 text-xs text-gray-700 z-10">Point</span>
+              <span class="absolute top-0 left-2 -translate-y-1/2 bg-white px-2 text-xs text-gray-700 z-10">Key Point</span>
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <div class="inline-flex items-center gap-2">
-                    <button id="editPointLeft" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold" title="Previous point">◀</button>
+                    <button id="editPointLeft" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold" title="Previous Key Point">◀</button>
                     <span id="editPointIndex" class="text-sm font-bold text-white bg-black min-w-[1.5rem] text-center px-2 py-0.5 rounded is-disabled">–</span>
-                    <button id="editPointRight" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold" title="Next point">▶</button>
+                    <button id="editPointRight" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold" title="Next Key Point">▶</button>
                   </div>
                 </div>
-                <button id="editDeleteBtn" class="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded font-bold" title="Delete selected point">✖︎ Delete</button>
+                <button id="editDeleteBtn" class="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded font-bold" title="Delete selected key point">✖︎ Delete</button>
               </div>
               <div class="flex items-center justify-center gap-2">
                 <button id="editNudgeYUp" class="px-2 py-1 text-xs rounded font-bold nudge-btn" title="Nudge Y up">△</button>
               </div>
               <div class="flex items-center justify-center gap-2 mt-1">
                 <button id="editNudgeXNeg" class="px-2 py-1 text-xs rounded font-bold nudge-btn" title="Nudge X left">◁</button>
-                <input id="editXYInput" class="w-24 text-center px-2 py-1 text-xs border border-gray-300 rounded" placeholder="X,Y" title="Edit point as 'X,Y' percent">
+                <input id="editXYInput" class="w-24 text-center px-2 py-1 text-xs border border-gray-300 rounded" placeholder="X,Y" title="Edit key point as 'X,Y' percent">
                 <button id="editNudgeXPos" class="px-2 py-1 text-xs rounded font-bold nudge-btn" title="Nudge X right">▷</button>
               </div>
               <div class="flex items-center justify-center gap-2 mt-1">
@@ -2163,8 +2163,8 @@ ARCHITECTURAL NOTES:
                 <strong>Try this:</strong> "Reduce all ink limits by 20%"<br>
                 <strong>or:</strong> "generate a curve with points 0,0 25,20 75,85 100,100"<br>
                 <strong>or:</strong> "apply a midtone lift"<br>
-                <strong>or:</strong> "delete the point near 25%"<br>
-                <strong>or:</strong> "delete point 2"
+                <strong>or:</strong> "delete the key point near 25%"<br>
+                <strong>or:</strong> "delete key point 2"
               </div>
             </div>
             <!-- Resizer for Lab Tech console -->
@@ -2317,7 +2317,7 @@ ARCHITECTURAL NOTES:
         
         <div class="hidden mb-4 text-sm text-gray-600">
           <ul class="list-disc list-inside space-y-1">
-            <li>Measure and enter L* values for each patch (e.g., using a device like the Color Muse 2).</li>
+            <li>Measure and enter L* values for each patch (e.g., using a device like the <a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Color Muse 2</a> or <a href="https://amzn.to/4msSLOv" target="_blank" rel="noopener">Nix Spectro L</a>).</li>
             <li>If your chart uses even steps (0, 5, 10 … 100%), leave <span class="font-medium">Patch %</span> as‑is.</li>
             <li>Edit <span class="font-medium">Patch %</span> for irregular spacing (more steps in the highlights / shadows).</li>
             <li>Target result is linear (L* 100 → 0) and linked to Patch %.</li>
@@ -2345,7 +2345,7 @@ ARCHITECTURAL NOTES:
 
         <div class="mb-4 text-sm text-gray-600">
           <ul class="list-disc list-inside space-y-1">
-            <li>Measure and enter L* values for each patch (e.g., using a device like the Color Muse 2).</li>
+            <li>Measure and enter L* values for each patch (e.g., using a device like the <a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Color Muse 2</a> or <a href="https://amzn.to/4msSLOv" target="_blank" rel="noopener">Nix Spectro L</a>).</li>
             <li>If your chart uses even steps (0, 5, 10 … 100%), leave <span class=\"font-medium\">Patch %</span> as‑is.</li>
             <li>Edit <span class=\"font-medium\">Patch %</span> for irregular spacing (more steps in the highlights / shadows).</li>
             <li>Target result is linear (L* 100 → 0) and linked to Patch %.</li>
@@ -2490,7 +2490,7 @@ ARCHITECTURAL NOTES:
             <li><span class="font-medium">White limit (left)</span>: adds a soft toe if the curve bunches near 0; preserves separation from 0→~knee.</li>
             <li><span class="font-medium">Scope</span>: local only — midtones are unchanged; applied after intent + corrections.</li>
             <li><span class="font-medium">Defaults</span>: Black limit ON, white limit OFF; 3% proximity threshold, C1-continuous, monotone knees that re-detect automatically on file/intent/limit changes.</li>
-            <li><span class="font-medium">Edit Mode</span>: Recompute bakes any visible knees into Smart points (undoable). Disable a checkbox to export without that rolloff.</li>
+            <li><span class="font-medium">Edit Mode</span>: Recompute bakes any visible knees into Smart key points (undoable). Disable a checkbox to export without that rolloff.</li>
           </ul>
           <div class="text-xs text-gray-600 mt-2">Debug notes: With <code>DEBUG_LOGS = true</code>, the console prints detected knee indices and before/after samples; dashed blue (black) / red (white) markers show knee positions on the chart while the respective Auto limit is on.</div>
         </div>
@@ -2543,18 +2543,18 @@ ARCHITECTURAL NOTES:
           <p class="font-medium">Calculate points</p>
           <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
             <li><strong>Max error %</strong>: Controls how closely the curve fits when generating points (lower = more points, tighter fit).</li>
-            <li><strong>Max points</strong>: Limits the maximum number of points generated (2-21).</li>
-            <li><strong>Recompute</strong>: Regenerates Smart curve points from the current curve using the Max error % and Max points settings.</li>
+            <li><strong>Max Key Points</strong>: Limits the maximum number of key points generated (2-21).</li>
+            <li><strong>Recompute</strong>: Regenerates Smart curve key points from the current curve using the Max error % and Max Key Points settings.</li>
           </ul>
         </div>
         <div>
-          <p class="font-medium">Point editing</p>
+          <p class="font-medium">Key Point editing</p>
           <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
             <li>Selected channel draws on top; others dim to 50%.</li>
-            <li>Only the selected channel shows key‑point markers and numbered labels.</li>
-            <li>Click the chart to insert a point at the curve under the cursor X.</li>
-            <li>Type "X,Y" in the field and press Enter to move the selected point (0–100).</li>
-            <li>Use ◀ ▶ to change the selected point; use △ ▽ ◁ ▷ or nudgers to adjust position.</li>
+            <li>Only the selected channel shows key point markers and numbered labels.</li>
+            <li>Click the chart to insert a key point at the curve under the cursor X.</li>
+            <li>Type "X,Y" in the field and press Enter to move the selected key point (0–100).</li>
+            <li>Use ◀ ▶ to change the selected key point; use △ ▽ ◁ ▷ or nudgers to adjust position.</li>
             <li>Undo/Redo supports all edit actions.</li>
           </ul>
         </div>
@@ -2648,16 +2648,18 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
 - Color Muse 2: handheld colorimeter used to capture LAB measurements from printed wedges/targets.
   - How to use with quadGEN: measure your printed wedge and export LAB data as `.txt`. In quadGEN, choose “Load LAB (.txt)” to import. The expected format is a GRAY column (0–100) and LAB L*,A*,B* columns. Tip: quadGEN can generate a `LAB-Data.txt` template with the correct header for Color Muse workflows. Most accurate consumer-level way to measure for calibration.
-  - Link: https://amzn.to/45R8rof (affiliate link)
+- Nix Spectro L: compact spectrophotometer with higher dynamic range for dark-process calibration.
+  - How to use with quadGEN: capture your step wedge with the Nix app, export LAB <code>.txt</code>, then import via “Load LAB (.txt)”. Supports denser plates and alternative processes with improved shadow readings. Product link: <a href="https://amzn.to/4msSLOv" target="_blank" rel="noopener">https://amzn.to/4msSLOv</a>.
+  - Link: https://amzn.to/45R8rof (product link)
 
 - Clay Harmon’s target file: 21-step target for calibration.
-  - How to use with quadGEN: print the target via with Print‑Tool using your current `.quad`. Measure the print (e.g., with Color Muse 2) and import the LAB `.txt` into quadGEN. Export the corrected `.quad`, then reprint and iterate until linear.
+  - How to use with quadGEN: print the target via with Print‑Tool using your current `.quad`. Measure the print (e.g., with Color Muse 2 or Nix Spectro L) and import the LAB `.txt` into quadGEN. Export the corrected `.quad`, then reprint and iterate until linear.
   - Link: https://clayharmonblog.com/downloads/25-step-ColorMuse-target.zip
   </script>
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta 2.5.2';
+    const APP_VERSION = 'Beta 2.5.3';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2748,6 +2750,24 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           DOCS: []
         },
         aboutDialog: []
+      },
+      'v2.5.3': {
+        date: '2025-09-19',
+        title: 'Glossary hardware refresh',
+        sections: {
+          ADDED: [
+            'Glossary now covers Colorimeters, Spectrophotometers, and the Epson P900, with direct links to recommended devices.'
+          ],
+          CHANGED: [],
+          FIXED: [],
+          REMOVED: [],
+          DOCS: [
+            'ReadMe and Help updated with Epson trademark notice plus Nix Spectro L guidance for spectrophotometer workflows.'
+          ]
+        },
+        aboutDialog: [
+          { label: 'Glossary/documentation', desc: 'Added more glossary entries, other documentation edits.' }
+        ]
       },
       'v2.5.2': {
         date: '2025-09-19',
@@ -10856,7 +10876,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       const maxPts = Math.max(2, Math.min(21, parseInt(elements.editMaxPoints?.value || String(KP_SIMPLIFY.maxPoints || 21), 10)));
       const res = quadGenActions.simplifySmartKeyPointsFromCurve(ch, { maxErrorPercent: maxError, maxPoints: maxPts });
       if (!res?.success){ showStatus(res?.message || 'Recompute failed'); return; }
-      showStatus(`Recomputed ${ch} key points (${maxPts} max, ${maxError}% max error)`);
+      showStatus(`Recomputed ${ch} Key Points (${maxPts} max, ${maxError}% max error)`);
       EDIT.selectedOrdinal = Math.min(EDIT.selectedOrdinal, (ControlPoints.get(ch)?.points?.length || 1));
       edit_refreshPointIndex();
       try { updateRevertButtonsState(); } catch (err) {}
@@ -10869,7 +10889,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       try {
         const kp = ControlPoints.get(ch)?.points || [];
         const n = kp.length || 0;
-        if (n <= 2) { showStatus('At least 2 points required — cannot delete.'); return; }
+        if (n <= 2) { showStatus('At least 2 Key Points required — cannot delete.'); return; }
         if (EDIT.selectedOrdinal === 1 || EDIT.selectedOrdinal === n) {
           showStatus('Endpoint deletion is blocked.');
           return;
@@ -10882,7 +10902,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         updateProcessingDetail(ch);
         updatePreview();
         edit_refreshPointIndex();
-        showStatus(`Deleted point on ${ch}`);
+        showStatus(`Deleted Key Point on ${ch}`);
       } catch (e) { showStatus(`Delete failed: ${e.message}`); }
     }
 
@@ -15955,6 +15975,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       
       const filename = linearizationData.filename || '';
       const format = linearizationData.format || '';
+      const filenameLower = filename.toLowerCase();
       
       // Check if data comes from Smart-generated curves (already smooth)
       const hasAICurves = window.loadedQuadData && window.loadedQuadData.curves;
@@ -15967,10 +15988,11 @@ DOMAIN_MAX 1.0 1.0 1.0
       }
       
       // Check for measurement data (needs proper smoothing)
-      const isMeasurementData = filename.includes('LAB') || 
-                               filename.includes('Color Muse') || 
-                               filename.includes('Manual-L') || 
-                               filename.includes('Sample Data');
+      const isMeasurementData = filenameLower.includes('lab') || 
+                               filenameLower.includes('color muse') || 
+                               filenameLower.includes('nix spectro') || 
+                               filenameLower.includes('manual-l') || 
+                               filenameLower.includes('sample data');
       
       if (isMeasurementData) {
       if (DEBUG_LOGS) console.log('DEBUG: Using selected method for global linearization (measurement data detected)');
@@ -15978,7 +16000,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       }
       
       // For pre-processed data (.cube, .acv), use selected method
-      const isPreprocessed = format === '1DLUT' || format === 'ACV' || filename.includes('.cube');
+      const isPreprocessed = format === '1DLUT' || format === 'ACV' || filenameLower.includes('.cube');
       if (isPreprocessed) {
       if (DEBUG_LOGS) console.log('DEBUG: Using selected method for global linearization (preprocessed data detected)');
         return selectedInterpolationType;
@@ -19673,7 +19695,8 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li>Anthropic Claude</li>
             <li>OpenAI ChatGPT / Codex</li>
             <li>Prints on Paper Studio — contrast intent definitions and feature references used with permission under <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GNU Public License</a>.</li>
-            <li>Trademarks: QuadToneRIP and Print‑Tool are property of Roy Harrington. Color Muse is a trademark of Variable, Inc. Easy Digital Negatives is a separate project. All product names, logos, and brands are property of their respective owners.</li>
+            <li>Easy Digital Negatives (EDN) — Copyright Peter Mrhar. EDN is a separate project for building correction LUTs for digital negatives.</li>
+            <li>Trademarks: Epson and SureColor are trademarks of Seiko Epson Corporation. QuadToneRIP and Print‑Tool are property of Roy Harrington. Color Muse is a trademark of Variable, Inc. Nix Spectro L is a trademark of Nix Sensor Ltd. All product names, logos, and brands are property of their respective owners.</li>
           </ul>
 
 
@@ -19685,6 +19708,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li><a href="https://www.quadtonerip.com/" target="_blank" rel="noopener">QuadToneRIP</a> – RIP software using <code>.quad</code> files. Install/export from quadGEN to QTR’s quad folder.</li>
             <li><a href="https://www.quadtonerip.com/html/QTRprinttool.html" target="_blank" rel="noopener">Print-Tool</a> – Utility for printing through QTR on macOS with color-management off.</li>
             <li><a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Color Muse 2</a> – Handheld colorimeter for LAB measurement. Exports <code>.txt</code> for import into quadGEN.</li>
+            <li><a href="https://amzn.to/4msSLOv" target="_blank" rel="noopener">Nix Spectro L</a> – Portable spectrophotometer with deeper shadow sensitivity; exports LAB data compatible with quadGEN.</li>
             <li><a href="https://clayharmonblog.com/downloads/25-step-ColorMuse-target.zip" target="_blank" rel="noopener">Clay Harmon’s 21-step target</a> – Printable target for iterative calibration.</li>
           </ul>
         </section>
@@ -19707,23 +19731,38 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <dt>ACV (Photoshop Curves)</dt>
             <dd>Binary curve format used by Adobe Photoshop (<code>.acv</code>). In quadGEN: can be loaded as a global correction or per-channel adapter; anchors can seed editable Smart curve.</dd>
 
+            <dt>Alternative process (Alt-process)</dt>
+            <dd>Historic or non-traditional photographic printing methods such as platinum/palladium, cyanotype, kallitype, polymer photogravure, and gum bichromate. These processes often use digital negatives created through QuadToneRIP workflows, requiring precise tonal calibration that quadGEN provides.</dd>
+
             <dt>Channel</dt>
             <dd>A printer ink channel (e.g., K, C, M, Y, LC, LM, LK, LLK, OR, GR, MK, V). Channels can be enabled/disabled and have independent End (ink limits).</dd>
 
-            <dt>Color Muse 2</dt>
+                        <dt>Colorimeter</dt>
+            <dd>Handheld device that measures color using filtered RGB sensors to approximate human vision. Fast and affordable for step wedges and general calibration. Example: <a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Color Muse 2</a>.</dd>
+
+<dt>Color Muse 2</dt>
             <dd><a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Handheld colorimeter</a> for measuring LAB values from printed wedges/targets. Exports <code>.txt</code> files compatible with quadGEN.</dd>
 
             <dt>Correction (curve)</dt>
             <dd>Mapping that adjusts output ink levels versus input to achieve a target response. In quadGEN, plotted as Y (output ink %) vs X (input %).</dd>
 
+            <dt>Density</dt>
+            <dd>Measure of how much light a material absorbs or blocks. In photography and printing, higher density means darker areas that block more light. quadGEN converts L* measurements to density values for linearization calculations, as density provides a more linear relationship with ink amounts than L* alone.</dd>
+
+            <dt>Digital Negative</dt>
+            <dd>A digitally created film negative used for alternative photographic processes like platinum/palladium printing, cyanotype, and silver gelatin contact printing. Created by inverting a positive digital image and printing it on transparent film with precise density control.</dd>
+
             <dt>EDN (Easy Digital Negatives)</dt>
-            <dd><a href="http://www.easydigitalnegatives.com/" target="_blank" rel="noopener">Workflow</a> to build correction LUTs for digital negatives. Export <code>.cube</code> LUTs from EDN for use as global/per-channel corrections in quadGEN.</dd>
+            <dd><a href="http://www.easydigitalnegatives.com/" target="_blank" rel="noopener">Workflow</a> created by Peter Mrhar to build correction LUTs for digital negatives. Export <code>.cube</code> LUTs from EDN for use as global/per-channel corrections in quadGEN.</dd>
 
             <dt>Edit Mode</dt>
             <dd>Gated state that enables key-point editing and shows overlays. Selected channel draws on top; unselected enabled channels dim.</dd>
 
             <dt>End (ink limit)</dt>
             <dd>Per-channel maximum ink level. Edits that require more ink can raise End when feasible; when End is effectively locked, edits that exceed it are blocked with status.</dd>
+
+            <dt>Epson Media Installer</dt>
+            <dd>Epson utility that downloads and installs ICC profiles and media settings for specific paper types on Epson printers. Provides paper thickness settings and media handling parameters needed for optimal print quality with third-party papers.</dd>
 
             <dt>Gaussian Weighted Correction</dt>
             <dd>LAB processing method that spreads each measurement's influence smoothly across inputs; reduces artifacts versus naive inversion techniques.</dd>
@@ -19740,6 +19779,9 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <dt>Image space</dt>
             <dd>Coordinate system where 0 represents black (shadow) and 100 represents white (highlight), matching how images are typically viewed and edited. Point (0,0) = black input produces black pixel output; point (100,100) = white input produces white pixel output. ACV files, LUTs, and most user input use image space conventions. quadGEN automatically converts image space data to printer space for internal processing and display.</dd>
 
+            <dt>Ink set</dt>
+            <dd>Collection of inks available in a printer, such as the standard CMYK inks or expanded sets like K, C, M, Y, LC, LM, LK, LLK for monochrome work. QuadToneRIP supports multi-shade ink sets that use multiple densities of the same color (e.g., Light Black, Light Light Black) for smoother tonal gradations.</dd>
+
             <dt>Input Level %</dt>
             <dd>X-axis value representing the input level (0–100%) in printer space; corresponds to the source tone step being mapped.</dd>
 
@@ -19755,11 +19797,17 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <dt>Key point</dt>
             <dd>An editable control point of a Smart Curve. Identified by ordinal (1-based). Insert/adjust/delete supported; endpoints often guarded. Coordinates are defined in printer space with the origin at (0,0), where X = input % (0–100) and Y = output ink % (0–100).</dd>
 
+            <dt>L* (L-star)</dt>
+            <dd>Lightness component of the LAB color space, ranging from 0 (pure black) to 100 (pure white). L* represents perceptual lightness as seen by human vision. In quadGEN workflows, L* measurements from printed step wedges are converted to density for linearization calculations.</dd>
+
             <dt>LAB data (<code>.txt</code>)</dt>
             <dd>Text file with measured L*, A*, B* (quadGEN expects GRAY and LAB columns). Used to compute or validate corrections.</dd>
 
+            <dt>LUT (Look-Up Table)</dt>
+            <dd>Data structure that maps input values to output values, used for color and tone transformations. quadGEN supports 1D and 3D <code>.cube</code> LUT files from tools like Easy Digital Negatives (EDN) and can extract neutral-axis corrections for linearization.</dd>
+
             <dt>Lab Tech</dt>
-            <dd>The built-in assistant that can answer questions and perform actions (when networked). Optional; core editing/export features work offline.</dd>
+            <dd>The built-in assistant in quadGEN that can answer questions and perform actions (when networked). Optional; core editing/export features work offline.</dd>
 
             <dt>Linearization</dt>
             <dd>Process of adjusting printer output so that equal input steps (e.g., 0–100%) produce perceptually equal changes in print density or L*. In quadGEN and QuadToneRIP, linearization involves measuring printed step wedges, comparing them to the ideal response, and generating correction curves that enforce a near-linear relationship between input values and visual tone.</dd>
@@ -19770,14 +19818,26 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <dt>Max error %</dt>
             <dd>Used for Smart curve Key point calculation. The largest deviation allowed from data file before a new Key point will be generated. Lower this number to create a tight fitting curve with more Key points. Raise this number to create a smoother curve with fewer Key points.</dd>
 
-            <dt>Max points</dt>
+            <dt>Max Key Points</dt>
             <dd>The upper limit on the number of Key points that quadGEN will generate when creating a Smart curve. Above this threshold, imported data (e.g., ACV/LUT/LAB) is simplified or interpolated to maintain performance and stability. Maximum is 25 points.</dd>
+
+            <dt>Monotonic</dt>
+            <dd>Property of a curve where values either never decrease (monotonic increasing) or never increase (monotonic decreasing) as you move along the X-axis. quadGEN enforces monotonic curves to ensure predictable printer behavior—no ink output reversals that could cause banding or unstable prints.</dd>
 
             <dt>Reference curve</dt>
             <dd>A fully linearized <code>.quad</code> kept as the authoritative baseline for a printer/process. Branch contrast variants from this reference (Apply Intent or upstream edits) while preserving the trusted linear response.</dd>
 
+            <dt>Open bite</dt>
+            <dd>Unwanted etching or surface marking in intaglio printmaking, such as polymer photogravure, caused by insufficient plate hardening. It occurs when too much exposure light is blocked, preventing the formation of proper ink-holding recesses. Often linked to ink limits set too high, requiring careful calibration to avoid.</dd>
+
             <dt>Output Ink Level %</dt>
             <dd>Y-axis value representing the ink output (0–100%) after applying the curve and current End; higher values mean more ink (darker).</dd>
+
+            <dt>Paper white</dt>
+            <dd>The lightest tone that a specific paper can produce—essentially the color and brightness of the unprinted paper surface. In quadGEN workflows, paper white serves as the reference point for determining minimum ink limits and calibrating highlight reproduction.</dd>
+
+            <dt>Patch</dt>
+            <dd>Individual tonal step within a step wedge or calibration target. Each patch represents a specific input percentage (e.g., 0%, 10%, 20%) and is measured separately to build the correction curve. A typical 21-step target contains 21 patches at 5% intervals.</dd>
 
             <dt>Printer space</dt>
             <dd>Coordinate system where 0 represents white (no ink) and 100 represents maximum ink (black), matching how printers actually operate. Point (0,0) = white input produces no ink output (white); point (100,100) = black input produces maximum ink output (black). This is quadGEN's native coordinate system for all internal processing, curve display, and .quad file generation. Input data from image space sources (ACV, LUT, custom intents) is automatically transformed to printer space.</dd>
@@ -19785,10 +19845,27 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <dt>Smart curve</dt>
             <dd>Adaptive curve model in quadGEN defined by editable key points and monotonic interpolation. Smart curves allow precise local edits while preserving smoothness and avoiding overshoot, enabling efficient linearization and correction workflows.</dd>
 
-            <dt>Target (21/25-step etc)</dt>
-            <dd>Printable step-wedge target used for iterative calibration. Measure the print (e.g., with Color Muse 2), import LAB <code>.txt</code>, refine, and reprint.</dd>
+            <dt>Step wedge</dt>
+            <dd>Test pattern with evenly spaced tonal steps from white to black, printed to measure printer response. Typically contains 10-25 patches at regular intervals (e.g., 0%, 10%, 20%...100%). After printing through QuadToneRIP, the wedge is measured with a colorimeter or spectrophotometer to generate LAB data for linearization in quadGEN. Often used interchangeably with "target."</dd>
 
-            <dt>PoPS (Prints on Paper Studio)</dt>
+            <dt>Target (21/25-step etc)</dt>
+            <dd>Printable step-wedge target used for iterative calibration. Measure the print (e.g., with Color Muse 2 or Nix Spectro L), import LAB <code>.txt</code>, refine, and reprint. Often used interchangeably with "step wedge."</dd>
+
+            <dt>Tone curve</dt>
+            <dd>Graph showing the relationship between input tonal values and output tonal values, controlling how light and dark areas are reproduced. In quadGEN, tone curves are displayed in printer space (X = input %, Y = output ink %) and can be linear (no change) or shaped for specific contrast intents.</dd>
+                        <dt>Spectrophotometer</dt>
+            <dd>Measures full spectral reflectance for precise LAB calculations and deep-shadow accuracy. Ideal for alternative processes and professional calibration. Example: <a href="https://amzn.to/4msSLOv" target="_blank" rel="noopener">Nix Spectro L</a>.</dd>
+
+<dt>Nix Spectro L</dt>
+            <dd>Compact spectrophotometer capable of low-L* readings. Capture LAB data with the Nix app and import the <code>.txt</code> file into quadGEN. Ideal for alternative and darkroom processes. <a href="https://amzn.to/4msSLOv" target="_blank" rel="noopener">Product link</a>.</dd>
+
+                        <dt>P900</dt>
+            <dd>Epson SureColor P900 17-inch photo printer (K,C,M,Y,LC,LM,LK,LLK,V,MK) often used for monochrome workflows with QuadToneRIP. <a href="https://amzn.to/42yGCQD" target="_blank" rel="noopener">Product link</a>.</dd>
+
+            <dt>PCHIP</dt>
+            <dd>Piecewise Cubic Hermite Interpolating Polynomial—a mathematical method for creating smooth curves between data points. Unlike other interpolation methods, PCHIP prevents overshooting and maintains monotonic behavior, making it ideal for photographic tone curves where predictable, artifact-free results are essential.</dd>
+
+<dt>PoPS (Prints on Paper Studio)</dt>
             <dd><a href="https://printsonpaper.studio/" target="_blank" rel="noopener">Collaborative printmaking studio</a> specializing in photogravure and digital pigment printing, offering artists a welcoming environment to create and edition fine art prints using innovative techniques. PoPS has developed contrast intent presets included in quadGEN for alternative photographic processes. Note: quadGEN is not affiliated with or part of Prints on Paper Studio.</dd>
 
             <dt>Print Tool</dt>
@@ -19797,11 +19874,14 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <dt>QuadToneRIP (QTR)</dt>
             <dd><a href="https://www.quadtonerip.com/" target="_blank" rel="noopener">Specialized RIP/driver</a> for Epson printers designed for high-quality monochrome printing with multi-shade ink sets. QTR uses <code>.quad</code> files to control how much ink each channel lays down across the 0–100% input range, enabling precise tonal calibration and alternative process workflows such as digital negatives.</dd>
 
+            <dt>RIP</dt>
+            <dd>Raster Image Processor—software that converts digital images into printer-specific instructions, controlling how ink is laid down on paper. RIPs like QuadToneRIP provide precise control over individual ink channels and support specialized workflows beyond standard printer drivers.</dd>
+
             <dt>Revert (to measurement)</dt>
             <dd>Buttons that return curves to the loaded measurement source for iteration. <strong>Per‑channel Revert</strong> clears Smart curves/points and re‑enables that channel’s measurement (enabled only when measurement data is loaded for that channel). <strong>Global Revert</strong> clears Smart curves/points across all channels and re‑enables the global measurement (enabled only when a global file is loaded and the global toggle is ON). Both actions are undoable.</dd>
 
             <dt>Recompute</dt>
-            <dd>Button in Edit Mode that regenerates Smart curve points for the selected channel from the currently plotted curve using the configured <em>Max error %</em> and <em>Max points</em> settings—useful for simplifying or refreshing an editable set from a loaded <code>.quad</code>.</dd>
+            <dd>Button in Edit Mode that regenerates Smart curve key points for the selected channel from the currently plotted curve using the configured <em>Max error %</em> and <em>Max Key Points</em> settings—useful for simplifying or refreshing an editable set from a loaded <code>.quad</code>.</dd>
           </dl>
         </section>
       `;
@@ -19835,7 +19915,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
           <ul>
             <li><a href="https://www.quadtonerip.com/" target="_blank" rel="noopener">QuadToneRIP</a> installed; know where your printer’s “quad” folder is.</li>
             <li>Ability to print a step wedge/target via QTR (Print-Tool on macOS recommended).</li>
-            <li>Optional (but recommended): <a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Color Muse 2</a> or equivalent to capture LAB L*.</li>
+            <li>Optional (but recommended): <a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Color Muse 2</a> or <a href="https://amzn.to/4msSLOv" target="_blank" rel="noopener">Nix Spectro L</a> to capture LAB L*.</li>
           </ul>
           <h3>1) Choose Printer</h3>
           <ul>
@@ -19876,7 +19956,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
               <ol>
                 <li><strong>Set patch count</strong>: choose the number of patches/steps to match your printed target.</li>
                 <li><strong>Enter Patch % (X)</strong>: if your target is not evenly spaced, type the input position for each row (0–100). If evenly spaced, keep the defaults.</li>
-                <li><strong>Measure and enter L*</strong>: measure each printed patch with your device and enter L* (0–100) in the matching row.</li>
+                <li><strong>Measure and enter L*</strong>: measure each printed patch with your device (e.g., <a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Color Muse 2</a> or <a href="https://amzn.to/4msSLOv" target="_blank" rel="noopener">Nix Spectro L</a>) and enter L* (0–100) in the matching row.</li>
                 <li><strong>Apply or save</strong>: click “Generate Correction” to apply immediately, or “Save as .txt” to export the entries for later reuse.</li>
               </ol>
             </li>
@@ -19916,7 +19996,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li>Selected channel draws on top; others dim.</li>
             <li>Use:</li>
             <ul>
-              <li><strong>Recompute</strong>: regenerate Smart curve points from the plotted curve using Max error % and Max points.</li>
+              <li><strong>Recompute</strong>: regenerate Smart curve key points from the plotted curve using Max error % and Max Key Points.</li>
               <li><strong>XY input</strong>: type <code>X,Y</code> (Y is absolute after End). Up/Down adjusts absolute Y; Left/Right adjusts X.</li>
               <li><strong>Insert/Delete</strong>: click to insert; delete non‑endpoints only.</li>
             </ul>
@@ -19945,6 +20025,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li><a href="https://www.quadtonerip.com/html/QTRoverview.html" target="_blank" rel="noopener">QTR Overview</a></li>
             <li><a href="https://www.quadtonerip.com/html/QTRprinttool.html" target="_blank" rel="noopener">Print‑Tool (macOS)</a></li>
             <li><a href="https://amzn.to/45R8rof" target="_blank" rel="noopener">Color Muse 2</a></li>
+            <li><a href="https://amzn.to/4msSLOv" target="_blank" rel="noopener">Nix Spectro L</a></li>
           </ul>
         </section>
       `;
