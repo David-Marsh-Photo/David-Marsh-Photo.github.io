@@ -1848,6 +1848,48 @@ ARCHITECTURAL NOTES:
                 <button id="chartZoomInBtn" type="button" class="chart-zoom-btn" title="Zoom in (magnify ink range)">+</button>
               </div>
 
+              <div id="autoLimitDebugPanel" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-xs space-y-3 hidden" aria-hidden="true">
+                <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                  <h3 class="text-sm font-semibold text-gray-700">Auto Endpoint Debug</h3>
+                  <p class="text-[11px] text-gray-500">Leave fields blank to use defaults.</p>
+                </div>
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <label class="flex flex-col gap-1">
+                    <span class="font-medium text-gray-700">Limit proximity (%)</span>
+                    <input id="autoLimitInputLimitProximity" type="number" min="0" max="100" step="0.1" class="rounded border border-gray-300 px-2 py-1" />
+                  </label>
+                  <label class="flex flex-col gap-1">
+                    <span class="font-medium text-gray-700">Slope threshold (% of End per sample)</span>
+                    <input id="autoLimitInputSlopeFactor" type="number" min="0" max="20" step="0.05" class="rounded border border-gray-300 px-2 py-1" />
+                  </label>
+                  <label class="flex flex-col gap-1">
+                    <span class="font-medium text-gray-700">Sustain samples</span>
+                    <input id="autoLimitInputSustain" type="number" min="1" max="64" step="1" class="rounded border border-gray-300 px-2 py-1" />
+                  </label>
+                  <label class="flex flex-col gap-1">
+                    <span class="font-medium text-gray-700">Minimum width (% of curve)</span>
+                    <input id="autoLimitInputMinWidth" type="number" min="0" max="50" step="0.5" class="rounded border border-gray-300 px-2 py-1" />
+                  </label>
+                  <label class="flex flex-col gap-1">
+                    <span class="font-medium text-gray-700">Black shoulder scan start (% of curve)</span>
+                    <input id="autoLimitInputBlackShoulder" type="number" min="0" max="99" step="0.5" class="rounded border border-gray-300 px-2 py-1" />
+                  </label>
+                  <label class="flex flex-col gap-1">
+                    <span class="font-medium text-gray-700">White toe scan end (% of curve)</span>
+                    <input id="autoLimitInputWhiteToe" type="number" min="1" max="50" step="0.5" class="rounded border border-gray-300 px-2 py-1" />
+                  </label>
+                  <label class="flex flex-col gap-1">
+                    <span class="font-medium text-gray-700">Fallback plateau (% of curve)</span>
+                    <input id="autoLimitInputFallback" type="number" min="1" max="50" step="0.5" class="rounded border border-gray-300 px-2 py-1" />
+                  </label>
+                </div>
+                <div class="flex flex-wrap gap-2 text-xs">
+                  <button id="autoLimitApplyBtn" type="button" class="rounded bg-blue-600 px-3 py-1 font-semibold text-white hover:bg-blue-700">Apply overrides &amp; replot</button>
+                  <button id="autoLimitRecalcBtn" type="button" class="rounded border border-gray-300 px-3 py-1 font-semibold text-gray-700 hover:bg-gray-100">Replot with current settings</button>
+                  <button id="autoLimitResetBtn" type="button" class="rounded border border-gray-300 px-3 py-1 font-semibold text-gray-700 hover:bg-gray-100">Reset to defaults</button>
+                </div>
+              </div>
+
               <!-- (Removed) Smoothing Note -->
             </div>
             <!-- Cursor tooltip for X,Y coordinates over the graph -->
@@ -1984,7 +2026,7 @@ ARCHITECTURAL NOTES:
             </div>
             <div class="flex items-center gap-2 mb-1">
               <button id="globalLinearizationBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold whitespace-nowrap shrink-0 inline-flex items-center" data-tooltip="Load LUT.cube, LABdata.txt, or .acv curve files">Load Data File</button>
-              <input type="file" id="linearizationFile" accept=".cube,.txt,.acv" class="hidden">
+              <input type="file" id="linearizationFile" accept=".cube,.txt,.cgats,.cgats17,.ti3,.acv" class="hidden">
               <button id="manualLstarBtn" class="px-3 py-2 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors font-bold whitespace-nowrap shrink-0 inline-flex items-center">
                 Enter L* Values
               </button>
@@ -2002,7 +2044,7 @@ ARCHITECTURAL NOTES:
               </span>
             </div>
             <!-- Auto endpoint rolloff controls -->
-            <div class="mt-2 flex items-center gap-3 text-xs text-gray-600">
+            <div class="mt-2 flex items-center gap-3 text-xs text-gray-600 hidden" aria-hidden="true">
               <span class="font-bold" title="Detect early plateau at the ends and apply a soft shoulder/toe so the curve reaches the ink limit exactly at 100% without flattening.">Auto limits</span>
               <label for="autoWhiteLimitToggle" class="inline-flex items-center gap-1" title="Enable automatic white-shoulder rolloff near paper white.">
                 <input type="checkbox" id="autoWhiteLimitToggle" class="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
@@ -2484,15 +2526,8 @@ ARCHITECTURAL NOTES:
         </div>
         <div>
           <p class="font-medium text-lg mb-2">Auto endpoint rolloff</p>
-          <p class="text-sm text-gray-600 mb-1">When a non-linear intent + correction pushes the curve against the ink limit early, the last steps can “flat-top” (no separation). Use the Auto limits checkboxes to apply a smooth shoulder (black) or toe (white) so the curve reaches the limit exactly at the endpoint with slope 0.</p>
-          <ul class="list-disc list-inside text-sm text-gray-600">
-            <li><span class="font-medium">Black limit (right)</span>: adds a soft shoulder when the curve plateaus near the max ink (End); preserves separation from ~knee→100%.</li>
-            <li><span class="font-medium">White limit (left)</span>: adds a soft toe if the curve bunches near 0; preserves separation from 0→~knee.</li>
-            <li><span class="font-medium">Scope</span>: local only — midtones are unchanged; applied after intent + corrections.</li>
-            <li><span class="font-medium">Defaults</span>: Black limit ON, white limit OFF; 3% proximity threshold, C1-continuous, monotone knees that re-detect automatically on file/intent/limit changes.</li>
-            <li><span class="font-medium">Edit Mode</span>: Recompute bakes any visible knees into Smart key points (undoable). Disable a checkbox to export without that rolloff.</li>
-          </ul>
-          <div class="text-xs text-gray-600 mt-2">Debug notes: With <code>DEBUG_LOGS = true</code>, the console prints detected knee indices and before/after samples; dashed blue (black) / red (white) markers show knee positions on the chart while the respective Auto limit is on.</div>
+          <p class="text-sm text-gray-600 mb-1">Temporarily disabled while we retune the shoulder/toe detector. Existing projects keep previously baked knees, but quadGEN will not generate new auto rolloff adjustments until the retune ships.</p>
+          <div class="text-xs text-gray-600 mt-2">Historical behavior (for reference only): the black limit added a soft shoulder near End, and the white limit added a soft toe near 0. Those localized knees will return once the detector is dialed back in.</div>
         </div>
         <div>
           <p class="font-medium text-lg mb-2">Sample Data</p>
@@ -2659,7 +2694,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta 2.5.3';
+    const APP_VERSION = 'Beta 2.6.0';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2731,6 +2766,100 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
     };
     LAB_TUNING.setOverrides({ K_NEIGHBORS: 2, SIGMA_FLOOR: 0.036, SIGMA_CEIL: 0.15, SIGMA_ALPHA: 2.0 });
 
+    const AUTO_LIMIT_DEFAULTS = Object.freeze({
+      limitProximityPct: 3,
+      // Tuned for easier white-toe detection on long zero plateaus
+      slopeAbsolutePct: 0.45,
+      sustainSamples: 3,
+      minWidthPct: 8,
+      blackShoulderScanStartPct: 80,
+      whiteToeScanEndPct: 22,
+      fallbackPlateauPct: 3
+    });
+
+    const AUTO_LIMITS_ENABLED = false; // Temporarily disable auto white/black limit rolloff UI + logic
+
+    const AUTO_LIMIT_CONFIG = {
+      overrides: null,
+      getDefault(key) {
+        return AUTO_LIMIT_DEFAULTS[key];
+      },
+      getNumber(key) {
+        const value = this.overrides && this.overrides[key];
+        return Number.isFinite(value) ? value : AUTO_LIMIT_DEFAULTS[key];
+      },
+      setOverrides(raw) {
+        if (!raw || typeof raw !== 'object') {
+          this.overrides = null;
+          return;
+        }
+        const sanitized = {};
+        const clampPercent = (num, min = 0, max = 100) => Math.min(max, Math.max(min, num));
+
+        const allKeys = Object.keys(AUTO_LIMIT_DEFAULTS);
+        // Accept legacy keys for backwards compatibility
+        const legacyMap = {
+          whiteScanStartPct: 'blackShoulderScanStartPct',
+          blackScanEndPct: 'whiteToeScanEndPct'
+        };
+
+        [...allKeys, ...Object.keys(legacyMap)].forEach((key) => {
+          const targetKey = legacyMap[key] || key;
+          const rawValue = raw[key];
+          if (rawValue === undefined || rawValue === null || rawValue === '') return;
+          let num = Number(rawValue);
+          if (!Number.isFinite(num)) return;
+          switch (targetKey) {
+            case 'limitProximityPct':
+              num = clampPercent(num, 0.5, 20);
+              break;
+            case 'slopeAbsolutePct':
+              num = clampPercent(num, 0.01, 20);
+              break;
+            case 'sustainSamples':
+              num = Math.round(Math.min(64, Math.max(1, num)));
+              break;
+            case 'minWidthPct':
+              num = clampPercent(num, 1, 50);
+              break;
+            case 'blackShoulderScanStartPct':
+              num = clampPercent(num, 0, 99);
+              break;
+            case 'whiteToeScanEndPct':
+              num = clampPercent(num, 1, 50);
+              break;
+            case 'fallbackPlateauPct':
+              num = clampPercent(num, 1, 50);
+              break;
+            default:
+              break;
+          }
+          sanitized[targetKey] = num;
+        });
+        this.overrides = Object.keys(sanitized).length ? sanitized : null;
+      },
+      clearOverrides() {
+        this.overrides = null;
+      },
+      exportOverrides() {
+        return this.overrides ? { ...this.overrides } : null;
+      },
+      getCurrentValues() {
+        const values = {};
+        Object.keys(AUTO_LIMIT_DEFAULTS).forEach((key) => {
+          values[key] = this.getNumber(key);
+        });
+        return values;
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.AUTO_LIMIT_CONFIG = AUTO_LIMIT_CONFIG;
+    }
+    if (typeof globalThis !== 'undefined') {
+      globalThis.AUTO_LIMIT_CONFIG = AUTO_LIMIT_CONFIG;
+    }
+
 
 
     let tuningRestoreState = null;
@@ -2750,6 +2879,29 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           DOCS: []
         },
         aboutDialog: []
+      },
+      'Beta 2.6.0': {
+        date: '2025-09-20',
+        title: 'CGATS parity + rolloff pause',
+        sections: {
+          ADDED: [
+            'Recognized Argyll CTI3 (.ti3) measurement files alongside CGATS.17 for LAB linearization imports.'
+          ],
+          CHANGED: [
+            'Standardized all user-facing terminology to say “Key Point” across labels, tooltips, and status messages.',
+            'Auto white/black limit rolloff controls are temporarily hidden while we retune the detector; no automatic knees apply in this build.'
+          ],
+          FIXED: [
+            'CGATS.17 importer now treats CMY values within ±2.5% as neutral, keeping K-only ramps aligned with their LAB counterparts.'
+          ],
+          REMOVED: [],
+          DOCS: []
+        },
+        aboutDialog: [
+          { label: 'CGATS.17 Support', desc: 'Import CGATS.17 grayscale measurement sets natively for LAB linearization.' },
+          { label: 'Argyll CTI3', desc: 'Load Argyll-style .ti3 files directly—handled with the same parser and parity checks as CGATS.17.' },
+          { label: 'Auto Rolloff', desc: 'White/black auto limit knees are offline for now; curves export exactly as plotted.' }
+        ]
       },
       'v2.5.3': {
         date: '2025-09-19',
@@ -2849,6 +3001,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             '“Apply to Loaded Curve” button lets you bake the active intent into a loaded .quad without re-running LAB corrections.'
           ],
           CHANGED: [
+            'Auto white/black limit rolloff controls are temporarily hidden and no longer apply knees while we retune the detector for consistency.',
             'Measurement rebuild now defaults to POPS-style smoothing (PCHIP with 30% primary + 1×30% post) and LAB bandwidth overrides (K=2, σ_floor=0.036, σ_ceil=0.15, σ_alpha=2.0).',
             'DataSpace now owns every image→printer conversion; loaders tag missing sourceSpace metadata and make256 helpers were split out for clarity.',
             'Undo/redo shares a single timeline so intent swaps, channel edits, and history snapshots stay in sync.',
@@ -2869,6 +3022,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           ]
         },
         aboutDialog: [
+          { label: 'Auto Rolloff Hidden', desc: 'White/black auto limit toggles are offline while we recalibrate the detector.' },
           { label: 'Printer-space Pipeline', desc: 'DataSpace now owns every conversion and the new fixtures/tests catch double-flip regressions early.' },
           { label: 'POPS Smoothing Defaults', desc: '30% primary + 30% post smoothing with LAB bandwidth overrides keep LAB rebuilds print-ready out of the box.' },
           { label: 'Intent Remap', desc: 'Use Apply to Loaded Curve to bake the selected intent into a linearized .quad—no external LUT required. Intent previews now render as soon as you pick a preset.' }
@@ -5022,9 +5176,12 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       /** Toggle the Auto white limit rolloff checkbox */
       setAutoWhiteLimit(enabled) {
         try {
+          if (!AUTO_LIMITS_ENABLED) {
+            return { success: false, message: 'Auto limit controls are disabled in this build' };
+          }
           const toggle = elements.autoWhiteLimitToggle;
           if (!toggle) {
-            return { success: false, message: 'Auto white limit toggle not available in this build' };
+            return { success: false, message: 'Auto limit controls are disabled in this build' };
           }
           const desired = !!enabled;
           toggle.checked = desired;
@@ -5038,9 +5195,12 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       /** Toggle the Auto black limit rolloff checkbox */
       setAutoBlackLimit(enabled) {
         try {
+          if (!AUTO_LIMITS_ENABLED) {
+            return { success: false, message: 'Auto limit controls are disabled in this build' };
+          }
           const toggle = elements.autoBlackLimitToggle;
           if (!toggle) {
-            return { success: false, message: 'Auto black limit toggle not available in this build' };
+            return { success: false, message: 'Auto limit controls are disabled in this build' };
           }
           const desired = !!enabled;
           toggle.checked = desired;
@@ -6178,8 +6338,8 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
             if (res && res.success && linearizationApplied && linearizationData) {
               if (!window.loadedQuadData) window.loadedQuadData = {};
               if (!window.loadedQuadData.keyPointsMeta) window.loadedQuadData.keyPointsMeta = {};
-              const autoWhiteOn = !!(elements?.autoWhiteLimitToggle?.checked);
-              const autoBlackOn = !!(elements?.autoBlackLimitToggle?.checked);
+              const autoWhiteOn = AUTO_LIMITS_ENABLED && !!(elements?.autoWhiteLimitToggle?.checked);
+              const autoBlackOn = AUTO_LIMITS_ENABLED && !!(elements?.autoBlackLimitToggle?.checked);
               window.loadedQuadData.keyPointsMeta[channelName] = {
                 ...(window.loadedQuadData.keyPointsMeta[channelName] || {}),
                 bakedGlobal: true,
@@ -7333,13 +7493,13 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       },
       {
         name: "set_auto_white_limit",
-        description: "Enable or disable the Auto white limit rolloff (toe near paper white).",
+        description: "(Temporarily disabled) Previously toggled the Auto white limit rolloff (toe near paper white).",
         parameters: {
           type: "object",
           properties: {
             enabled: {
               type: "boolean",
-              description: "true to enable the Auto white limit rolloff; false to disable"
+              description: "No effect in this build; auto white limit is disabled."
             }
           },
           required: ["enabled"]
@@ -7347,13 +7507,13 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       },
       {
         name: "set_auto_black_limit",
-        description: "Enable or disable the Auto black limit rolloff (shoulder near max ink).",
+        description: "(Temporarily disabled) Previously toggled the Auto black limit rolloff (shoulder near max ink).",
         parameters: {
           type: "object",
           properties: {
             enabled: {
               type: "boolean",
-              description: "true to enable the Auto black limit rolloff; false to disable"
+              description: "No effect in this build; auto black limit is disabled."
             }
           },
           required: ["enabled"]
@@ -9253,6 +9413,17 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       globalLinearizationToggle: document.getElementById('globalLinearizationToggle'),
       autoWhiteLimitToggle: document.getElementById('autoWhiteLimitToggle'),
       autoBlackLimitToggle: document.getElementById('autoBlackLimitToggle'),
+      autoLimitDebugPanel: document.getElementById('autoLimitDebugPanel'),
+      autoLimitInputLimitProximity: document.getElementById('autoLimitInputLimitProximity'),
+      autoLimitInputSlopeFactor: document.getElementById('autoLimitInputSlopeFactor'),
+      autoLimitInputSustain: document.getElementById('autoLimitInputSustain'),
+      autoLimitInputMinWidth: document.getElementById('autoLimitInputMinWidth'),
+      autoLimitInputBlackShoulder: document.getElementById('autoLimitInputBlackShoulder'),
+      autoLimitInputWhiteToe: document.getElementById('autoLimitInputWhiteToe'),
+      autoLimitInputFallback: document.getElementById('autoLimitInputFallback'),
+      autoLimitApplyBtn: document.getElementById('autoLimitApplyBtn'),
+      autoLimitRecalcBtn: document.getElementById('autoLimitRecalcBtn'),
+      autoLimitResetBtn: document.getElementById('autoLimitResetBtn'),
       curveSmoothingMethod: document.getElementById('curveSmoothingMethod'),
       catmullTension: document.getElementById('catmullTension'),
       catmullTensionContainer: document.getElementById('catmullTensionContainer'),
@@ -11079,6 +11250,68 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
       }, 6000);
     }
+
+    function gatherAutoLimitOverridesFromInputs() {
+      const overrides = {};
+      const pairs = [
+        ['limitProximityPct', elements.autoLimitInputLimitProximity],
+        ['slopeAbsolutePct', elements.autoLimitInputSlopeFactor],
+        ['sustainSamples', elements.autoLimitInputSustain],
+        ['minWidthPct', elements.autoLimitInputMinWidth],
+        ['blackShoulderScanStartPct', elements.autoLimitInputBlackShoulder],
+        ['whiteToeScanEndPct', elements.autoLimitInputWhiteToe],
+        ['fallbackPlateauPct', elements.autoLimitInputFallback]
+      ];
+
+      pairs.forEach(([key, input]) => {
+        if (!input) return;
+        const raw = String(input.value || '').trim();
+        if (!raw) return;
+        const num = Number(raw);
+        if (Number.isFinite(num)) overrides[key] = num;
+      });
+
+      return overrides;
+    }
+
+    function populateAutoLimitDebugInputs() {
+      if (!AUTO_LIMITS_ENABLED) return;
+      if (!elements.autoLimitDebugPanel) return;
+      const overrides = AUTO_LIMIT_CONFIG.exportOverrides();
+
+      const assign = (input, key) => {
+        if (!input) return;
+        const def = AUTO_LIMIT_CONFIG.getDefault(key);
+        input.placeholder = String(def);
+        if (overrides && overrides[key] !== undefined) {
+          input.value = overrides[key];
+        } else {
+          input.value = '';
+        }
+      };
+
+      assign(elements.autoLimitInputLimitProximity, 'limitProximityPct');
+      assign(elements.autoLimitInputSlopeFactor, 'slopeAbsolutePct');
+      assign(elements.autoLimitInputSustain, 'sustainSamples');
+      assign(elements.autoLimitInputMinWidth, 'minWidthPct');
+      assign(elements.autoLimitInputBlackShoulder, 'blackShoulderScanStartPct');
+      assign(elements.autoLimitInputWhiteToe, 'whiteToeScanEndPct');
+      assign(elements.autoLimitInputFallback, 'fallbackPlateauPct');
+    }
+
+    function runAutoLimitRecalc() {
+      if (!AUTO_LIMITS_ENABLED) return;
+      try {
+        updatePreview();
+      } catch (err) {
+        console.error('Auto limit preview update failed:', err);
+      }
+      try {
+        updateInkChart();
+      } catch (err) {
+        console.error('Auto limit chart update failed:', err);
+      }
+    }
     
     function animateLogoBars() {
       const cyanBar = document.getElementById('cyanBar');
@@ -11245,17 +11478,19 @@ DOMAIN_MAX 1.0 1.0 1.0
       }
 
       // Auto endpoint rolloff annotation (if enabled and detected)
-      try {
-        const autoWhiteOn = !!elements?.autoWhiteLimitToggle?.checked;
-        const autoBlackOn = !!elements?.autoBlackLimitToggle?.checked;
-        if ((autoWhiteOn || autoBlackOn) && window._autoLimitState && window._autoLimitState[channelName]) {
-          const meta = window._autoLimitState[channelName];
-          const parts = [];
-          if (autoBlackOn && meta.black && isFinite(meta.black.widthPercent)) parts.push(`B ${meta.black.widthPercent.toFixed(1)}%`);
-          if (autoWhiteOn && meta.white && isFinite(meta.white.widthPercent)) parts.push(`W ${meta.white.widthPercent.toFixed(1)}%`);
-          if (parts.length) segmentsApplied.push(`Auto limit: ${parts.join(', ')}`);
-        }
-      } catch (err) {}
+      if (AUTO_LIMITS_ENABLED) {
+        try {
+          const autoWhiteOn = !!elements?.autoWhiteLimitToggle?.checked;
+          const autoBlackOn = !!elements?.autoBlackLimitToggle?.checked;
+          if ((autoWhiteOn || autoBlackOn) && window._autoLimitState && window._autoLimitState[channelName]) {
+            const meta = window._autoLimitState[channelName];
+            const parts = [];
+            if (autoBlackOn && meta.black && isFinite(meta.black.widthPercent)) parts.push(`B ${meta.black.widthPercent.toFixed(1)}%`);
+            if (autoWhiteOn && meta.white && isFinite(meta.white.widthPercent)) parts.push(`W ${meta.white.widthPercent.toFixed(1)}%`);
+            if (parts.length) segmentsApplied.push(`Auto limit: ${parts.join(', ')}`);
+          }
+        } catch (err) {}
+      }
 
       // Build display text; show each applied segment on a new line.
       if (segmentsApplied.length === 0) {
@@ -12016,29 +12251,31 @@ DOMAIN_MAX 1.0 1.0 1.0
       ctx.globalAlpha = 1.0; // reset
 
       // Auto endpoint rolloff markers (debug overlay)
-      try {
-        const autoWhiteOn = !!elements?.autoWhiteLimitToggle?.checked;
-        const autoBlackOn = !!elements?.autoBlackLimitToggle?.checked;
-        if ((autoWhiteOn || autoBlackOn) && window._autoLimitState && window._autoLimitState[channelName]) {
-          const meta = window._autoLimitState[channelName];
-          const drawMarker = (idx, color) => {
-            const x = leftPadding + (idx / (values.length - 1)) * chartWidth;
-            ctx.save();
-            ctx.strokeStyle = color;
-            ctx.setLineDash([6, 3]);
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(x, padding);
-            ctx.lineTo(x, height - padding);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.restore();
-          };
-          // Marker colors: blue = black end (right/knee start), red = white end (left/knee end)
-          if (autoBlackOn && meta.black && isFinite(meta.black.startIndex)) drawMarker(meta.black.startIndex, '#3b82f6');
-          if (autoWhiteOn && meta.white && isFinite(meta.white.endIndex)) drawMarker(meta.white.endIndex, '#ef4444');
-        }
-      } catch (err) {}
+      if (AUTO_LIMITS_ENABLED) {
+        try {
+          const autoWhiteOn = !!elements?.autoWhiteLimitToggle?.checked;
+          const autoBlackOn = !!elements?.autoBlackLimitToggle?.checked;
+          if ((autoWhiteOn || autoBlackOn) && window._autoLimitState && window._autoLimitState[channelName]) {
+            const meta = window._autoLimitState[channelName];
+            const drawMarker = (idx, color) => {
+              const x = leftPadding + (idx / (values.length - 1)) * chartWidth;
+              ctx.save();
+              ctx.strokeStyle = color;
+              ctx.setLineDash([6, 3]);
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.moveTo(x, padding);
+              ctx.lineTo(x, height - padding);
+              ctx.stroke();
+              ctx.setLineDash([]);
+              ctx.restore();
+            };
+            // Marker colors: blue = black end (right/knee start), red = white end (left/knee end)
+            if (autoBlackOn && meta.black && isFinite(meta.black.startIndex)) drawMarker(meta.black.startIndex, '#3b82f6');
+            if (autoWhiteOn && meta.white && isFinite(meta.white.endIndex)) drawMarker(meta.white.endIndex, '#ef4444');
+          }
+        } catch (err) {}
+      }
         
         // Lightweight overlay: key points visibility follows Edit Mode
         // Prefer explicit AI key points when available; otherwise show adapter overlays (ACV/LUT/LAB)
@@ -14627,7 +14864,7 @@ DOMAIN_MAX 1.0 1.0 1.0
 
     function applyLinearizationExtras(target, source) {
       if (!target || !source) return target;
-      const copyKeys = ['filename', 'edited', 'conversionMeta', 'sourceSpace', 'format', 'originalSamples', 'controlPointsTransformed', 'lutSize', 'domainMin', 'domainMax', 'is3DLUT', 'neutralAxisSamples'];
+      const copyKeys = ['filename', 'edited', 'conversionMeta', 'sourceSpace', 'format', 'originalSamples', 'controlPointsTransformed', 'lutSize', 'domainMin', 'domainMax', 'is3DLUT', 'neutralAxisSamples', 'measurementSet', 'rawCgatsText'];
       copyKeys.forEach(key => {
         if (source[key] !== undefined) {
           target[key] = cloneWithoutFunctions(source[key]);
@@ -15275,6 +15512,664 @@ DOMAIN_MAX 1.0 1.0 1.0
       const Y = lstarToY_CIE(L);
       return -log10_safe(Y);
     }
+    function tokenizeCgatsLine(line) {
+      const tokens = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+
+        if (ch === '"') {
+          inQuotes = !inQuotes;
+          continue;
+        }
+
+        if (!inQuotes && (ch === '#' || ch === ';')) {
+          // Inline comments terminate the meaningful portion of the line
+          if (current) tokens.push(current);
+          return tokens;
+        }
+
+        if (!inQuotes && /\s/.test(ch)) {
+          if (current) {
+            tokens.push(current);
+            current = '';
+          }
+        } else {
+          current += ch;
+        }
+      }
+
+      if (current) tokens.push(current);
+      return tokens;
+    }
+
+    function parseCgatsNumber(token) {
+      if (token === undefined || token === null || token === '') return NaN;
+      const cleaned = token.replace(/,/g, '');
+      const value = parseFloat(cleaned);
+      return Number.isFinite(value) ? value : NaN;
+    }
+
+    /**
+     * Parse a CGATS.17 color measurement file and extract monochrome data
+     * Expected format: CGATS.17 with CMYK input and LAB output data
+     * Extracts K-only progressions (C=M=Y=0) or composite grayscale data
+     * Returns { domainMin: 0, domainMax: 1, samples, format: 'CGATS.17' }
+     */
+
+    function parseCGATS17(fileContent, filename) {
+      const lines = fileContent.split(/\r?\n/);
+      const CHANNEL_ZERO_TOLERANCE = 2.5;
+      const normalizeChannelValue = (value) => {
+        if (!Number.isFinite(value)) return 0;
+        return Math.abs(value) <= CHANNEL_ZERO_TOLERANCE ? 0 : value;
+      };
+      const clampPercent = (value) => {
+        if (!Number.isFinite(value)) return 0;
+        if (value < 0) return 0;
+        if (value > 100) return 100;
+        return value;
+      };
+      let inDataFormat = false;
+      let inData = false;
+      const formatFields = [];
+      const headerValues = {};
+      const spectralColumns = [];
+      let spectralColumnsSorted = [];
+      let declaredFieldCount = null;
+      let declaredSetCount = null;
+      const dataPoints = [];
+      const measurementPatches = [];
+
+      const normalizeKey = (key) => (key || '').trim().toUpperCase();
+      const headerValueFromTokens = (tokens) => tokens.slice(1).join(' ').trim();
+      const stringOrNull = (value) => {
+        if (value === undefined || value === null) return null;
+        const str = String(value).trim();
+        return str.length ? str : null;
+      };
+      const spectralNmFromField = (canonical) => {
+        if (!canonical) return null;
+        const stripped = canonical.replace(/[^A-Z0-9]/g, '');
+        const match = stripped.match(/(?:SPEC|SPECTRAL|NM)(\d{3})$/);
+        if (!match) return null;
+        const nm = parseInt(match[1], 10);
+        return Number.isFinite(nm) ? nm : null;
+      };
+      const pushFormatField = (name) => {
+        const canonical = normalizeKey(name);
+        const fieldIndex = formatFields.length;
+        formatFields.push({ name, canonical, index: fieldIndex });
+        const nm = spectralNmFromField(canonical);
+        if (nm !== null) {
+          spectralColumns.push({ name, canonical, index: fieldIndex, nm });
+        }
+      };
+      const pickHeader = (...keys) => {
+        for (const key of keys) {
+          if (headerValues[key] !== undefined && headerValues[key] !== '') {
+            return headerValues[key];
+          }
+        }
+        return null;
+      };
+
+      let rowCounter = 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        const rawLine = lines[i];
+        if (!rawLine) continue;
+        const tokens = tokenizeCgatsLine(rawLine);
+        if (!tokens.length) continue;
+        const keyword = normalizeKey(tokens[0]);
+
+        if (keyword === 'CGATS.17' || keyword === 'CTI3') {
+          continue;
+        }
+        if (keyword === 'BEGIN_DATA_FORMAT') {
+          inDataFormat = true;
+          continue;
+        }
+        if (keyword === 'END_DATA_FORMAT') {
+          inDataFormat = false;
+          spectralColumnsSorted = spectralColumns.slice().sort((a, b) => a.nm - b.nm || a.index - b.index);
+          continue;
+        }
+        if (keyword === 'BEGIN_DATA') {
+          if (!formatFields.length) {
+            throw new Error('CGATS file missing data format definition before BEGIN_DATA');
+          }
+          inData = true;
+          rowCounter = 0;
+          continue;
+        }
+        if (keyword === 'END_DATA') {
+          inData = false;
+          break;
+        }
+
+        if (inDataFormat) {
+          tokens.forEach(pushFormatField);
+          continue;
+        }
+
+        if (inData) {
+          const expectedFields = formatFields.length;
+          if (expectedFields === 0) {
+            throw new Error('CGATS file missing data format definition before data rows');
+          }
+          if (tokens.length < expectedFields) {
+            throw new Error(`CGATS data row ${rowCounter + 1} has ${tokens.length} columns but expected ${expectedFields}`);
+          }
+          if (tokens.length > expectedFields) {
+            throw new Error(`CGATS data row ${rowCounter + 1} has ${tokens.length} columns but expected ${expectedFields}`);
+          }
+
+          const valueByCanonical = Object.create(null);
+          const rawRecord = {};
+          for (let idx = 0; idx < expectedFields; idx++) {
+            const field = formatFields[idx];
+            const rawValue = tokens[idx] !== undefined ? tokens[idx] : '';
+            rawRecord[field.name] = rawValue;
+            valueByCanonical[field.canonical] = rawValue;
+          }
+
+          const sampleId = stringOrNull(valueByCanonical['SAMPLE_ID']);
+          const sampleName = stringOrNull(valueByCanonical['SAMPLE_NAME']);
+
+          const labLRaw = valueByCanonical['LAB_L'];
+          const labARaw = valueByCanonical['LAB_A'];
+          const labBRaw = valueByCanonical['LAB_B'];
+          const labL = parseCgatsNumber(labLRaw);
+          const labA = parseCgatsNumber(labARaw);
+          const labB = parseCgatsNumber(labBRaw);
+
+          const xyzX = parseCgatsNumber(valueByCanonical['XYZ_X']);
+          const xyzY = parseCgatsNumber(valueByCanonical['XYZ_Y']);
+          const xyzZ = parseCgatsNumber(valueByCanonical['XYZ_Z']);
+
+          const cmykCValue = parseCgatsNumber(valueByCanonical['CMYK_C']);
+          const cmykMValue = parseCgatsNumber(valueByCanonical['CMYK_M']);
+          const cmykYValue = parseCgatsNumber(valueByCanonical['CMYK_Y']);
+          const cmykKValue = parseCgatsNumber(valueByCanonical['CMYK_K']);
+
+          let inputPercent = NaN;
+          let inputSource = null;
+          const inputPriority = ['CMYK_K', 'INPUT', 'GRAY_PERCENT', 'GRAY_%', 'GRAY', 'PERCENT_INPUT', 'PCT_INPUT', 'PCT', 'TARGET', 'INTENT', 'CHANNEL_K', 'DEVICE_K'];
+          for (const candidate of inputPriority) {
+            if (valueByCanonical[candidate] !== undefined) {
+              const parsed = parseCgatsNumber(valueByCanonical[candidate]);
+              if (Number.isFinite(parsed)) {
+                inputPercent = parsed;
+                inputSource = candidate;
+                break;
+              }
+            }
+          }
+
+          const rgbRValue = parseCgatsNumber(valueByCanonical['RGB_R']);
+          const rgbGValue = parseCgatsNumber(valueByCanonical['RGB_G']);
+          const rgbBValue = parseCgatsNumber(valueByCanonical['RGB_B']);
+          if (!Number.isFinite(inputPercent) && Number.isFinite(rgbRValue) && Number.isFinite(rgbGValue) && Number.isFinite(rgbBValue)) {
+            const clamp255 = (v) => Math.max(0, Math.min(255, v));
+            const avg = (clamp255(rgbRValue) + clamp255(rgbGValue) + clamp255(rgbBValue)) / 3;
+            inputPercent = (1 - (avg / 255)) * 100;
+            inputSource = 'RGB';
+          }
+
+          const normalizedInput = Number.isFinite(inputPercent) ? clampPercent(inputPercent) : NaN;
+          const cmykCNormalized = normalizeChannelValue(cmykCValue);
+          const cmykMNormalized = normalizeChannelValue(cmykMValue);
+          const cmykYNormalized = normalizeChannelValue(cmykYValue);
+          const derivedKRaw = Number.isFinite(cmykKValue) ? cmykKValue : (Number.isFinite(normalizedInput) ? normalizedInput : 0);
+          const derivedK = clampPercent(derivedKRaw);
+          const normalizedDerivedK = normalizeChannelValue(derivedK);
+          const totalInk = Math.max(0, cmykCNormalized) + Math.max(0, cmykMNormalized) + Math.max(0, cmykYNormalized) + Math.max(0, normalizedDerivedK);
+
+          if (Number.isFinite(labL) && labL >= 0 && labL <= 100) {
+            dataPoints.push({
+              labL,
+              labA: Number.isFinite(labA) ? labA : null,
+              labB: Number.isFinite(labB) ? labB : null,
+              cmykK: derivedK,
+              cmykC: cmykCNormalized,
+              cmykM: cmykMNormalized,
+              cmykY: cmykYNormalized,
+              totalInk,
+              derivedInput: Number.isFinite(normalizedInput) ? normalizedInput : NaN,
+              inputSource,
+              labOnly: !Number.isFinite(normalizedInput),
+              sampleId,
+              sampleName
+            });
+          }
+
+          const device = {};
+          if (Number.isFinite(cmykCValue) || Number.isFinite(cmykMValue) || Number.isFinite(cmykYValue) || Number.isFinite(cmykKValue)) {
+            device.cmyk = {
+              c: Number.isFinite(cmykCValue) ? cmykCValue : null,
+              m: Number.isFinite(cmykMValue) ? cmykMValue : null,
+              y: Number.isFinite(cmykYValue) ? cmykYValue : null,
+              k: Number.isFinite(cmykKValue) ? cmykKValue : (Number.isFinite(normalizedInput) ? normalizedInput : null)
+            };
+          }
+          if (Number.isFinite(rgbRValue) || Number.isFinite(rgbGValue) || Number.isFinite(rgbBValue)) {
+            device.rgb = {
+              r: Number.isFinite(rgbRValue) ? rgbRValue : null,
+              g: Number.isFinite(rgbGValue) ? rgbGValue : null,
+              b: Number.isFinite(rgbBValue) ? rgbBValue : null
+            };
+          }
+          const hasDevice = Object.keys(device).length > 0;
+
+          let labEntry = null;
+          if (Number.isFinite(labL)) {
+            labEntry = {
+              L: labL,
+              a: Number.isFinite(labA) ? labA : null,
+              b: Number.isFinite(labB) ? labB : null
+            };
+          }
+          let xyzEntry = null;
+          if (Number.isFinite(xyzX) || Number.isFinite(xyzY) || Number.isFinite(xyzZ)) {
+            xyzEntry = {
+              X: Number.isFinite(xyzX) ? xyzX : null,
+              Y: Number.isFinite(xyzY) ? xyzY : null,
+              Z: Number.isFinite(xyzZ) ? xyzZ : null
+            };
+          }
+
+          let spectrum = null;
+          if (spectralColumnsSorted.length) {
+            const nm = [];
+            const values = [];
+            for (const column of spectralColumnsSorted) {
+              nm.push(column.nm);
+              const columnValue = tokens[column.index];
+              const parsed = parseCgatsNumber(columnValue);
+              values.push(Number.isFinite(parsed) ? parsed : null);
+            }
+            const finiteSpectral = values.some((v) => Number.isFinite(v));
+            if (finiteSpectral) {
+              spectrum = { nm, values };
+            }
+          }
+
+          measurementPatches.push({
+            ordinal: rowCounter + 1,
+            id: sampleId,
+            name: sampleName || sampleId,
+            device: hasDevice ? device : null,
+            lab: labEntry,
+            xyz: xyzEntry,
+            spectrum,
+            derivedInput: Number.isFinite(normalizedInput) ? normalizedInput : null,
+            inputSource: inputSource || null,
+            raw: rawRecord
+          });
+
+          rowCounter++;
+          continue;
+        }
+
+        const value = headerValueFromTokens(tokens);
+        headerValues[keyword] = value;
+        if (keyword === 'NUMBER_OF_FIELDS') {
+          const parsed = parseInt(tokens[1], 10);
+          if (Number.isFinite(parsed)) declaredFieldCount = parsed;
+        } else if (keyword === 'NUMBER_OF_SETS') {
+          const parsed = parseInt(tokens[1], 10);
+          if (Number.isFinite(parsed)) declaredSetCount = parsed;
+        }
+      }
+
+      if (!spectralColumnsSorted.length && spectralColumns.length) {
+        spectralColumnsSorted = spectralColumns.slice().sort((a, b) => a.nm - b.nm || a.index - b.index);
+      }
+
+      if (!dataPoints.length) {
+        throw new Error('No valid measurement data found in CGATS file');
+      }
+
+      if (declaredFieldCount !== null && declaredFieldCount !== formatFields.length) {
+        throw new Error(`CGATS field count mismatch: NUMBER_OF_FIELDS declares ${declaredFieldCount} but parsed ${formatFields.length}`);
+      }
+      if (declaredSetCount !== null && declaredSetCount !== measurementPatches.length) {
+        throw new Error(`CGATS row count mismatch: NUMBER_OF_SETS declares ${declaredSetCount} but found ${measurementPatches.length}`);
+      }
+
+      const spectralBandsDeclared = parseInt(headerValues['SPECTRAL_BANDS'], 10);
+      const spectralStartDeclared = parseCgatsNumber(headerValues['SPECTRAL_START_NM']);
+      const spectralEndDeclared = parseCgatsNumber(headerValues['SPECTRAL_END_NM']);
+      if (Number.isFinite(spectralBandsDeclared) && spectralColumnsSorted.length && spectralColumnsSorted.length !== spectralBandsDeclared) {
+        throw new Error(`CGATS spectral metadata mismatch: SPECTRAL_BANDS declares ${spectralBandsDeclared} but found ${spectralColumnsSorted.length}`);
+      }
+      if (spectralColumnsSorted.length) {
+        const actualStart = spectralColumnsSorted[0].nm;
+        const actualEnd = spectralColumnsSorted[spectralColumnsSorted.length - 1].nm;
+        const tolerance = 1;
+        if (Number.isFinite(spectralStartDeclared) && Math.abs(actualStart - spectralStartDeclared) > tolerance) {
+          throw new Error(`CGATS spectral metadata mismatch: SPECTRAL_START_NM=${spectralStartDeclared} but first spectral column is ${actualStart}`);
+        }
+        if (Number.isFinite(spectralEndDeclared) && Math.abs(actualEnd - spectralEndDeclared) > tolerance) {
+          throw new Error(`CGATS spectral metadata mismatch: SPECTRAL_END_NM=${spectralEndDeclared} but last spectral column is ${actualEnd}`);
+        }
+      }
+
+      const rawHeader = {};
+      Object.keys(headerValues).forEach((key) => {
+        rawHeader[key] = headerValues[key];
+      });
+
+      const measurementMeta = {
+        originator: pickHeader('ORIGINATOR'),
+        created: pickHeader('CREATED'),
+        descriptor: pickHeader('DESCRIPTOR'),
+        instrument: pickHeader('INSTRUMENT', 'INSTRUMENTATION'),
+        illuminant: pickHeader('ILLUMINANT', 'ILLUMINATION_NAME', 'ILLUMINANT_NAME'),
+        observer: pickHeader('OBSERVER', 'OBSERVER_ANGLE', 'OBSERVER_NAME'),
+        geometry: pickHeader('MEASUREMENT_GEOMETRY', 'GEOMETRY'),
+        aperture: pickHeader('MEASUREMENT_APERTURE', 'APERTURE'),
+        backing: pickHeader('MEASUREMENT_BACKING', 'BACKING'),
+        spectral: spectralColumnsSorted.length ? {
+          declaredBands: Number.isFinite(spectralBandsDeclared) ? spectralBandsDeclared : null,
+          declaredStartNm: Number.isFinite(spectralStartDeclared) ? spectralStartDeclared : null,
+          declaredEndNm: Number.isFinite(spectralEndDeclared) ? spectralEndDeclared : null,
+          actualBands: spectralColumnsSorted.length,
+          actualStartNm: spectralColumnsSorted.length ? spectralColumnsSorted[0].nm : null,
+          actualEndNm: spectralColumnsSorted.length ? spectralColumnsSorted[spectralColumnsSorted.length - 1].nm : null
+        } : null,
+        declaredSetCount,
+        actualSetCount: measurementPatches.length
+      };
+
+      const measurementSet = {
+        source: {
+          filename: filename || null,
+          format: 'CGATS.17'
+        },
+        schema: {
+          fields: formatFields.map((field) => field.name),
+          canonicalFields: formatFields.map((field) => field.canonical),
+          numberOfFields: formatFields.length,
+          declaredFieldCount,
+          spectralColumns: spectralColumnsSorted.map((col) => ({ name: col.name, nm: col.nm, index: col.index }))
+        },
+        meta: measurementMeta,
+        patches: measurementPatches,
+        raw: {
+          header: rawHeader,
+          text: fileContent
+        }
+      };
+
+      // Extract monochrome data - try K-only first, then composite
+      let monochromeData = extractKOnlyData(dataPoints);
+      let extractionMethod = 'K-only';
+
+      if (monochromeData.length < 3) {
+        const composite = extractCompositeGrayscale(dataPoints);
+        if (composite.length >= 3) {
+          monochromeData = composite;
+          extractionMethod = 'composite';
+        } else {
+          const fallbackLab = extractLabOnlyData(dataPoints);
+          if (fallbackLab.length >= 3) {
+            monochromeData = fallbackLab;
+            extractionMethod = 'LAB';
+          }
+        }
+
+        if (monochromeData.length < 3) {
+          throw new Error('CGATS file contains no suitable monochrome measurement data. Need minimum 3 points spanning 0-100% range.');
+        }
+      }
+
+      // Convert to internal LAB format: {input: %, lab: L*}
+      const labPoints = monochromeData.map(point => ({
+        input: point.input,
+        lab: point.labL
+      }));
+
+      // Sort by input percentage
+      labPoints.sort((a, b) => a.input - b.input);
+
+      // Use same Gaussian correction algorithm as parseLabData
+      const originalDataPoints = [...labPoints];
+
+      // Build Gaussian Weighted Correction in printer space using CIE-exact density mapping
+      const labValues = labPoints.map(p => p.lab);
+      const D_values = labValues.map(L => cieDensityFromLstar(L));
+      const Dmax = Math.max(...D_values, 1e-6);
+
+      const correctionPoints = labPoints.map(point => {
+        const pos = Math.max(0, Math.min(1, point.input / 100));
+        const actualDensity = cieDensityFromLstar(point.lab) / Dmax; // normalized 0..1
+        const expectedDensity = getTargetRelAt(pos);
+        return {
+          position: pos,
+          // Stable sign convention: expected minus actual
+          correction: (expectedDensity - actualDensity),
+          originalLab: point.lab,
+          originalInput: point.input
+        };
+      });
+
+      // Local adaptive bandwidth (σ) for Gaussian weights
+      // σ(t) = clamp(floor=0.02, alpha * s_local(t), ceil=0.15)
+      // s_local(t): median distance to K nearest measured positions (handles uneven spacing)
+      const positionsOnly = correctionPoints.map(p => p.position);
+      const K_NEIGHBORS = LAB_TUNING.get('K_NEIGHBORS', 6);
+      const SIGMA_FLOOR = 0.02;
+      const SIGMA_CEIL = 0.15;
+      const SIGMA_ALPHA = 3.0;
+      function localSigmaAt(t) {
+        const n = positionsOnly.length;
+        if (n <= 1) return SIGMA_CEIL; // fallback
+        // Binary search to find insertion index
+        let lo = 0, hi = n;
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (positionsOnly[mid] < t) lo = mid + 1; else hi = mid;
+        }
+        // Gather K nearest distances from neighbors around index
+        const dists = [];
+        let L = lo - 1, R = lo;
+        while ((L >= 0 || R < n) && dists.length < K_NEIGHBORS) {
+          const dl = (L >= 0) ? Math.abs(t - positionsOnly[L]) : Infinity;
+          const dr = (R < n) ? Math.abs(t - positionsOnly[R]) : Infinity;
+          if (dl <= dr) { if (isFinite(dl)) dists.push(dl); L--; } else { if (isFinite(dr)) dists.push(dr); R++; }
+        }
+        if (dists.length === 0) return SIGMA_CEIL;
+        dists.sort((a,b)=>a-b);
+        const mid = dists.length >> 1;
+        const med = (dists.length % 2 === 0) ? 0.5*(dists[mid-1]+dists[mid]) : dists[mid];
+        const sigma = Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, SIGMA_ALPHA * med));
+        return sigma;
+      }
+
+      const samples = [];
+      for (let i = 0; i < 256; i++) {
+        const position = i / 255;
+        let weightedCorrection = 0;
+        let totalWeight = 0;
+        const sigma = localSigmaAt(position);
+        const denom = 2 * sigma * sigma;
+        for (let j = 0; j < correctionPoints.length; j++) {
+          const d = Math.abs(position - correctionPoints[j].position);
+          const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
+          weightedCorrection += correctionPoints[j].correction * w;
+          totalWeight += w;
+        }
+        const baseline = position;
+        const finalCorrection = totalWeight > 0 ? (weightedCorrection / totalWeight) : 0;
+        const corrected = Math.max(0, Math.min(1, baseline + finalCorrection));
+        samples.push(corrected);
+      }
+      // Anchor endpoints
+      samples[0] = 0.0;
+      samples[samples.length - 1] = 1.0;
+
+      return {
+        domainMin: 0.0,
+        domainMax: 1.0,
+        samples: samples,
+        originalData: originalDataPoints,
+        format: `CGATS.17 (${extractionMethod})`,
+        measurementSet,
+        sourceSpace: DataSpace.SPACE.PRINTER,
+        rawCgatsText: fileContent,
+        getSmoothingControlPoints: function(smoothingPercent) {
+          // Local adaptive σ widened by smoothingPercent
+          const sp = Math.max(0, Math.min(90, Number(smoothingPercent) || 0));
+          const widen = 1 + (sp / 100);
+          const dyn = new Array(256);
+          for (let i = 0; i < 256; i++) {
+            const position = i / 255;
+            let weightedCorrection = 0;
+            let totalWeight = 0;
+            const sigma = localSigmaAt(position) * widen;
+            const denom = 2 * sigma * sigma;
+            for (let j = 0; j < correctionPoints.length; j++) {
+              const d = Math.abs(position - correctionPoints[j].position);
+              const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
+              weightedCorrection += correctionPoints[j].correction * w;
+              totalWeight += w;
+            }
+            const baseline = position;
+            const finalCorrection = totalWeight > 0 ? (weightedCorrection / totalWeight) : 0;
+            dyn[i] = Math.max(0, Math.min(1, baseline + finalCorrection));
+          }
+          dyn[0] = 0.0;
+          dyn[255] = 1.0;
+
+          // Generate control points (sparse sample for interpolation)
+          const K = 21 - Math.floor(Math.max(0, Math.min(90, Number(sp) || 0)) / 10);
+          const controlPointCount = Math.max(3, K);
+          const cpY = [];
+          const cpX = [];
+          for (let i = 0; i < controlPointCount; i++) {
+            const x = i / (controlPointCount - 1);
+            const idx = Math.round(x * 255);
+            cpX.push(x);
+            cpY.push(dyn[idx]);
+          }
+          return {
+            samples: cpY,
+            xCoords: cpX,
+            needsDualTransformation: false
+          };
+        }
+      };
+    }
+    function extractKOnlyData(dataPoints) {
+      const kOnlyPoints = dataPoints.filter(point =>
+        !point.labOnly && point.cmykC === 0 && point.cmykM === 0 && point.cmykY === 0
+      );
+
+      return kOnlyPoints.map(point => ({
+        input: Number.isFinite(point.derivedInput) ? point.derivedInput : point.cmykK,
+        labL: point.labL
+      }));
+    }
+
+    /**
+     * Extract composite grayscale data from CGATS measurements
+     * Uses total ink density as input
+     */
+    function extractCompositeGrayscale(dataPoints) {
+      if (!dataPoints.length) return [];
+
+      const CHROMA_THRESHOLD = 4.5; // L*a*b* units; keep neutral-ish samples
+      const CHANNEL_TOLERANCE = 1.5; // % difference between C/M/Y when LAB chroma absent
+
+      const neutralCandidates = dataPoints.filter(point => {
+        const hasChromaticity = Number.isFinite(point.labA) && Number.isFinite(point.labB);
+        if (hasChromaticity) {
+          return Math.abs(point.labA) <= CHROMA_THRESHOLD && Math.abs(point.labB) <= CHROMA_THRESHOLD;
+        }
+        return Math.abs(point.cmykC - point.cmykM) <= CHANNEL_TOLERANCE &&
+               Math.abs(point.cmykM - point.cmykY) <= CHANNEL_TOLERANCE;
+      });
+
+      const candidates = neutralCandidates.length >= 3 ? neutralCandidates : dataPoints;
+
+      const totals = candidates
+        .map(point => Number.isFinite(point.totalInk) ? point.totalInk : NaN)
+        .filter(value => Number.isFinite(value));
+
+      if (totals.length === 0) return [];
+
+      const maxTotal = Math.max(...totals);
+      if (!(maxTotal > 0)) return [];
+
+      const dedupedMap = new Map();
+
+      for (const point of candidates) {
+        if (!Number.isFinite(point.totalInk)) continue;
+        const normalized = (point.totalInk / maxTotal) * 100;
+        const clamped = Math.max(0, Math.min(100, normalized));
+        if (!Number.isFinite(clamped)) continue;
+
+        const key = clamped.toFixed(4);
+        const chroma = Math.abs(point.labA || 0) + Math.abs(point.labB || 0);
+
+        if (dedupedMap.has(key)) {
+          const existing = dedupedMap.get(key);
+          if (chroma < existing.chroma) {
+            dedupedMap.set(key, { input: clamped, labL: point.labL, chroma });
+          }
+        } else {
+          dedupedMap.set(key, { input: clamped, labL: point.labL, chroma });
+        }
+      }
+
+      const result = Array.from(dedupedMap.values())
+        .filter(entry => Number.isFinite(entry.labL))
+        .sort((a, b) => a.input - b.input)
+        .map(({ input, labL }) => ({ input, labL }));
+
+      return result.length >= 3 ? result : [];
+    }
+
+    /**
+     * Fallback extractor for Lab-only CGATS where no channel data exists
+     */
+    function extractLabOnlyData(dataPoints) {
+      const derived = [];
+      for (let i = 0; i < dataPoints.length; i++) {
+        const point = dataPoints[i];
+        if (Number.isFinite(point.labL)) {
+          if (Number.isFinite(point.derivedInput)) {
+            derived.push({ input: point.derivedInput, labL: point.labL });
+          }
+        }
+      }
+
+      if (derived.length >= 3) {
+        derived.sort((a, b) => a.input - b.input);
+        return derived;
+      }
+
+      if (dataPoints.length >= 3) {
+        const fallback = [];
+        const denom = Math.max(1, dataPoints.length - 1);
+        for (let i = 0; i < dataPoints.length; i++) {
+          const point = dataPoints[i];
+          if (!Number.isFinite(point.labL)) continue;
+          const pos = (i / denom) * 100;
+          fallback.push({ input: pos, labL: point.labL });
+        }
+        if (fallback.length >= 3) {
+          return fallback;
+        }
+      }
+
+      return [];
+    }
+
     /**
      * Parse a LAB measurement data file (tab-separated format)
      * Expected format:
@@ -15530,27 +16425,46 @@ DOMAIN_MAX 1.0 1.0 1.0
      * For binary files (.acv), pass the ArrayBuffer
      */
     async function parseLinearizationFile(fileContentOrFile, filename) {
-      const extension = filename.toLowerCase().split('.').pop();
-      
+      const extension = (filename || '').toLowerCase().split('.').pop();
+      const isTextInput = typeof fileContentOrFile === 'string';
+      const textPreview = isTextInput ? fileContentOrFile.trim() : '';
+
       if (extension === 'cube') {
         return parseCube1D(fileContentOrFile);
-      } else if (extension === 'txt') {
-        // Check if it's LAB measurement format by looking for the header
-        if (fileContentOrFile.includes('GRAY') && fileContentOrFile.includes('LAB_L')) {
-          return parseLabData(fileContentOrFile, filename);
-        } else {
-          throw new Error('TXT file format not recognized. Expected LAB measurement format with GRAY and LAB_L columns.');
-        }
       } else if (extension === 'acv') {
         // .acv files are binary, so fileContentOrFile should be an ArrayBuffer
         if (!(fileContentOrFile instanceof ArrayBuffer)) {
           throw new Error('ACV files must be read as binary data');
         }
         return parseACVFile(fileContentOrFile);
-      } else {
-        throw new Error(`Unsupported file format: ${extension}. Use .cube, .txt, or .acv files.`);
       }
+
+      const looksLikeCgats = textPreview.startsWith('CGATS.17') || textPreview.startsWith('CTI3');
+      const looksLikeLabTable = isTextInput && fileContentOrFile.includes('GRAY') && fileContentOrFile.includes('LAB_L');
+      const cgatsExtensions = new Set(['txt', 'cgats', 'cgats17', 'ti3']);
+
+      if (cgatsExtensions.has(extension) || looksLikeCgats || looksLikeLabTable) {
+        if (looksLikeCgats) {
+          return parseCGATS17(fileContentOrFile, filename);
+        }
+        if (looksLikeLabTable) {
+          return parseLabData(fileContentOrFile, filename);
+        }
+        if (isTextInput) {
+          const trimmed = fileContentOrFile.trim();
+          if (trimmed.startsWith('CGATS.17') || trimmed.startsWith('CTI3')) {
+            return parseCGATS17(fileContentOrFile, filename);
+          }
+          if (fileContentOrFile.includes('GRAY') && fileContentOrFile.includes('LAB_L')) {
+            return parseLabData(fileContentOrFile, filename);
+          }
+        }
+        throw new Error('Text linearization file not recognized. Expected CGATS.17 / CTI3 format or GRAY\tLAB_L data table.');
+      }
+
+      throw new Error(`Unsupported file format: ${extension}. Use .cube, .txt, .cgats, .cgats17, .ti3, or .acv files.`);
     }
+
 
     /**
      * Natural cubic spline interpolation
@@ -16253,6 +17167,10 @@ DOMAIN_MAX 1.0 1.0 1.0
 
     function applyAutoEndpointAdjustments(values, endValue, channelName, smartApplied) {
       try {
+        if (!AUTO_LIMITS_ENABLED) {
+          if (window._autoLimitState && channelName) delete window._autoLimitState[channelName];
+          return values;
+        }
         const metaForAuto = window.loadedQuadData?.keyPointsMeta?.[channelName] || {};
         const autoWhiteOn = !!elements?.autoWhiteLimitToggle?.checked;
         const autoBlackOn = !!elements?.autoBlackLimitToggle?.checked;
@@ -16295,7 +17213,12 @@ DOMAIN_MAX 1.0 1.0 1.0
       return arr;
     }
 
-    // Auto endpoint rolloff (soft knee/toe) utilities
+    // Auto endpoint rolloff (soft knee/toe) utilities.
+    // Important orientation note:
+    //   • Black limit = max ink shoulder. It scans the RIGHT side of the chart (high input) and
+    //     nudges the curve upward toward the channel end value if it flattens early.
+    //   • White limit = zero-ink toe. It scans the LEFT side (low input) and lifts the curve off the floor
+    //     if it gets pinned near 0. Names mirror print appearance (more ink = darker/"black").
     function applyAutoEndpointRolloff(values, endValue, channelName, options = {}) {
       try {
         const Np = values.length;
@@ -16306,60 +17229,132 @@ DOMAIN_MAX 1.0 1.0 1.0
         const arr = values.slice();
         const last = Np - 1;
 
+        const limitProximityPct = AUTO_LIMIT_CONFIG.getNumber('limitProximityPct');
+        const slopeAbsolutePct = AUTO_LIMIT_CONFIG.getNumber('slopeAbsolutePct');
+        const sustain = Math.max(1, Math.round(AUTO_LIMIT_CONFIG.getNumber('sustainSamples')));
+        const minWidthPct = AUTO_LIMIT_CONFIG.getNumber('minWidthPct');
+        const blackShoulderScanStartPct = AUTO_LIMIT_CONFIG.getNumber('blackShoulderScanStartPct');
+        const whiteToeScanEndPct = AUTO_LIMIT_CONFIG.getNumber('whiteToeScanEndPct');
+        const fallbackPlateauPct = AUTO_LIMIT_CONFIG.getNumber('fallbackPlateauPct');
+
         // Compute slopes (first differences)
         const slopes = new Array(Np).fill(0);
         for (let i = 1; i < Np; i++) slopes[i] = arr[i] - arr[i-1];
 
-        // Median slope around midtones (30–70%) as baseline
-        const iLo = Math.floor(0.30 * last), iHi = Math.ceil(0.70 * last);
-        const midSlopes = slopes.slice(iLo+1, iHi+1).map(Math.abs).filter(isFinite);
-        const midMedian = median(midSlopes) || 0;
-
         // Thresholds
-        const epsY = Math.max(1, Math.round(0.03 * endValue)); // 3% of End (min 1)
-        const epsSlope = Math.max(1, Math.round(0.15 * (midMedian || 1))); // 15% of mid median
-        const sustain = 4; // sustained samples
-        const minWidthIdx = Math.round(0.05 * last); // 5% domain
+        const epsY = Math.max(1, Math.round((limitProximityPct / 100) * endValue));
+        const slopeThresholdFraction = Math.max(0, slopeAbsolutePct) / 100;
+        const normalizedDenom = Math.max(1, endValue);
+        const minWidthIdx = Math.max(1, Math.round((minWidthPct / 100) * last));
+        const fallbackRequirementIdx = Math.max(sustain, Math.round((fallbackPlateauPct / 100) * last));
 
         if (DEBUG_LOGS) console.log('[AUTO LIMIT] begin', {
           channelName,
           Np,
           endValue,
           epsY,
-          epsSlope,
+          slopeThresholdFraction,
           sustain,
           minWidthIdx,
           arrHead: arr.slice(0,8), arrTail: arr.slice(-8)
         });
 
-        let whiteStart = null;
+        let whiteStart = null; // shoulder toward channel end (black limit)
         if (applyBlack) {
-          // Scan last 10%
-          const startScanW = Math.max(1, Math.floor(0.80 * last));
+          // Scan the right-hand side of the curve (high input near the ink ceiling)
+          const startScanW = Math.max(1, Math.floor((blackShoulderScanStartPct / 100) * last));
           for (let i = startScanW; i <= last - sustain; i++) {
             const nearCap = (endValue - arr[i]) <= epsY;
             if (!nearCap) continue;
             // Rolling low slope sustain
             let ok = true;
             for (let k = 0; k < sustain; k++) {
-              if (Math.abs(slopes[i + k]) > epsSlope) { ok = false; break; }
+              const normalizedSlope = Math.abs(slopes[i + k]) / normalizedDenom;
+              if (normalizedSlope > slopeThresholdFraction) { ok = false; break; }
             }
             if (ok) { whiteStart = i; break; }
           }
         }
 
-        let blackEnd = null;
+        if (applyBlack && whiteStart == null) {
+          let capCount = 0;
+          for (let i = last; i >= 0; i--) {
+            if ((endValue - arr[i]) <= epsY) capCount++;
+            else break;
+          }
+          const requiredCap = Math.max(fallbackRequirementIdx, minWidthIdx);
+          if (capCount >= requiredCap) {
+            whiteStart = Math.max(1, Math.round(0.88 * last));
+            if (DEBUG_LOGS) console.log('[AUTO LIMIT] fallback white knee', { whiteStart, capCount, requiredCap });
+          }
+        }
+        if (applyBlack && whiteStart != null) {
+          const capAllowance = Math.max(1, Math.round(epsY / 2));
+          if ((endValue - arr[whiteStart]) > capAllowance) {
+            let search = whiteStart;
+            while (search <= last && (endValue - arr[search]) > capAllowance) search++;
+            if (search <= last && (endValue - arr[search]) <= capAllowance) {
+              if (DEBUG_LOGS) console.log('[AUTO LIMIT] adjusting white knee forward', { prev: whiteStart, next: search });
+              whiteStart = search;
+            } else {
+              if (DEBUG_LOGS) console.log('[AUTO LIMIT] skipping white knee; delta too large', { whiteStart, value: arr[whiteStart], capAllowance });
+              whiteStart = null;
+            }
+          }
+        }
+        if (applyBlack && whiteStart != null) {
+          const targetWidth = Math.max(3, minWidthIdx);
+          if ((last - whiteStart) < targetWidth) {
+            whiteStart = Math.max(1, last - targetWidth);
+          }
+        }
+
+        let blackEnd = null; // toe near zero output (white limit)
         if (applyWhite) {
-          // Scan first 10%
-          const endScanB = Math.min(last-1, Math.ceil(0.10 * last));
+          // Scan the left-hand side (low input near zero ink)
+          const endScanB = Math.min(last-1, Math.ceil((whiteToeScanEndPct / 100) * last));
           for (let j = endScanB; j >= sustain; j--) {
             const nearFloor = arr[j] <= epsY;
             if (!nearFloor) continue;
             let ok = true;
             for (let k = 0; k < sustain; k++) {
-              if (Math.abs(slopes[j - k]) > epsSlope) { ok = false; break; }
+              const normalizedSlope = Math.abs(slopes[j - k]) / normalizedDenom;
+              if (normalizedSlope > slopeThresholdFraction) { ok = false; break; }
             }
             if (ok) { blackEnd = j; break; }
+          }
+        }
+
+        if (applyWhite && blackEnd == null) {
+          let floorCount = 0;
+          for (let i = 0; i <= last; i++) {
+            if (arr[i] <= epsY) floorCount++;
+            else break;
+          }
+          const requiredFloor = Math.max(fallbackRequirementIdx, minWidthIdx);
+          if (floorCount >= requiredFloor) {
+            blackEnd = Math.min(last - 1, Math.round((whiteToeScanEndPct / 100) * last));
+            if (DEBUG_LOGS) console.log('[AUTO LIMIT] fallback black toe', { blackEnd, floorCount, requiredFloor });
+          }
+        }
+        if (applyWhite && blackEnd != null) {
+          const floorAllowance = Math.max(1, Math.round(epsY / 2));
+          if (arr[blackEnd] > floorAllowance) {
+            let search = blackEnd;
+            while (search >= 0 && arr[search] > floorAllowance) search--;
+            if (search >= 0 && arr[search] <= floorAllowance) {
+              if (DEBUG_LOGS) console.log('[AUTO LIMIT] adjusting black toe backward', { prev: blackEnd, next: search });
+              blackEnd = search;
+            } else {
+              if (DEBUG_LOGS) console.log('[AUTO LIMIT] skipping black toe; delta too large', { blackEnd, value: arr[blackEnd], floorAllowance });
+              blackEnd = null;
+            }
+          }
+        }
+        if (applyWhite && blackEnd != null) {
+          const targetWidth = Math.max(3, minWidthIdx);
+          if (blackEnd < targetWidth) {
+            blackEnd = Math.min(last - 1, targetWidth);
           }
         }
 
@@ -16464,7 +17459,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Record meta for UI labels
         try {
           if (!window._autoLimitState) window._autoLimitState = {};
-          const meta = { debug: { epsY, epsSlope, sustain, minWidthIdx, whiteStart, blackEnd } };
+          const meta = { debug: { epsY, slopeThresholdFraction, sustain, minWidthIdx, whiteStart, blackEnd } };
           // Store printer-space semantics: right-side = black, left-side = white
           if (applyBlack && whiteStart != null && whiteWidth > 0) meta.black = { startIndex: whiteStart, widthPercent: whiteWidth };
           if (applyWhite && blackEnd != null && blackWidth > 0) meta.white = { endIndex: blackEnd, widthPercent: blackWidth };
@@ -16522,7 +17517,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         </td>
         <td class="px-1 pt-2 pb-1 text-center" style="width: 250px;">
           <div class="inline-flex items-center gap-2">
-            <input type="file" id="perChannel_${name}" accept=".cube,.txt,.acv" class="hidden per-channel-file">
+            <input type="file" id="perChannel_${name}" accept=".cube,.txt,.cgats,.cgats17,.ti3,.acv" class="hidden per-channel-file">
             <button class="per-channel-btn px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors font-bold" data-channel="${name}" data-tooltip="Load LUT.cube, LABdata.txt, or .acv curve files">load file</button>
             <label class="slider-toggle" title="Enable/disable per-channel linearization">
               <input type="checkbox" class="per-channel-toggle" data-channel="${name}" disabled>
@@ -17291,55 +18286,101 @@ DOMAIN_MAX 1.0 1.0 1.0
 
     // Note: Smoothing slider deprecated. Measurement reconstruction + decimation provide stable curves; fidelity is controlled via Recompute.
 
-    // Initialize Auto endpoint rolloff toggles
-    try {
-      const parseStoredBool = (value) => {
-        if (!value) return null;
-        const v = value.trim().toLowerCase();
-        if (v === '1' || v === 'true') return true;
-        if (v === '0' || v === 'false') return false;
-        return null;
-      };
+    // Initialize Auto endpoint rolloff toggles (disabled in this build)
+    if (AUTO_LIMITS_ENABLED) {
+      try {
+        const parseStoredBool = (value) => {
+          if (!value) return null;
+          const v = value.trim().toLowerCase();
+          if (v === '1' || v === 'true') return true;
+          if (v === '0' || v === 'false') return false;
+          return null;
+        };
 
-      let savedWhite = parseStoredBool(localStorage.getItem('autoWhiteLimitV1') || '');
-      let savedBlack = parseStoredBool(localStorage.getItem('autoBlackLimitV1') || '');
+        let savedWhite = parseStoredBool(localStorage.getItem('autoWhiteLimitV1') || '');
+        let savedBlack = parseStoredBool(localStorage.getItem('autoBlackLimitV1') || '');
 
-      if (savedWhite === null && savedBlack === null) {
-        const legacy = parseStoredBool(localStorage.getItem('autoEndpointRolloffV1') || '');
-        if (legacy !== null) {
-          savedWhite = legacy;
-          savedBlack = legacy;
-          try { localStorage.removeItem('autoEndpointRolloffV1'); } catch (err) {}
+        if (savedWhite === null && savedBlack === null) {
+          const legacy = parseStoredBool(localStorage.getItem('autoEndpointRolloffV1') || '');
+          if (legacy !== null) {
+            savedWhite = legacy;
+            savedBlack = legacy;
+            try { localStorage.removeItem('autoEndpointRolloffV1'); } catch (err) {}
+          }
         }
-      }
 
-      if (savedWhite === null) savedWhite = false; // default: white off
-      if (savedBlack === null) savedBlack = true;  // default: black on
+        if (savedWhite === null) savedWhite = false; // default: white off
+        if (savedBlack === null) savedBlack = true;  // default: black on
 
-      if (elements.autoWhiteLimitToggle) {
-        elements.autoWhiteLimitToggle.checked = savedWhite;
-        elements.autoWhiteLimitToggle.addEventListener('change', (e) => {
-          const enabled = !!e.target.checked;
-          try { localStorage.setItem('autoWhiteLimitV1', enabled ? '1' : '0'); } catch (err) {}
-          showStatus(enabled ? 'Auto white limit enabled' : 'Auto white limit disabled');
-          try { (getCurrentPrinter()?.channels || []).forEach(ch => updateProcessingDetail(ch)); } catch (err) {}
-          try { updateSessionStatus(); } catch (err) {}
-          debouncedPreviewUpdate();
+        if (elements.autoWhiteLimitToggle) {
+          elements.autoWhiteLimitToggle.checked = savedWhite;
+          elements.autoWhiteLimitToggle.addEventListener('change', (e) => {
+            const enabled = !!e.target.checked;
+            try { localStorage.setItem('autoWhiteLimitV1', enabled ? '1' : '0'); } catch (err) {}
+            showStatus(enabled ? 'Auto white limit enabled' : 'Auto white limit disabled');
+            try { (getCurrentPrinter()?.channels || []).forEach(ch => updateProcessingDetail(ch)); } catch (err) {}
+            try { updateSessionStatus(); } catch (err) {}
+            debouncedPreviewUpdate();
+          });
+        }
+
+        if (elements.autoBlackLimitToggle) {
+          elements.autoBlackLimitToggle.checked = savedBlack;
+          elements.autoBlackLimitToggle.addEventListener('change', (e) => {
+            const enabled = !!e.target.checked;
+            try { localStorage.setItem('autoBlackLimitV1', enabled ? '1' : '0'); } catch (err) {}
+            showStatus(enabled ? 'Auto black limit enabled' : 'Auto black limit disabled');
+            try { (getCurrentPrinter()?.channels || []).forEach(ch => updateProcessingDetail(ch)); } catch (err) {}
+            try { updateSessionStatus(); } catch (err) {}
+            debouncedPreviewUpdate();
+          });
+        }
+      } catch (err) {}
+    } else {
+      try {
+        if (elements.autoWhiteLimitToggle) elements.autoWhiteLimitToggle.checked = false;
+        if (elements.autoBlackLimitToggle) elements.autoBlackLimitToggle.checked = false;
+        try {
+          localStorage.removeItem('autoWhiteLimitV1');
+          localStorage.removeItem('autoBlackLimitV1');
+        } catch (err) {}
+      } catch (err) {}
+    }
+
+    if (AUTO_LIMITS_ENABLED) {
+      populateAutoLimitDebugInputs();
+
+      if (elements.autoLimitApplyBtn) {
+        elements.autoLimitApplyBtn.addEventListener('click', () => {
+          try {
+            const overrides = gatherAutoLimitOverridesFromInputs();
+            AUTO_LIMIT_CONFIG.setOverrides(overrides);
+            populateAutoLimitDebugInputs();
+            runAutoLimitRecalc();
+            showStatus('Auto limit overrides applied');
+          } catch (error) {
+            console.error('Auto limit apply error:', error);
+            showStatus('Error applying auto limit overrides');
+          }
         });
       }
 
-      if (elements.autoBlackLimitToggle) {
-        elements.autoBlackLimitToggle.checked = savedBlack;
-        elements.autoBlackLimitToggle.addEventListener('change', (e) => {
-          const enabled = !!e.target.checked;
-          try { localStorage.setItem('autoBlackLimitV1', enabled ? '1' : '0'); } catch (err) {}
-          showStatus(enabled ? 'Auto black limit enabled' : 'Auto black limit disabled');
-          try { (getCurrentPrinter()?.channels || []).forEach(ch => updateProcessingDetail(ch)); } catch (err) {}
-          try { updateSessionStatus(); } catch (err) {}
-          debouncedPreviewUpdate();
+      if (elements.autoLimitResetBtn) {
+        elements.autoLimitResetBtn.addEventListener('click', () => {
+          AUTO_LIMIT_CONFIG.clearOverrides();
+          populateAutoLimitDebugInputs();
+          runAutoLimitRecalc();
+          showStatus('Auto limit overrides reset');
         });
       }
-    } catch (err) {}
+
+      if (elements.autoLimitRecalcBtn) {
+        elements.autoLimitRecalcBtn.addEventListener('click', () => {
+          runAutoLimitRecalc();
+          showStatus('Auto limit recalculated');
+        });
+      }
+    }
 
     // Sample data loading functions
     function loadSampleData(type) {
@@ -19723,16 +20764,19 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
           <p>A concise, alphabetized reference to key terms used in quadGEN, QuadToneRIP, and related workflows.</p>
           <dl>
             <dt>Auto black limit</dt>
-            <dd>Automatic soft toe at the black end: detects an early plateau near 0% output and eases the first segment so the curve approaches 0 with zero slope, preserving shadow separation.</dd>
+            <dd>Temporarily disabled while the rolloff detector is re-tuned. Previously applied a localized soft toe at the black end to preserve shadow separation.</dd>
 
             <dt>Auto white limit</dt>
-            <dd>Automatic soft shoulder at the white end: detects an early plateau near the ink limit and eases the last segment so the curve reaches the limit exactly at 100% with zero slope, preserving highlight separation.</dd>
+            <dd>Temporarily disabled while the rolloff detector is re-tuned. Previously applied a localized soft shoulder at the white end to preserve highlight separation.</dd>
 
             <dt>ACV (Photoshop Curves)</dt>
             <dd>Binary curve format used by Adobe Photoshop (<code>.acv</code>). In quadGEN: can be loaded as a global correction or per-channel adapter; anchors can seed editable Smart curve.</dd>
 
             <dt>Alternative process (Alt-process)</dt>
             <dd>Historic or non-traditional photographic printing methods such as platinum/palladium, cyanotype, kallitype, polymer photogravure, and gum bichromate. These processes often use digital negatives created through QuadToneRIP workflows, requiring precise tonal calibration that quadGEN provides.</dd>
+
+            <dt>CGATS.17</dt>
+            <dd>Industry-standard color measurement data format developed by Committee for Graphic Arts Technology Standards. Used by professional spectrophotometers and colorimeters (X-Rite i1Pro, DataColor SpyderPrint, etc.) to exchange measurement data. quadGEN extracts monochrome progressions (K-only or composite grayscale) from CGATS files for LAB linearization workflows.</dd>
 
             <dt>Channel</dt>
             <dd>A printer ink channel (e.g., K, C, M, Y, LC, LM, LK, LLK, OR, GR, MK, V). Channels can be enabled/disabled and have independent End (ink limits).</dd>
