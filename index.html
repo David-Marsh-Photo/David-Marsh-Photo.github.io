@@ -2694,7 +2694,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta 2.6.1';
+    const APP_VERSION = 'Beta 2.6.2';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2879,6 +2879,22 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           DOCS: []
         },
         aboutDialog: []
+      },
+            'Beta 2.6.2': {
+        date: '2025-09-20',
+        title: '1D LUT limit increase',
+        sections: {
+          ADDED: [],
+          CHANGED: [
+            '1D .cube parser now accepts up to 256 samples even without a LUT_1D_SIZE header.'
+          ],
+          FIXED: [],
+          REMOVED: [],
+          DOCS: []
+        },
+        aboutDialog: [
+          { label: '1D LUT Support', desc: '1D .cube imports now handle up to 256 samples; include LUT_1D_SIZE when possible for clarity.' }
+        ]
       },
       'Beta 2.6.1': {
         date: '2025-09-20',
@@ -15058,10 +15074,10 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
       }
 
-      // After parsing, check if this looks like 3D LUT data
-      if (samples.length > 100) {
-        // LUTs with very high point counts may indicate parsing issues
-        throw new Error("This file contains an unusually high number of data points. Please verify the file format and try again.");
+      // Guard against mis-labeled 3D LUTs: allow up to 256 samples when no size is declared
+      const SAMPLE_LIMIT = 256;
+      if (declaredSize == null && samples.length > SAMPLE_LIMIT) {
+        throw new Error(`This 1D LUT lists ${samples.length} samples without a LUT_1D_SIZE header. quadGEN supports up to ${SAMPLE_LIMIT} points per channel; verify the file or convert it to a 3D LUT.`);
       }
 
       if (declaredSize !== null && samples.length >= declaredSize) {
@@ -20765,8 +20781,8 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
           <ul>
             <li><strong>Offline use:</strong> Lab Tech is unavailable offline; manual functions work fully.</li>
             <li><strong>Curve orientation:</strong> quadGEN plots input % (X) vs ink output % (Y), origin = white. Other tools may use tone curves with origin = black.</li>
-            <li><strong>Corrections:</strong> Upward curve = more ink (darker); downward = less ink (lighter). Example: raise mids if midtones are too light.</li>
-            <li><strong>Full reset:</strong> Use your browser’s refresh/reload button to return quadGEN to a clean state.</li>
+                        <li><strong>Corrections:</strong> Upward curve = more ink (darker); downward = less ink (lighter). Example: raise mids if midtones are too light.</li>
+                      <li><strong>Full reset:</strong> Use your browser’s refresh/reload button to return quadGEN to a clean state.</li>
           </ul>
 
           <hr />
