@@ -2694,7 +2694,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta 2.6.0';
+    const APP_VERSION = 'Beta 2.6.1';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2879,6 +2879,24 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           DOCS: []
         },
         aboutDialog: []
+      },
+      'Beta 2.6.1': {
+        date: '2025-09-20',
+        title: 'Intent remap guard + opt-in sweeps',
+        sections: {
+          ADDED: [],
+          CHANGED: [
+            'Intent tuning sweep tests now skip by default; set QUADGEN_ENABLE_TUNING_SWEEPS=1 to run the long-form harness.'
+          ],
+          FIXED: [
+            'Apply Intent remains available after loading a global .acv or .cube; it only disables when active LAB/CGATS/TI3 measurement data is applied.'
+          ],
+          REMOVED: [],
+          DOCS: []
+        },
+        aboutDialog: [
+          { label: 'Intent Remap Guard', desc: 'Apply Intent stays available after loading global .acv/.cube data unless a LAB/CGATS/TI3 measurement is active.' }
+        ]
       },
       'Beta 2.6.0': {
         date: '2025-09-20',
@@ -10121,11 +10139,28 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         if (elements.contrastIntentSelect) elements.contrastIntentSelect.setAttribute('title', tip);
       } catch (err) {}
     }
+    function hasLoadedQuadCurves() {
+      try {
+        const data = window.loadedQuadData;
+        return !!(data && data.curves && Object.keys(data.curves).length);
+      } catch (err) { return false; }
+    }
+
+    function isGlobalMeasurementActive() {
+      try {
+        if (!linearizationData || !linearizationApplied) return false;
+        if (!Array.isArray(linearizationData.originalData) || linearizationData.originalData.length === 0) return false;
+        const fmt = String(linearizationData.format || '').toUpperCase();
+        const measurementKeywords = ['LAB', 'MANUAL', 'MEASUREMENT', 'CGATS', 'TI3', 'CTI3'];
+        return measurementKeywords.some(key => fmt.includes(key));
+      } catch (err) { return false; }
+    }
+
     function canApplyIntentRemap() {
       try {
-        const hasQuad = !!(window.loadedQuadData && window.loadedQuadData.curves && Object.keys(window.loadedQuadData.curves).length);
-        const hasGlobalMeasurement = !!linearizationData;
-        return hasQuad && !hasGlobalMeasurement;
+        const hasQuad = hasLoadedQuadCurves();
+        if (!hasQuad) return false;
+        return !isGlobalMeasurementActive();
       } catch (err) { return false; }
     }
     function recomputeLinearizationForCurrentIntent(){
@@ -12970,7 +13005,15 @@ DOMAIN_MAX 1.0 1.0 1.0
     
     function applyIntentToLoadedCurve() {
       if (!canApplyIntentRemap()) {
-        showStatus('Load a .quad without global LAB data to remap intent');
+        const hasQuad = hasLoadedQuadCurves();
+        const measurementActive = isGlobalMeasurementActive();
+        if (!hasQuad) {
+          showStatus('Load a .quad before remapping intent');
+        } else if (measurementActive) {
+          showStatus('Disable or remove global measurement data (LAB/CGATS/TI3) before remapping intent');
+        } else {
+          showStatus('Intent remap is currently unavailable');
+        }
         return;
       }
       try {
@@ -13269,7 +13312,9 @@ DOMAIN_MAX 1.0 1.0 1.0
         const intentName = contrastIntent?.name || 'Linear';
         const tooltip = allowRemap
           ? `Bake ${intentName} intent into the loaded curve`
-          : 'Load a .quad (without global LAB data) to enable intent remap';
+          : (hasLoadedQuadCurves()
+              ? 'Disable or remove global measurement data (LAB/CGATS/TI3) to enable intent remap'
+              : 'Load a .quad to enable intent remap');
         remapBtn.setAttribute('title', tooltip);
       }
     }
@@ -18512,8 +18557,9 @@ DOMAIN_MAX 1.0 1.0 1.0
         // Guard: only perform revert when a global measurement dataset is actually loaded
         try {
           const fmt = String(linearizationData?.format || '').toUpperCase();
-          const isMeasurement = !!linearizationData && (fmt.includes('LAB') || fmt.includes('MANUAL')) && Array.isArray(linearizationData.originalData);
-          if (DEBUG_LOGS) console.log(`[DEBUG REVERT] Button clicked: fmt="${fmt}", hasLinearizationData=${!!linearizationData}, hasOriginalData=${Array.isArray(linearizationData?.originalData)}, isMeasurement=${isMeasurement}`);
+          const hasOriginal = Array.isArray(linearizationData?.originalData);
+          const isMeasurement = isGlobalMeasurementActive();
+          if (DEBUG_LOGS) console.log(`[DEBUG REVERT] Button clicked: fmt="${fmt}", hasLinearizationData=${!!linearizationData}, applied=${!!linearizationApplied}, hasOriginalData=${hasOriginal}, isMeasurement=${isMeasurement}`);
           if (!isMeasurement) {
             if (DEBUG_LOGS) console.log('[DEBUG REVERT] Guard check failed - exiting');
             return;
@@ -20720,6 +20766,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
             <li><strong>Offline use:</strong> Lab Tech is unavailable offline; manual functions work fully.</li>
             <li><strong>Curve orientation:</strong> quadGEN plots input % (X) vs ink output % (Y), origin = white. Other tools may use tone curves with origin = black.</li>
             <li><strong>Corrections:</strong> Upward curve = more ink (darker); downward = less ink (lighter). Example: raise mids if midtones are too light.</li>
+            <li><strong>Full reset:</strong> Use your browser’s refresh/reload button to return quadGEN to a clean state.</li>
           </ul>
 
           <hr />
