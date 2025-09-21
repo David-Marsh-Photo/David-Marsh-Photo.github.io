@@ -1701,17 +1701,20 @@ ARCHITECTURAL NOTES:
 
     /* Dark-mode readability for channel inputs (percent and end) */
     [data-theme="dark"] .percent-input,
-    [data-theme="dark"] .end-input {
+    [data-theme="dark"] .end-input,
+    [data-theme="dark"] #scaleAllInput {
       background-color: var(--console-input-bg) !important; /* darker field */
       color: var(--text) !important;                         /* light text */
       border-color: var(--console-input-border) !important;  /* neutral border */
     }
     [data-theme="dark"] .percent-input::placeholder,
-    [data-theme="dark"] .end-input::placeholder {
+    [data-theme="dark"] .end-input::placeholder,
+    [data-theme="dark"] #scaleAllInput::placeholder {
       color: #9a9a9a;                                       /* subtle placeholder */
     }
     [data-theme="dark"] .percent-input:focus,
-    [data-theme="dark"] .end-input:focus {
+    [data-theme="dark"] .end-input:focus,
+    [data-theme="dark"] #scaleAllInput:focus {
       outline: 2px solid #737373;                           /* soft gray focus */
       outline-offset: 0;
       box-shadow: none !important;
@@ -2158,8 +2161,17 @@ ARCHITECTURAL NOTES:
 
       <!-- Quick Enable Chips -->
       <div id="disabledChannelsCompact" class="disabled-channels-compact mb-3">
-        <div id="disabledChannelsRow" class="disabled-channels-row">
-          <!-- Channel chips will be inserted here -->
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div id="disabledChannelsRow" class="disabled-channels-row flex-1 min-w-0">
+            <!-- Channel chips will be inserted here -->
+          </div>
+          <div class="flex items-center gap-2 shrink-0" title="Multiply every channel’s End by this factor (100% = no change)">
+            <label for="scaleAllInput" class="text-xs font-medium text-gray-700">Scale:</label>
+            <div class="flex items-center gap-1">
+              <input id="scaleAllInput" type="number" min="10" max="1000" step="1" value="100" class="w-16 m-0 rounded-lg border border-gray-300 px-2 py-1 text-xs text-right focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Scale all channels percent">
+              <span class="text-xs text-gray-500">%</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2694,7 +2706,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta 2.6.2';
+    const APP_VERSION = 'Beta 2.6.3';
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2880,7 +2892,35 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
         },
         aboutDialog: []
       },
-            'Beta 2.6.2': {
+      '2.6.3': {
+        date: '2025-09-21',
+        title: 'Scale control handoff',
+        sections: {
+          ADDED: [],
+          CHANGED: [
+            'Lab Tech AI exposes scale_channel_ends_by_percent, so the assistant can drive the global Scale control directly.',
+            'Use the Scale field above the channel list to adjust every End value proportionally.',
+            'Global Scale input now auto-clamps once any channel would reach 100% (65,535) and accepts entries up to 1000% for proportional boosts.',
+            'Graph labels track the highest ink value on each curve so low-limit channels no longer display inflated percentages.',
+            'Removed the dotted intent reference overlay when only a .quad curve is loaded for a cleaner plot.'
+          ],
+          FIXED: [
+            'Global Scale control now scales against per-channel baselines, so 90% → 95% applies once instead of stacking and channel edits no longer throw baseline errors.',
+            'Printer initialization defers intent guards until a .quad is loaded, eliminating the missing hasLoadedQuadCurves reference on startup.'
+          ],
+          REMOVED: [],
+          DOCS: []
+        },
+        aboutDialog: [
+          { label: 'Scale Control', desc: 'Global Scale reuses cached baselines—90%→95% no longer compounds and channel edits stay clean.' },
+          { label: 'Scale Field', desc: 'Use the Scale field above the channel list to adjust every End value proportionally.' },
+          { label: 'Auto Clamp', desc: 'Scaling stops automatically when the first channel would hit 100% ink (65,535), and the input now accepts up to 1000%.' },
+          { label: 'Chart Labels', desc: 'Ink labels sit at the peak ink value, so flat curves report the true endpoint.' },
+          { label: 'Clean Plot', desc: 'The dotted intent reference is hidden when only a .quad is loaded, keeping the chart uncluttered.' },
+          { label: 'Lab Tech', desc: 'Assistant can set the Scale via scale_channel_ends_by_percent without touching individual channels.' }
+        ]
+      },
+      '2.6.2': {
         date: '2025-09-20',
         title: '1D LUT limit increase',
         sections: {
@@ -2896,7 +2936,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           { label: '1D LUT Support', desc: '1D .cube imports now handle up to 256 samples; include LUT_1D_SIZE when possible for clarity.' }
         ]
       },
-      'Beta 2.6.1': {
+      '2.6.1': {
         date: '2025-09-20',
         title: 'Intent remap guard + opt-in sweeps',
         sections: {
@@ -2914,7 +2954,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           { label: 'Intent Remap Guard', desc: 'Apply Intent stays available after loading global .acv/.cube data unless a LAB/CGATS/TI3 measurement is active.' }
         ]
       },
-      'Beta 2.6.0': {
+      '2.6.0': {
         date: '2025-09-20',
         title: 'CGATS parity + rolloff pause',
         sections: {
@@ -4181,6 +4221,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           }
 
           this._recordAction('setChannelEndValue', { channelName, endValue: validatedEndValue });
+          updateScaleBaselineForChannel(channelName);
 
           return {
             success: true,
@@ -4252,19 +4293,20 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
               if (channelRow) {
                 const channelElement = channelRow.querySelector('.percent-input');
                 if (channelElement) {
-                  
+
                   // Set value and manually trigger UI updates without dispatching input event
                   channelElement.value = validatedPercentage;
-                  
+
                   // Manually perform the same UI updates as the input handler, but without recording actions
                   const p = InputValidator.validateInput(channelElement, InputValidator.clampPercent);
                   const endVal = InputValidator.computeEndFromPercent(p);
                   const endInput = channelRow.querySelector('.end-input');
                   if (endInput) endInput.value = String(endVal);
-                  
+
                   // Update UI display
                   if (channelRow.refreshDisplayFn) channelRow.refreshDisplayFn();
                   if (typeof channelRow._syncHistoryCache === 'function') channelRow._syncHistoryCache();
+                  updateScaleBaselineForChannel(channelAction.channelName);
                 }
               }
             }
@@ -4353,19 +4395,20 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
               if (channelRow) {
                 const channelElement = channelRow.querySelector('.end-input');
                 if (channelElement) {
-                  
+
                   // Set value and manually trigger UI updates without dispatching input event
                   channelElement.value = validatedEndValue;
-                  
+
                   // Manually perform the same UI updates as the input handler, but without recording actions
                   const e = InputValidator.validateInput(channelElement, InputValidator.clampEnd);
                   const p = InputValidator.computePercentFromEnd(e);
                   const percentInput = channelRow.querySelector('.percent-input');
                   if (percentInput) percentInput.value = p.toFixed(1);
-                  
+
                   // Update UI display
                   if (channelRow.refreshDisplayFn) channelRow.refreshDisplayFn();
                   if (typeof channelRow._syncHistoryCache === 'function') channelRow._syncHistoryCache();
+                  updateScaleBaselineForChannel(channelAction.channelName);
                 }
               }
             }
@@ -4394,6 +4437,188 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           return {
             success: false,
             message: `Error applying end value to all channels: ${error.message}`
+          };
+        }
+      }
+
+      scaleChannelEndsByPercent(percent) {
+        try {
+          const MAX_SCALE_PERCENT = 1000;
+          const rawPercent = Number(percent);
+          if (!Number.isFinite(rawPercent) || rawPercent <= 0) {
+            return {
+              success: false,
+              message: `Invalid scale '${percent}'. Enter a positive percent value.`
+            };
+          }
+
+          const requestedPercent = Math.min(MAX_SCALE_PERCENT, Math.max(0, rawPercent));
+          const currentPrinter = getCurrentPrinter();
+          if (!currentPrinter || !Array.isArray(currentPrinter.channels)) {
+            return {
+              success: false,
+              message: 'No printer selected.'
+            };
+          }
+
+          if (!scaleBaselineEnds) scaleBaselineEnds = {};
+          const previousPercent = scaleAllPercent;
+          const previousFactor = Math.max(0.0001, previousPercent / 100 || 1);
+
+          const baselineMap = {};
+          let maxAllowedPercent = MAX_SCALE_PERCENT;
+
+          for (const channelName of currentPrinter.channels) {
+            const row = getChannelRow(channelName);
+            if (!row) continue;
+            const endInput = row.querySelector('.end-input');
+            if (!endInput) continue;
+            const originalEnd = InputValidator.clampEnd(endInput.value);
+
+            let baseEnd = scaleBaselineEnds[channelName];
+            if (!Number.isFinite(baseEnd)) {
+              const computedBase = InputValidator.clampEnd(Math.round(originalEnd / previousFactor));
+              const guardingMax = (previousFactor > 1.000001 && originalEnd >= TOTAL && computedBase < originalEnd);
+              const guardingMin = (previousFactor < 0.999999 && originalEnd <= 0 && computedBase > originalEnd);
+              baseEnd = guardingMax || guardingMin ? originalEnd : computedBase;
+            } else {
+              if (previousFactor > 1.000001 && originalEnd >= TOTAL && baseEnd > originalEnd) {
+                baseEnd = originalEnd;
+              } else if (previousFactor < 0.999999 && originalEnd <= 0 && baseEnd < originalEnd) {
+                baseEnd = originalEnd;
+              }
+            }
+
+            baselineMap[channelName] = baseEnd;
+
+            if (Number.isFinite(baseEnd) && baseEnd > 0) {
+              const limitFactor = TOTAL / baseEnd;
+              if (Number.isFinite(limitFactor) && limitFactor > 0) {
+                const limitPercent = Math.floor(limitFactor * 100);
+                if (limitPercent > 0) {
+                  maxAllowedPercent = Math.min(maxAllowedPercent, limitPercent);
+                }
+              }
+            }
+          }
+
+          if (!Number.isFinite(maxAllowedPercent) || maxAllowedPercent <= 0) {
+            maxAllowedPercent = MAX_SCALE_PERCENT;
+          }
+
+          const appliedPercent = Math.max(0, Math.min(requestedPercent, maxAllowedPercent));
+          if (!Number.isFinite(appliedPercent) || appliedPercent <= 0) {
+            return {
+              success: false,
+              message: 'Scale percent exceeds allowable range.'
+            };
+          }
+
+          const factor = appliedPercent / 100;
+
+          const channelActions = [];
+          const updates = [];
+
+          currentPrinter.channels.forEach(channelName => {
+            const row = getChannelRow(channelName);
+            if (!row) return;
+            const endInput = row.querySelector('.end-input');
+            if (!endInput) return;
+            const originalEndRaw = endInput.value;
+            const originalEnd = InputValidator.clampEnd(originalEndRaw);
+
+            let baseEnd = baselineMap[channelName];
+            if (!Number.isFinite(baseEnd)) {
+              baseEnd = originalEnd;
+            }
+            scaleBaselineEnds[channelName] = baseEnd;
+
+            const scaledValue = Math.round(baseEnd * factor);
+            const newEnd = InputValidator.clampEnd(scaledValue);
+            if (newEnd === originalEnd) return;
+
+            channelActions.push({
+              channelName,
+              type: 'end',
+              oldValue: originalEndRaw,
+              newValue: newEnd.toString()
+            });
+            updates.push({ channelName, row, newEnd, baseEnd });
+          });
+
+          if (updates.length === 0) {
+            scaleAllPercent = previousPercent;
+            if (Math.abs(scaleAllPercent - 100) < 1e-6) {
+              scaleBaselineEnds = null;
+            }
+            if (elements.scaleAllInput) {
+              elements.scaleAllInput.value = formatScalePercent(scaleAllPercent);
+            }
+            const direction = appliedPercent > previousPercent ? 'already maxed at current ink limits' : 'already at minimum for active channels';
+            return {
+              success: true,
+              message: `Scale unchanged — ${direction}.`,
+              details: { scalePercent: scaleAllPercent }
+            };
+          }
+
+          CurveHistory.isBatchOperation = true;
+          try {
+            updates.forEach(({ row, newEnd, baseEnd, channelName }) => {
+              const endInput = row.querySelector('.end-input');
+              if (!endInput) return;
+              endInput.value = newEnd;
+              const validatedEnd = InputValidator.validateInput(endInput, InputValidator.clampEnd);
+              const percentInput = row.querySelector('.percent-input');
+              if (percentInput) {
+                const derivedPercent = InputValidator.computePercentFromEnd(validatedEnd);
+                if (Number.isFinite(derivedPercent)) {
+                  percentInput.value = derivedPercent.toFixed(1);
+                }
+              }
+              scaleBaselineEnds[channelName] = baseEnd;
+              if (row.refreshDisplayFn) row.refreshDisplayFn();
+              if (typeof row._syncHistoryCache === 'function') row._syncHistoryCache();
+            });
+          } finally {
+            CurveHistory.isBatchOperation = false;
+          }
+
+          setTimeout(() => updateCompactChannelsList(), 50);
+          debouncedPreviewUpdate();
+
+          CurveHistory.recordBatchAction(
+            `Scale channel ends by ${appliedPercent}%`,
+            channelActions
+          );
+
+          try { updateSessionStatus(); } catch (err) {}
+
+          this._recordAction('scaleChannelEnds', {
+            scalePercent: appliedPercent,
+            channels: updates.map(u => u.channelName)
+          });
+
+          if (Math.abs(appliedPercent - 100) < 1e-6) {
+            scaleBaselineEnds = null;
+          }
+
+          scaleAllPercent = appliedPercent;
+          if (elements.scaleAllInput) {
+            elements.scaleAllInput.value = formatScalePercent(scaleAllPercent);
+          }
+
+          return {
+            success: true,
+            message: `Scaled ${updates.length} channel${updates.length === 1 ? '' : 's'} by ${appliedPercent}%`,
+            details: { scalePercent: appliedPercent, channels: updates.map(u => u.channelName) }
+          };
+
+        } catch (error) {
+          CurveHistory.isBatchOperation = false;
+          return {
+            success: false,
+            message: `Error scaling channel ends: ${error.message}`
           };
         }
       }
@@ -7333,6 +7558,22 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
         }
       },
       {
+        name: "scale_channel_ends_by_percent",
+        description: "Use the global Scale control to multiply every enabled channel's End against its cached baseline (100% = no change).",
+        parameters: {
+          type: "object",
+          properties: {
+            scalePercent: {
+              type: "number",
+              description: "Desired scale percent for all enabled channels (10–200). 100 leaves Ends unchanged.",
+              minimum: 10,
+              maximum: 200
+            }
+          },
+          required: ["scalePercent"]
+        }
+      },
+      {
         name: "enable_disable_channel",
         description: "Enable or disable a specific ink channel",
         parameters: {
@@ -8641,6 +8882,9 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           
           case 'apply_end_to_all_channels':
             return quadGenActions.applyEndToAllChannels(parameters.endValue);
+
+          case 'scale_channel_ends_by_percent':
+            return quadGenActions.scaleChannelEndsByPercent(parameters.scalePercent ?? parameters.percent ?? parameters.percentage);
           
           case 'enable_disable_channel':
             return quadGenActions.enableDisableChannel(parameters.channelName, parameters.enabled);
@@ -9442,6 +9686,7 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       chartZoomOutBtn: document.getElementById('chartZoomOutBtn'),
       filenameInput: document.getElementById('filenameInput'),
       linearizationFile: document.getElementById('linearizationFile'),
+      scaleAllInput: document.getElementById('scaleAllInput'),
       globalLinearizationBtn: document.getElementById('globalLinearizationBtn'),
       globalLinearizationHint: document.getElementById('globalLinearizationHint'),
       globalLinearizationToggle: document.getElementById('globalLinearizationToggle'),
@@ -9735,6 +9980,46 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       return CHART_ZOOM_LEVELS.length - 1;
     }
 
+    function normalizeDisplayMax(geom) {
+      const raw = Number(geom?.displayMax);
+      if (Number.isFinite(raw) && raw > 0) return raw;
+      return 100;
+    }
+
+    function clampPercentForDisplay(percent, geom) {
+      const max = normalizeDisplayMax(geom);
+      if (!Number.isFinite(percent)) return 0;
+      return Math.max(0, Math.min(max, percent));
+    }
+
+    function mapPercentToY(percent, geom) {
+      const max = normalizeDisplayMax(geom);
+      let chartHeight = Number(geom?.chartHeight);
+      const padding = Number(geom?.padding) || 0;
+      const height = Number(geom?.height) || 0;
+      if (!Number.isFinite(chartHeight) || chartHeight <= 0) {
+        chartHeight = Math.max(0, height - 2 * padding);
+      }
+      const clamped = clampPercentForDisplay(percent, geom);
+      if (chartHeight <= 0) return height - padding;
+      return height - padding - (chartHeight * (clamped / max));
+    }
+
+    function mapYToPercent(yPx, geom) {
+      const max = normalizeDisplayMax(geom);
+      let chartHeight = Number(geom?.chartHeight);
+      const padding = Number(geom?.padding) || 0;
+      const height = Number(geom?.height) || 0;
+      if (!Number.isFinite(chartHeight) || chartHeight <= 0) {
+        chartHeight = Math.max(0, height - 2 * padding);
+      }
+      if (chartHeight <= 0) return 0;
+      const ratio = (height - padding - yPx) / chartHeight;
+      const value = ratio * max;
+      if (!Number.isFinite(value)) return 0;
+      return Math.max(0, Math.min(max, value));
+    }
+
     function updateChartZoomButtons() {
       try {
         const current = getChartZoomPercent();
@@ -9793,47 +10078,31 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
       return setChartZoomIndex(idx, options);
     }
 
-    function normalizeDisplayMax(geom) {
-      const raw = Number(geom?.displayMax);
-      if (Number.isFinite(raw) && raw > 0) return raw;
-      return 100;
+    function formatScalePercent(value) {
+      if (!Number.isFinite(value)) return '100';
+      const rounded = Math.round(value * 10) / 10;
+      return Math.abs(rounded - Math.round(rounded)) < 0.05
+        ? String(Math.round(rounded))
+        : rounded.toFixed(1);
     }
 
-    function clampPercentForDisplay(percent, geom) {
-      const max = normalizeDisplayMax(geom);
-      if (!Number.isFinite(percent)) return 0;
-      return Math.max(0, Math.min(max, percent));
-    }
-
-    function mapPercentToY(percent, geom) {
-      const max = normalizeDisplayMax(geom);
-      let chartHeight = Number(geom?.chartHeight);
-      const padding = Number(geom?.padding) || 0;
-      const height = Number(geom?.height) || 0;
-      if (!Number.isFinite(chartHeight) || chartHeight <= 0) {
-        chartHeight = Math.max(0, height - 2 * padding);
+    function updateScaleBaselineForChannel(channelName) {
+      if (Math.abs(scaleAllPercent - 100) < 1e-6) {
+        scaleBaselineEnds = null;
+        return;
       }
-      const clamped = clampPercentForDisplay(percent, geom);
-      if (chartHeight <= 0) return height - padding;
-      return height - padding - (chartHeight * (clamped / max));
+      if (!scaleBaselineEnds) scaleBaselineEnds = {};
+      const row = getChannelRow(channelName);
+      if (!row) return;
+      const endInput = row.querySelector('.end-input');
+      if (!endInput) return;
+      const currentEnd = InputValidator.clampEnd(endInput.value);
+      const factor = Math.max(0.0001, scaleAllPercent / 100 || 1);
+      const base = InputValidator.clampEnd(Math.round(currentEnd / factor));
+      scaleBaselineEnds[channelName] = base;
     }
 
-    function mapYToPercent(yPx, geom) {
-      const max = normalizeDisplayMax(geom);
-      let chartHeight = Number(geom?.chartHeight);
-      const padding = Number(geom?.padding) || 0;
-      const height = Number(geom?.height) || 0;
-      if (!Number.isFinite(chartHeight) || chartHeight <= 0) {
-        chartHeight = Math.max(0, height - 2 * padding);
-      }
-      if (chartHeight <= 0) return 0;
-      const ratio = (height - padding - yPx) / chartHeight;
-      const value = ratio * max;
-      if (!Number.isFinite(value)) return 0;
-      return Math.max(0, Math.min(max, value));
-    }
-
-    function rescaleSmartCurveForInkLimit(channelName, fromPercent, toPercent) {
+function rescaleSmartCurveForInkLimit(channelName, fromPercent, toPercent) {
       try {
         if (!channelName) return;
         const fromPct = Number(fromPercent);
@@ -10155,28 +10424,21 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
         if (elements.contrastIntentSelect) elements.contrastIntentSelect.setAttribute('title', tip);
       } catch (err) {}
     }
+
     function hasLoadedQuadCurves() {
       try {
-        const data = window.loadedQuadData;
-        return !!(data && data.curves && Object.keys(data.curves).length);
-      } catch (err) { return false; }
-    }
-
-    function isGlobalMeasurementActive() {
-      try {
-        if (!linearizationData || !linearizationApplied) return false;
-        if (!Array.isArray(linearizationData.originalData) || linearizationData.originalData.length === 0) return false;
-        const fmt = String(linearizationData.format || '').toUpperCase();
-        const measurementKeywords = ['LAB', 'MANUAL', 'MEASUREMENT', 'CGATS', 'TI3', 'CTI3'];
-        return measurementKeywords.some(key => fmt.includes(key));
-      } catch (err) { return false; }
+        const curves = window.loadedQuadData?.curves;
+        return !!(curves && Object.keys(curves).length);
+      } catch (err) {
+        return false;
+      }
     }
 
     function canApplyIntentRemap() {
       try {
         const hasQuad = hasLoadedQuadCurves();
-        if (!hasQuad) return false;
-        return !isGlobalMeasurementActive();
+        const hasGlobalMeasurement = !!linearizationData;
+        return hasQuad && !hasGlobalMeasurement;
       } catch (err) { return false; }
     }
     function recomputeLinearizationForCurrentIntent(){
@@ -11302,67 +11564,6 @@ DOMAIN_MAX 1.0 1.0 1.0
       }, 6000);
     }
 
-    function gatherAutoLimitOverridesFromInputs() {
-      const overrides = {};
-      const pairs = [
-        ['limitProximityPct', elements.autoLimitInputLimitProximity],
-        ['slopeAbsolutePct', elements.autoLimitInputSlopeFactor],
-        ['sustainSamples', elements.autoLimitInputSustain],
-        ['minWidthPct', elements.autoLimitInputMinWidth],
-        ['blackShoulderScanStartPct', elements.autoLimitInputBlackShoulder],
-        ['whiteToeScanEndPct', elements.autoLimitInputWhiteToe],
-        ['fallbackPlateauPct', elements.autoLimitInputFallback]
-      ];
-
-      pairs.forEach(([key, input]) => {
-        if (!input) return;
-        const raw = String(input.value || '').trim();
-        if (!raw) return;
-        const num = Number(raw);
-        if (Number.isFinite(num)) overrides[key] = num;
-      });
-
-      return overrides;
-    }
-
-    function populateAutoLimitDebugInputs() {
-      if (!AUTO_LIMITS_ENABLED) return;
-      if (!elements.autoLimitDebugPanel) return;
-      const overrides = AUTO_LIMIT_CONFIG.exportOverrides();
-
-      const assign = (input, key) => {
-        if (!input) return;
-        const def = AUTO_LIMIT_CONFIG.getDefault(key);
-        input.placeholder = String(def);
-        if (overrides && overrides[key] !== undefined) {
-          input.value = overrides[key];
-        } else {
-          input.value = '';
-        }
-      };
-
-      assign(elements.autoLimitInputLimitProximity, 'limitProximityPct');
-      assign(elements.autoLimitInputSlopeFactor, 'slopeAbsolutePct');
-      assign(elements.autoLimitInputSustain, 'sustainSamples');
-      assign(elements.autoLimitInputMinWidth, 'minWidthPct');
-      assign(elements.autoLimitInputBlackShoulder, 'blackShoulderScanStartPct');
-      assign(elements.autoLimitInputWhiteToe, 'whiteToeScanEndPct');
-      assign(elements.autoLimitInputFallback, 'fallbackPlateauPct');
-    }
-
-    function runAutoLimitRecalc() {
-      if (!AUTO_LIMITS_ENABLED) return;
-      try {
-        updatePreview();
-      } catch (err) {
-        console.error('Auto limit preview update failed:', err);
-      }
-      try {
-        updateInkChart();
-      } catch (err) {
-        console.error('Auto limit chart update failed:', err);
-      }
-    }
     
     function animateLogoBars() {
       const cyanBar = document.getElementById('cyanBar');
@@ -12202,7 +12403,7 @@ DOMAIN_MAX 1.0 1.0 1.0
         
         // Draw a faded target reference line (matches current Intent)
         const isAICurve = isSmartCurve(channelName);
-        const showRef = hasLinearization || allowIntentPreview || isAICurve;
+        const showRef = hasLinearization || isAICurve;
         if (showRef) {
           // Build intent-based reference: y = Intent(t) scaled to current End (ink output)
           const refValues = (() => {
@@ -12359,13 +12560,18 @@ DOMAIN_MAX 1.0 1.0 1.0
         }
         
         // Store label info for later positioning
-        const actualEndValue = values[values.length - 1];
-        const actualEndPercent = (actualEndValue / maxValue) * 100;
-        const endY = mapPercentToY(actualEndPercent, geom);
-        
+        let peakValue = 0;
+        for (let i = 0; i < values.length; i++) {
+          const v = values[i];
+          if (Number.isFinite(v) && v > peakValue) peakValue = v;
+        }
+        const peakPercent = (peakValue / maxValue) * 100;
+        const clampedPeak = Math.max(0, Math.min(displayMax, peakPercent));
+        const endY = mapPercentToY(clampedPeak, geom);
+
         labels.push({
           channelName,
-          percent: Math.round(percent),
+          percent: Math.round(peakPercent),
           inkColor,
           endY
         });
@@ -13018,6 +13224,8 @@ DOMAIN_MAX 1.0 1.0 1.0
     let linearizationData = null;
     let linearizationApplied = false;
     let loadedQuadData = null; // Stores complete curve data from loaded .quad files
+    let scaleAllPercent = 100;
+    let scaleBaselineEnds = null;
     
     function applyIntentToLoadedCurve() {
       if (!canApplyIntentRemap()) {
@@ -13270,6 +13478,11 @@ DOMAIN_MAX 1.0 1.0 1.0
           tuningRestoreState = null;
           if (elements.tuningRestoreBtn) elements.tuningRestoreBtn.disabled = true;
           setTuningStatus('');
+        }
+        scaleAllPercent = 100;
+        scaleBaselineEnds = null;
+        if (elements.scaleAllInput) {
+          elements.scaleAllInput.value = formatScalePercent(scaleAllPercent);
         }
         updateIntentDropdownState();
       } catch (e) {
@@ -17909,7 +18122,9 @@ DOMAIN_MAX 1.0 1.0 1.0
             endValue: endVal
           };
         }
-        
+
+        updateScaleBaselineForChannel(tr.dataset.channel);
+
         refreshDisplay();
         debouncedPreviewUpdate();
       });
@@ -17935,7 +18150,9 @@ DOMAIN_MAX 1.0 1.0 1.0
             endValue: e
           };
         }
-        
+
+        updateScaleBaselineForChannel(tr.dataset.channel);
+
         refreshDisplay();
         debouncedPreviewUpdate();
       });
@@ -18062,6 +18279,10 @@ DOMAIN_MAX 1.0 1.0 1.0
         const p = PRINTERS[key];
         const fragment = document.createDocumentFragment();
         channelRowCache.clear();
+        scaleAllPercent = 100;
+        if (elements.scaleAllInput) {
+          elements.scaleAllInput.value = formatScalePercent(scaleAllPercent);
+        }
         
         p.channels.forEach(ch => {
           const tr = createChannelRow(ch, key);
@@ -18556,11 +18777,75 @@ DOMAIN_MAX 1.0 1.0 1.0
       }
     });
 
+    if (elements.scaleAllInput) {
+      const MIN_SCALE = 10;
+      const MAX_SCALE = 1000;
+
+      const commitScaleAll = (raw) => {
+        if (!elements.scaleAllInput) return;
+        let parsed = parseFloat(raw);
+        if (!Number.isFinite(parsed)) {
+          elements.scaleAllInput.value = formatScalePercent(scaleAllPercent);
+          return;
+        }
+        parsed = Math.min(MAX_SCALE, Math.max(MIN_SCALE, parsed));
+        const needsChange = Math.abs(parsed - scaleAllPercent) > 0.0001;
+        const result = needsChange ? quadGenActions.scaleChannelEndsByPercent(parsed) : { success: true, message: null, details: { scalePercent: parsed } };
+        if (!result.success) {
+          elements.scaleAllInput.value = formatScalePercent(scaleAllPercent);
+          showStatus(result.message || 'Unable to scale channel ends');
+          return;
+        }
+        const applied = (result.details && Number.isFinite(result.details.scalePercent)) ? result.details.scalePercent : parsed;
+        scaleAllPercent = applied;
+        elements.scaleAllInput.value = formatScalePercent(scaleAllPercent);
+        if (result.message) {
+          showStatus(result.message);
+        } else if (needsChange) {
+          showStatus(`Scaled channels by ${formatScalePercent(scaleAllPercent)}%`);
+        }
+      };
+
+      elements.scaleAllInput.value = formatScalePercent(scaleAllPercent);
+      elements.scaleAllInput.addEventListener('focus', () => elements.scaleAllInput && elements.scaleAllInput.select());
+      elements.scaleAllInput.addEventListener('blur', (e) => commitScaleAll(e.target.value));
+      elements.scaleAllInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commitScaleAll(e.target.value);
+          elements.scaleAllInput.blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          elements.scaleAllInput.value = formatScalePercent(scaleAllPercent);
+          elements.scaleAllInput.blur();
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'PageUp' || e.key === 'PageDown') {
+          // Allow default increment/decrement, then commit the new value on the next frame
+          setTimeout(() => commitScaleAll(elements.scaleAllInput.value), 0);
+        }
+      });
+
+      elements.scaleAllInput.addEventListener('input', (e) => {
+        const inputEvt = (typeof InputEvent !== 'undefined' && e instanceof InputEvent) ? e : null;
+        if (inputEvt && typeof inputEvt.inputType === 'string') {
+          const skipTypes = new Set([
+            'insertText',
+            'deleteContentBackward',
+            'deleteContentForward',
+            'deleteByCut',
+            'deleteByDrag',
+            'insertFromDrop'
+          ]);
+          if (skipTypes.has(inputEvt.inputType)) return;
+        }
+        commitScaleAll(e.target.value);
+      });
+    }
+
     // Positive-only workflow: no Print Intent control or warnings
     // (Intent mismatch warnings removed; EDN mapping fixed to Positive.)
-    
-    
-    
+
+
+
     // Global linearization button click
       elements.globalLinearizationBtn.addEventListener('click', () => {
         elements.linearizationFile.click();
