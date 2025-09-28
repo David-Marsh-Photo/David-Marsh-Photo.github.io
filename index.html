@@ -2706,7 +2706,9 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
 
   <script>
     // Application version - update in one place
-    const APP_VERSION = 'Beta 2.6.3';
+    const APP_RELEASE_CHANNEL = 'Beta';
+    const APP_VERSION = '2.6.4';
+    const APP_DISPLAY_VERSION = APP_RELEASE_CHANNEL ? `${APP_RELEASE_CHANNEL} ${APP_VERSION}` : APP_VERSION;
     // Dark mode feature flag
     const ENABLE_DARK_MODE = true;
     // Global debug logging toggle for non-AI logs
@@ -2891,6 +2893,26 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
           DOCS: []
         },
         aboutDialog: []
+      },
+      '2.6.4': {
+        date: '2025-09-27',
+        title: 'Legacy LAB/CGATS alignment',
+        sections: {
+          ADDED: [],
+          CHANGED: [],
+          FIXED: [
+            'Legacy LAB loader and manual L* entry now use the printer-space inversion helper (density smoothing + PCHIP) so symmetric datasets cross at 50% without flattening.',
+            'Legacy CGATS/CTI3 imports share the same inversion helper, keeping plotted curves monotone with anchored endpoints and matching smoothing previews.'
+          ],
+          REMOVED: [],
+          DOCS: [
+            'Updated CGATS.17 spec summary in the Help documentation to note the shared inversion workflow.'
+          ]
+        },
+        aboutDialog: [
+          { label: 'LAB & CGATS Parity', desc: 'Legacy quadGEN now matches the modular printer-space inversion, so LAB, manual, and CGATS curves line up.' },
+          { label: 'Documentation', desc: 'CGATS.17 spec entry explains the shared inversion + smoothing behaviour.' }
+        ]
       },
       '2.6.3': {
         date: '2025-09-21',
@@ -3945,7 +3967,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
       let content = '';
       for (const [version, data] of Object.entries(VERSION_HISTORY)) {
         if (version === 'Unreleased') continue;
-        const displayVersion = `Beta ${version}`;
+        const displayVersion = APP_RELEASE_CHANNEL ? `${APP_RELEASE_CHANNEL} ${version}` : version;
         content += `
           <div class="mb-3">
             <p class="font-bold">${displayVersion}</p>
@@ -4403,7 +4425,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                   const e = InputValidator.validateInput(channelElement, InputValidator.clampEnd);
                   const p = InputValidator.computePercentFromEnd(e);
                   const percentInput = channelRow.querySelector('.percent-input');
-                  if (percentInput) percentInput.value = p.toFixed(1);
+                  if (percentInput) percentInput.value = p.toFixed(2);
 
                   // Update UI display
                   if (channelRow.refreshDisplayFn) channelRow.refreshDisplayFn();
@@ -4573,7 +4595,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
               if (percentInput) {
                 const derivedPercent = InputValidator.computePercentFromEnd(validatedEnd);
                 if (Number.isFinite(derivedPercent)) {
-                  percentInput.value = derivedPercent.toFixed(1);
+                  percentInput.value = derivedPercent.toFixed(2);
                 }
               }
               scaleBaselineEnds[channelName] = baseEnd;
@@ -6779,7 +6801,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
               let scale = (InputValidator.computePercentFromEnd(endVal)) / 100; // fraction of TOTAL
               if (scale <= 0 && desiredAbs > 0) {
                 if (endLocked) {
-                  showStatus(`${channelName} edit blocked: exceeds ink limit (${InputValidator.computePercentFromEnd(endVal).toFixed(1)}%).`);
+                  showStatus(`${channelName} edit blocked: exceeds ink limit (${InputValidator.computePercentFromEnd(endVal).toFixed(2)}%).`);
                   return { success: false, message: 'Edit blocked: exceeds ink limit' };
                 }
                 // Channel effectively at 0%; raise End to minimally satisfy desiredAbs at pre-scale 100
@@ -6789,8 +6811,8 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                   pctEl.value = InputValidator.computePercentFromEnd(neededEnd).toFixed(1);
                   endEl.dispatchEvent(new Event('input', { bubbles: true }));
                   pctEl.dispatchEvent(new Event('input', { bubbles: true }));
-                  if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
-                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
+                  if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
+                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
                 }
                 endVal = neededEnd;
                 scale = (InputValidator.computePercentFromEnd(endVal)) / 100;
@@ -6800,7 +6822,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                 // Need to increase End so pre-scale stays within [0,100]
                 const neededEnd = Math.round((desiredAbs / 100) * TOTAL);
                 if (endLocked) {
-                  showStatus(`${channelName} edit blocked: exceeds ink limit (${InputValidator.computePercentFromEnd(endVal).toFixed(1)}%).`);
+                  showStatus(`${channelName} edit blocked: exceeds ink limit (${InputValidator.computePercentFromEnd(endVal).toFixed(2)}%).`);
                   return { success: false, message: 'Edit blocked: exceeds ink limit' };
                 }
                 if (neededEnd > endVal && endEl && pctEl) {
@@ -6808,8 +6830,8 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                   pctEl.value = InputValidator.computePercentFromEnd(neededEnd).toFixed(1);
                   endEl.dispatchEvent(new Event('input', { bubbles: true }));
                   pctEl.dispatchEvent(new Event('input', { bubbles: true }));
-                  if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
-                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
+                  if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
+                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
                   // Recompute scale
                   scale = (InputValidator.computePercentFromEnd(neededEnd)) / 100;
                 }
@@ -6956,8 +6978,8 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                   pctEl.value = InputValidator.computePercentFromEnd(neededEnd).toFixed(1);
                   endEl.dispatchEvent(new Event('input', { bubbles: true }));
                   pctEl.dispatchEvent(new Event('input', { bubbles: true }));
-                  if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
-                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
+                  if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
+                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
                 }
                 endVal = neededEnd;
                 scale = (InputValidator.computePercentFromEnd(endVal)) / 100;
@@ -6970,8 +6992,8 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                   pctEl.value = InputValidator.computePercentFromEnd(neededEnd).toFixed(1);
                   endEl.dispatchEvent(new Event('input', { bubbles: true }));
                   pctEl.dispatchEvent(new Event('input', { bubbles: true }));
-                  if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
-                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
+                  if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
+                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
                   // Recompute scale
                   const newScale = (InputValidator.computePercentFromEnd(neededEnd)) / 100;
                   // Scale existing points down so their absolute outputs remain unchanged
@@ -7056,7 +7078,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
               let scale = (InputValidator.computePercentFromEnd(endVal)) / 100;
               if (scale <= 0 && desiredAbs > 0) {
                 if (endLocked) {
-                  showStatus(`${channelName} edit blocked: exceeds ink limit (${InputValidator.computePercentFromEnd(endVal).toFixed(1)}%).`);
+                  showStatus(`${channelName} edit blocked: exceeds ink limit (${InputValidator.computePercentFromEnd(endVal).toFixed(2)}%).`);
                   return { success: false, message: 'Edit blocked: exceeds ink limit' };
                 }
                 const neededEnd = Math.round((desiredAbs / 100) * TOTAL);
@@ -7065,8 +7087,8 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                   pctEl.value = InputValidator.computePercentFromEnd(neededEnd).toFixed(1);
                   endEl.dispatchEvent(new Event('input', { bubbles: true }));
                   pctEl.dispatchEvent(new Event('input', { bubbles: true }));
-                  console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
-                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
+                  console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
+                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
                 }
                 endVal = neededEnd;
                 scale = (InputValidator.computePercentFromEnd(endVal)) / 100;
@@ -7075,7 +7097,7 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
               if (pre > 100 + 1e-6) {
                 const neededEnd = Math.round((desiredAbs / 100) * TOTAL);
                 if (endLocked) {
-                  showStatus(`${channelName} edit blocked: exceeds ink limit (${InputValidator.computePercentFromEnd(endVal).toFixed(1)}%).`);
+                  showStatus(`${channelName} edit blocked: exceeds ink limit (${InputValidator.computePercentFromEnd(endVal).toFixed(2)}%).`);
                   return { success: false, message: 'Edit blocked: exceeds ink limit' };
                 }
                 if (neededEnd > endVal && endEl && pctEl) {
@@ -7083,8 +7105,8 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                   pctEl.value = InputValidator.computePercentFromEnd(neededEnd).toFixed(1);
                   endEl.dispatchEvent(new Event('input', { bubbles: true }));
                   pctEl.dispatchEvent(new Event('input', { bubbles: true }));
-                  console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
-                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
+                  console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
+                  showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
                   const newScale = (InputValidator.computePercentFromEnd(neededEnd)) / 100;
                   const factor = (oldScale > 0) ? (oldScale / newScale) : 0;
                   for (let j = 0; j < points.length; j++) {
@@ -7242,8 +7264,8 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                     pctEl.value = InputValidator.computePercentFromEnd(neededEnd).toFixed(1);
                     endEl.dispatchEvent(new Event('input', { bubbles: true }));
                     pctEl.dispatchEvent(new Event('input', { bubbles: true }));
-                    if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
-                    showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
+                    if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
+                    showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
                   }
                   endVal = neededEnd;
                   scale = (InputValidator.computePercentFromEnd(endVal)) / 100;
@@ -7256,8 +7278,8 @@ QuadToneRIP (QTR) is a specialized RIP/driver for Epson printers focused on high
                     pctEl.value = InputValidator.computePercentFromEnd(neededEnd).toFixed(1);
                     endEl.dispatchEvent(new Event('input', { bubbles: true }));
                     pctEl.dispatchEvent(new Event('input', { bubbles: true }));
-                    if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
-                    showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(1)}%`);
+                    if (DEBUG_LOGS) console.log(`[INK] ${channelName} channel ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
+                    showStatus(`${channelName} ink limit changed to ${InputValidator.computePercentFromEnd(neededEnd).toFixed(2)}%`);
                     const newScale = (InputValidator.computePercentFromEnd(neededEnd)) / 100;
                     const factor = (oldScale > 0) ? (oldScale / newScale) : 0;
                     for (let j = 0; j < points.length; j++) {
@@ -10080,10 +10102,10 @@ CHANNEL SELECTION RULES - KEEP IT SIMPLE:
 
     function formatScalePercent(value) {
       if (!Number.isFinite(value)) return '100';
-      const rounded = Math.round(value * 10) / 10;
-      return Math.abs(rounded - Math.round(rounded)) < 0.05
+      const rounded = Math.round(value * 100) / 100;
+      return Math.abs(rounded - Math.round(rounded)) < 0.005
         ? String(Math.round(rounded))
-        : rounded.toFixed(1);
+        : rounded.toFixed(2);
     }
 
     function updateScaleBaselineForChannel(channelName) {
@@ -10464,132 +10486,128 @@ function rescaleSmartCurveForInkLimit(channelName, fromPercent, toPercent) {
       } catch (e) { console.warn('Recompute intent failed:', e); }
     }
     function buildLabLinearizationFromOriginal(originalDataPoints, targetOverrideFn, options = {}){
-      const skipDefaultSmoothing = options && options.skipDefaultSmoothing;
       try {
-        const dataPoints = Array.from(originalDataPoints||[]).map(p=>({ input: p.input, lab: p.lab }));
+        const dataPoints = Array.from(originalDataPoints || []).map(point => ({
+          input: Math.max(0, Math.min(100, Number(point?.input ?? 0))),
+          lab: Math.max(0, Math.min(100, Number(point?.lab ?? 0)))
+        }));
         if (!dataPoints.length) throw new Error('No LAB original data');
-        dataPoints.sort((a,b)=>a.input-b.input);
-        const labValues = dataPoints.map(p=>p.lab);
-        const D_values = labValues.map(L => cieDensityFromLstar(L));
-        const Dmax = Math.max(...D_values, 1e-6);
-        console.log('DEBUG: Processing', dataPoints.length, 'LAB points, Dmax:', Dmax);
-        const correctionPoints = dataPoints.map(point => {
-          const pos = Math.max(0, Math.min(1, point.input / 100));
-          const actualDensity = cieDensityFromLstar(point.lab) / Dmax;
-          const expectedDensity = (typeof targetOverrideFn === 'function' ? targetOverrideFn(pos) : getTargetRelAt(pos));
-          const correction = expectedDensity - actualDensity;
-          if (point.input === 0 || point.input === 100) {
-            console.log('DEBUG: Endpoint', point.input + '%: actual =', actualDensity.toFixed(3), 'expected =', expectedDensity.toFixed(3), 'correction =', correction.toFixed(3));
-          }
-          return { position: pos, correction, originalLab: point.lab, originalInput: point.input };
-        });
-        const positionsOnly = correctionPoints.map(p => p.position);
-        const K_NEIGHBORS = LAB_TUNING.get('K_NEIGHBORS', 6);
-        const SIGMA_FLOOR = LAB_TUNING.get('SIGMA_FLOOR', 0.02);
-        const SIGMA_CEIL = LAB_TUNING.get('SIGMA_CEIL', 0.15);
-        const SIGMA_ALPHA = LAB_TUNING.get('SIGMA_ALPHA', 3.0);
-        function localSigmaAt(t) {
-          const n = positionsOnly.length; if (n <= 1) return SIGMA_CEIL;
-          let lo = 0, hi = n; while (lo < hi) { const mid = (lo + hi) >> 1; if (positionsOnly[mid] < t) lo = mid + 1; else hi = mid; }
-          const dists = []; let L = lo - 1, R = lo; while ((L >= 0 || R < n) && dists.length < K_NEIGHBORS) { const dl = (L >= 0) ? Math.abs(t - positionsOnly[L]) : Infinity; const dr = (R < n) ? Math.abs(t - positionsOnly[R]) : Infinity; if (dl <= dr) { if (isFinite(dl)) dists.push(dl); L--; } else { if (isFinite(dr)) dists.push(dr); R++; } }
-          if (!dists.length) return SIGMA_CEIL; dists.sort((a,b)=>a-b); const mid = dists.length >> 1; const med = (dists.length % 2 === 0) ? 0.5*(dists[mid-1]+dists[mid]) : dists[mid];
-          return Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, SIGMA_ALPHA * med));
+        dataPoints.sort((a, b) => a.input - b.input);
+
+        const helper = legacyBuildInkInterpolatorFromMeasurements(dataPoints, options);
+        const targetFn = typeof targetOverrideFn === 'function'
+          ? (t) => clamp01(targetOverrideFn(clamp01(t)))
+          : (t) => clamp01(getTargetRelAt(t));
+
+        const evaluator = helper.createEvaluator(options?.widenFactor ?? 1);
+        const samples = new Array(256);
+        for (let i = 0; i < 256; i++) {
+          const t = i / 255;
+          samples[i] = clamp01(evaluator(t, targetFn));
         }
-        let samples = []; for (let i=0;i<256;i++){ const t = i/255; const sigma = localSigmaAt(t); const denom = 2*sigma*sigma; let num=0, den=0; for (let j=0;j<correctionPoints.length;j++){ const d = Math.abs(t - correctionPoints[j].position); const w = Math.exp(-(d*d)/Math.max(1e-9,denom)); num += correctionPoints[j].correction*w; den += w; } const corr = den>0 ? (num/den) : 0; samples.push(Math.max(0, Math.min(1, t + corr))); }
-        samples[0]=0.0; samples[255]=1.0;
-        if (!skipDefaultSmoothing) {
-          samples = applySmoothingSequence(samples, 30, 'smoothing-splines');
-          samples = applySmoothingSequence(samples, 30, 'smoothing-splines');
-        }
-        samples[0] = 0.0; samples[samples.length - 1] = 1.0;
-        console.log('DEBUG: LAB samples at key points:', 'sample[64]:', samples[64].toFixed(3), 'sample[128]:', samples[128].toFixed(3), 'sample[192]:', samples[192].toFixed(3));
-        console.log('DEBUG: Is linear?', samples.every((val, i) => Math.abs(val - i/255) < 0.001));
+        samples[0] = 0;
+        samples[255] = 1;
+        const monotonicSamples = enforceMonotonicSamples(samples);
+
         return {
-          domainMin:0.0,
-          domainMax:1.0,
-          samples,
+          domainMin: 0,
+          domainMax: 1,
+          samples: monotonicSamples,
           originalData: dataPoints,
-          format:'LAB Data',
+          format: 'LAB Data',
           sourceSpace: DataSpace.SPACE.PRINTER,
-          getSmoothingControlPoints: function(sp){ const widen = 1 + (Math.max(0, Math.min(90, Number(sp) || 0))/100); const dyn = new Array(256); for (let i=0;i<256;i++){ const t=i/255; const sigma = Math.min(0.15, Math.max(0.02, localSigmaAt(t)*widen)); const denom=2*sigma*sigma; let num=0, den=0; for (let j=0;j<correctionPoints.length;j++){ const d = Math.abs(t - correctionPoints[j].position); const w = Math.exp(-(d*d)/Math.max(1e-9,denom)); num += correctionPoints[j].correction*w; den += w; } dyn[i]=Math.max(0, Math.min(1, t + (den>0?(num/den):0))); } dyn[0]=0.0; dyn[255]=1.0; const K = 21 - Math.floor(Math.max(0, Math.min(90, Number(sp) || 0))/10); const controlPointCount = Math.max(3, K); const cpY = []; const cpX = []; for (let i=0;i<controlPointCount;i++){ const x = i/(controlPointCount-1); const idx = Math.round(x*255); cpX.push(x); cpY.push(dyn[idx]); } return { samples: cpY, xCoords: cpX, needsDualTransformation: false }; }
+          getSmoothingControlPoints: function(sp) {
+            const widen = 1 + (Math.max(0, Math.min(90, Number(sp) || 0)) / 100);
+            const widenedEvaluator = helper.createEvaluator(widen);
+            const dyn = new Array(256);
+            for (let i = 0; i < 256; i++) {
+              const t = i / 255;
+              dyn[i] = clamp01(widenedEvaluator(t, targetFn));
+            }
+            const monotonicDyn = enforceMonotonicSamples(dyn);
+            const controlPointCount = Math.max(3, 21 - Math.floor(Math.max(0, Math.min(90, Number(sp) || 0)) / 10));
+            const cpY = [];
+            const cpX = [];
+            for (let i = 0; i < controlPointCount; i++) {
+              const x = i / (controlPointCount - 1 || 1);
+              const idx = Math.round(x * 255);
+              cpX.push(x);
+              cpY.push(monotonicDyn[idx]);
+            }
+            return { samples: cpY, xCoords: cpX, needsDualTransformation: false };
+          }
         };
-      } catch (e) { console.warn('buildLabLinearizationFromOriginal failed:', e); return linearizationData || { domainMin:0, domainMax:1, samples: Array.from({length:256},(_,i)=>i/255), format:'LAB Data', sourceSpace: DataSpace.SPACE.PRINTER }; }
-    }
-    function buildManualLinearizationFromOriginal(originalData, targetOverrideFn, options = {}){
-      const skipDefaultSmoothing = options && options.skipDefaultSmoothing;
-      try {
-        const measuredXs = originalData.map(p=>p.input);
-        const measuredL = originalData.map(p=>p.lab);
-        const N = measuredL.length;
-
-        // Auto-detect range for input values: if any input value > 100, assume 0-255 range; otherwise 0-100 range
-        // L* values are always 0-100 by CIE LAB standard
-        const maxInputValue = measuredXs.length > 0 ? Math.max(...measuredXs) : 0;
-        const divisor = maxInputValue > 100 ? 255 : 100;
-        const posNorm = measuredXs.map(v => Math.max(0, Math.min(divisor, v)) / divisor);
-
-        const Dvals = measuredL.map(L => cieDensityFromLstar(L));
-        const Dmax = Math.max(...Dvals, 1e-6);
-        const actualDensity = Dvals.map(D => D / Dmax);
-        const targetDensity = posNorm.map(t => (typeof targetOverrideFn === 'function' ? targetOverrideFn(t) : getTargetRelAt(t)));
-        const cps = posNorm.map((pos,i)=>({ position: pos, correction: (targetDensity[i] - actualDensity[i]) }));
-        const positionsOnly = cps.map(p=>p.position);
-        const K = LAB_TUNING.get('K_NEIGHBORS', 6);
-        const F = LAB_TUNING.get('SIGMA_FLOOR', 0.02);
-        const C = LAB_TUNING.get('SIGMA_CEIL', 0.15);
-        const A = LAB_TUNING.get('SIGMA_ALPHA', 3.0);
-
-        function localSigmaAt(t){
-          const n=positionsOnly.length;
-          if (n<=1) return C;
-          let lo=0,hi=n;
-          while(lo<hi){
-            const mid=(lo+hi)>>1;
-            if(positionsOnly[mid]<t) lo=mid+1;
-            else hi=mid;
-          }
-          const d=[]; let L=lo-1,R=lo;
-          while((L>=0||R<n)&&d.length<K){
-            const dl=(L>=0)?Math.abs(t-positionsOnly[L]):Infinity;
-            const dr=(R<n)?Math.abs(t-positionsOnly[R]):Infinity;
-            if(dl<=dr){ if(isFinite(dl))d.push(dl); L--; }
-            else { if(isFinite(dr))d.push(dr); R++; }
-          }
-          if(!d.length) return C;
-          d.sort((a,b)=>a-b);
-          const m=d.length>>1;
-          const med=(d.length%2===0)?0.5*(d[m-1]+d[m]):d[m];
-          return Math.min(C, Math.max(F, A*med));
-        }
-
-        const samples=[];
-        for(let i=0;i<256;i++){
-          const t=i/255;
-          const s=localSigmaAt(t);
-          const denom=2*s*s;
-          let num=0, den=0;
-          for(let j=0;j<cps.length;j++){
-            const dd=Math.abs(t-cps[j].position);
-            const w=Math.exp(-(dd*dd)/Math.max(1e-9,denom));
-            num+=cps[j].correction*w;
-            den+=w;
-          }
-          samples[i]=Math.max(0, Math.min(1, t + (den>0?(num/den):0)));
-        }
-        samples[0]=0.0; samples[255]=1.0;
-        return {
-          domainMin:0,
-          domainMax:1,
-          samples,
-          originalData: originalData.slice(),
-          format: 'Manual L* Entry',
+      } catch (e) {
+        console.warn('buildLabLinearizationFromOriginal failed:', e);
+        return linearizationData || {
+          domainMin: 0,
+          domainMax: 1,
+          samples: Array.from({ length: 256 }, (_, i) => i / 255),
+          format: 'LAB Data',
           sourceSpace: DataSpace.SPACE.PRINTER
         };
-      } catch(e){
+      }
+    }
+
+
+    function buildManualLinearizationFromOriginal(originalData, targetOverrideFn, options = {}){
+      try {
+        const normalizedPoints = Array.from(originalData || []).map(point => ({
+          input: Math.max(0, Math.min(100, Number(point?.input ?? 0))),
+          lab: Math.max(0, Math.min(100, Number(point?.lab ?? 0)))
+        }));
+        if (!normalizedPoints.length) throw new Error('No manual L* data');
+        normalizedPoints.sort((a, b) => a.input - b.input);
+
+        const helper = legacyBuildInkInterpolatorFromMeasurements(normalizedPoints, options);
+        const targetFn = typeof targetOverrideFn === 'function'
+          ? (t) => clamp01(targetOverrideFn(clamp01(t)))
+          : (t) => clamp01(getTargetRelAt(t));
+
+        const evaluator = helper.createEvaluator(options?.widenFactor ?? 1);
+        const samples = new Array(256);
+        for (let i = 0; i < 256; i++) {
+          const t = i / 255;
+          samples[i] = clamp01(evaluator(t, targetFn));
+        }
+        samples[0] = 0;
+        samples[255] = 1;
+        const monotonicSamples = enforceMonotonicSamples(samples);
+
+        return {
+          domainMin: 0,
+          domainMax: 1,
+          samples: monotonicSamples,
+          originalData: normalizedPoints.map(point => ({ input: point.input, lab: point.lab })),
+          format: 'Manual L* Entry',
+          sourceSpace: DataSpace.SPACE.PRINTER,
+          getSmoothingControlPoints: function(sp) {
+            const widen = 1 + (Math.max(0, Math.min(90, Number(sp) || 0)) / 100);
+            const widenedEvaluator = helper.createEvaluator(widen);
+            const dyn = new Array(256);
+            for (let i = 0; i < 256; i++) {
+              const t = i / 255;
+              dyn[i] = clamp01(widenedEvaluator(t, targetFn));
+            }
+            const monotonicDyn = enforceMonotonicSamples(dyn);
+            const controlPointCount = Math.max(3, 21 - Math.floor(Math.max(0, Math.min(90, Number(sp) || 0)) / 10));
+            const cpY = [];
+            const cpX = [];
+            for (let i = 0; i < controlPointCount; i++) {
+              const x = i / (controlPointCount - 1 || 1);
+              const idx = Math.round(x * 255);
+              cpX.push(x);
+              cpY.push(monotonicDyn[idx]);
+            }
+            return { samples: cpY, xCoords: cpX, needsDualTransformation: false };
+          }
+        };
+      } catch (e) {
         console.warn('buildManualLinearizationFromOriginal failed:', e);
         return linearizationData;
       }
     }
+
 
     // Helper to prefix edited filenames for display
     function getEditedDisplayName(name, edited) {
@@ -10662,9 +10680,9 @@ function rescaleSmartCurveForInkLimit(channelName, fromPercent, toPercent) {
 
     // Initialize dynamic version numbers
     function initializeVersionNumbers() {
-      elements.pageTitle.textContent = `quadGEN ${APP_VERSION}`;
-      elements.appVersion.textContent = APP_VERSION;
-      
+      elements.pageTitle.textContent = `quadGEN ${APP_DISPLAY_VERSION}`;
+      elements.appVersion.textContent = APP_DISPLAY_VERSION;
+      try { document.getElementById('helpAppVersion').textContent = APP_DISPLAY_VERSION; } catch (err) {}
     }
 
     // Initialize version numbers when DOM is ready
@@ -13226,7 +13244,187 @@ DOMAIN_MAX 1.0 1.0 1.0
     let loadedQuadData = null; // Stores complete curve data from loaded .quad files
     let scaleAllPercent = 100;
     let scaleBaselineEnds = null;
-    
+    let perChannelLinearization = {};
+    let perChannelEnabled = {};
+    let perChannelFilenames = {};
+    let channelPreviousValues = {};
+
+    function bindWindowLinearizationState() {
+      if (typeof window === 'undefined') return;
+      const define = (prop, getter, setter) => {
+        try {
+          Object.defineProperty(window, prop, {
+            configurable: true,
+            get: getter,
+            set: setter
+          });
+        } catch (err) {
+          try {
+            window[prop] = getter();
+          } catch (fallbackErr) {
+            if (DEBUG_LOGS) console.warn(`Failed to bind window property ${prop}:`, fallbackErr);
+          }
+        }
+      };
+
+      define('linearizationData', () => linearizationData, value => { linearizationData = value; });
+      define('linearizationApplied', () => linearizationApplied, value => { linearizationApplied = !!value; });
+      define('loadedQuadData', () => loadedQuadData, value => { loadedQuadData = value; });
+      define('perChannelLinearization', () => perChannelLinearization, value => { perChannelLinearization = value || {}; });
+      define('perChannelEnabled', () => perChannelEnabled, value => { perChannelEnabled = value || {}; });
+      define('perChannelFilenames', () => perChannelFilenames, value => { perChannelFilenames = value || {}; });
+    }
+    bindWindowLinearizationState();
+
+    function enforceMonotonicSamples(values, epsilon = 1 / 65535) {
+      if (!Array.isArray(values) || values.length === 0) return Array.isArray(values) ? values : [];
+      const out = values.map(v => clamp01(v));
+      if (out.length === 0) return out;
+      out[0] = 0;
+      for (let i = 1; i < out.length; i++) {
+        const prev = out[i - 1];
+        if (out[i] < prev) {
+          out[i] = Math.min(1, prev + epsilon);
+        }
+      }
+      const last = out.length - 1;
+      out[last] = 1;
+      return out;
+    }
+
+    function legacyBuildInkInterpolatorFromMeasurements(points, options = {}) {
+      try {
+        const sorted = Array.isArray(points)
+          ? points.map(p => ({
+              input: Math.max(0, Math.min(100, Number(p?.input ?? p?.x ?? 0))),
+              lab: Math.max(0, Math.min(100, Number(p?.lab ?? p?.L ?? (p?.l ?? 0))))
+            }))
+          : [];
+        sorted.sort((a, b) => a.input - b.input);
+        if (!sorted.length) {
+          const identity = (t, targetFn = (x) => clamp01(x)) => clamp01(targetFn(clamp01(t)));
+          return {
+            evaluate: identity,
+            createEvaluator: () => identity,
+            positions: []
+          };
+        }
+
+        const maxLab = Math.max(...sorted.map(point => point.lab));
+        const minLab = Math.min(...sorted.map(point => point.lab));
+        const span = Math.max(1e-6, maxLab - minLab);
+        const measuredInk = sorted.map(point => clamp01((maxLab - point.lab) / span));
+        const positions = sorted.map(point => clamp01(point.input / 100));
+
+        const neighbors = options.neighbors ?? LAB_TUNING.get('K_NEIGHBORS', 6);
+        const sigmaFloor = options.sigmaFloor ?? LAB_TUNING.get('SIGMA_FLOOR', 0.02);
+        const sigmaCeil = options.sigmaCeil ?? LAB_TUNING.get('SIGMA_CEIL', 0.15);
+        const sigmaAlpha = options.sigmaAlpha ?? LAB_TUNING.get('SIGMA_ALPHA', 3.0);
+
+        function localSigmaAt(t) {
+          const n = positions.length;
+          if (n <= 1) return sigmaCeil;
+          let lo = 0;
+          let hi = n;
+          while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (positions[mid] < t) lo = mid + 1;
+            else hi = mid;
+          }
+          const distances = [];
+          let left = lo - 1;
+          let right = lo;
+          while ((left >= 0 || right < n) && distances.length < neighbors) {
+            const dl = left >= 0 ? Math.abs(t - positions[left]) : Infinity;
+            const dr = right < n ? Math.abs(t - positions[right]) : Infinity;
+            if (dl <= dr) {
+              if (Number.isFinite(dl)) distances.push(dl);
+              left -= 1;
+            } else {
+              if (Number.isFinite(dr)) distances.push(dr);
+              right += 1;
+            }
+          }
+          if (!distances.length) return sigmaCeil;
+          distances.sort((a, b) => a - b);
+          const midIndex = distances.length >> 1;
+          const median = distances.length % 2 === 0
+            ? 0.5 * (distances[midIndex - 1] + distances[midIndex])
+            : distances[midIndex];
+          return Math.min(sigmaCeil, Math.max(sigmaFloor, sigmaAlpha * median));
+        }
+
+        function createInkEvaluator(widenFactor = 1) {
+          const smoothed = measuredInk.map((value, idx) => {
+            const pos = positions[idx];
+            const sigma = Math.min(sigmaCeil, Math.max(sigmaFloor, localSigmaAt(pos) * Math.max(0.1, widenFactor)));
+            const denom = Math.max(1e-9, 2 * sigma * sigma);
+            let numerator = 0;
+            let weightSum = 0;
+            for (let j = 0; j < positions.length; j++) {
+              const dist = Math.abs(pos - positions[j]);
+              const weight = Math.exp(-(dist * dist) / denom);
+              numerator += measuredInk[j] * weight;
+              weightSum += weight;
+            }
+            return weightSum > 0 ? numerator / weightSum : measuredInk[idx];
+          });
+
+          if (smoothed.length) {
+            smoothed[0] = clamp01(measuredInk[0]);
+            for (let i = 1; i < smoothed.length; i++) {
+              if (smoothed[i] <= smoothed[i - 1]) smoothed[i] = clamp01(smoothed[i - 1] + (1 / 65535));
+            }
+            smoothed[smoothed.length - 1] = clamp01(measuredInk[measuredInk.length - 1]);
+          }
+
+          const xsPercent = positions.map(p => p * 100);
+          const spline = createPCHIPSpline(xsPercent, smoothed);
+          return (t) => clamp01(spline(clamp01(t) * 100));
+        }
+
+        function buildInverseEvaluator(widenFactor = 1) {
+          const inkEvaluator = createInkEvaluator(widenFactor);
+          return (t, targetFn = (x) => clamp01(x)) => {
+            const targetValue = clamp01(targetFn(clamp01(t)));
+            let lo = 0;
+            let hi = 1;
+            for (let iter = 0; iter < 40; iter++) {
+              const mid = (lo + hi) / 2;
+              const value = inkEvaluator(mid);
+              if (value < targetValue) {
+                lo = mid;
+              } else {
+                hi = mid;
+              }
+            }
+            return clamp01(hi);
+          };
+        }
+
+        const evaluateInverse = buildInverseEvaluator(options.widenFactor ?? 1);
+
+        return {
+          evaluate: (t, targetFn) => evaluateInverse(t, targetFn),
+          createEvaluator(widenFactor = 1) {
+            const evaluator = buildInverseEvaluator(widenFactor);
+            return (t, targetFn) => evaluator(t, targetFn);
+          },
+          positions: positions.slice()
+        };
+      } catch (err) {
+        if (DEBUG_LOGS) console.warn('legacyBuildInkInterpolatorFromMeasurements failed:', err);
+        const identity = (t, targetFn = (x) => clamp01(x)) => clamp01(targetFn(clamp01(t)));
+        return {
+          evaluate: identity,
+          createEvaluator: () => identity,
+          positions: []
+        };
+      }
+    }
+
+
+
     function applyIntentToLoadedCurve() {
       if (!canApplyIntentRemap()) {
         const hasQuad = hasLoadedQuadCurves();
@@ -13493,8 +13691,15 @@ DOMAIN_MAX 1.0 1.0 1.0
     // Check if any linearization is available that would benefit from interpolation
     function hasAnyLinearization() {
       // Active when a global correction is applied, or at least one per-channel correction is enabled
-      const hasGlobal = !!(linearizationData && linearizationApplied);
-      const hasAnyPerEnabled = Object.keys(perChannelLinearization).some(ch => perChannelEnabled[ch]);
+      const globalData = (typeof window !== 'undefined' && window.linearizationData !== undefined) ? window.linearizationData : linearizationData;
+      const globalApplied = (typeof window !== 'undefined' && window.linearizationApplied !== undefined) ? window.linearizationApplied : linearizationApplied;
+      const hasGlobal = !!(globalData && globalApplied);
+
+      const perLinearizationState = (typeof window !== 'undefined' && window.perChannelLinearization !== undefined) ? window.perChannelLinearization : perChannelLinearization;
+      const perEnabledState = (typeof window !== 'undefined' && window.perChannelEnabled !== undefined) ? window.perChannelEnabled : perChannelEnabled;
+      const perKeys = perLinearizationState && typeof perLinearizationState === 'object' ? Object.keys(perLinearizationState) : [];
+      const hasAnyPerEnabled = perKeys.some(ch => !!(perEnabledState && perEnabledState[ch]));
+
       return hasGlobal || hasAnyPerEnabled;
       // Note: Loaded .quad data alone doesn't need interpolation since it already has 256 points
     }
@@ -13751,14 +13956,6 @@ DOMAIN_MAX 1.0 1.0 1.0
       return elements.simplificationMethod ? (elements.simplificationMethod.value || 'smoothing-splines') : 'smoothing-splines';
     }
     
-    // Per-channel linearization storage
-    let perChannelLinearization = {};
-    let perChannelEnabled = {};
-    let perChannelFilenames = {};
-    
-    // Channel previous values storage (for restore after enable)
-    let channelPreviousValues = {};
-
     // Curve history system for undo functionality
     const CurveHistory = {
       history: [], // Unified timeline of actions and snapshots
@@ -16210,125 +16407,47 @@ DOMAIN_MAX 1.0 1.0 1.0
       // Sort by input percentage
       labPoints.sort((a, b) => a.input - b.input);
 
-      // Use same Gaussian correction algorithm as parseLabData
-      const originalDataPoints = [...labPoints];
+      const originalDataPoints = labPoints.map(point => ({ input: point.input, lab: point.lab }));
+      const helper = legacyBuildInkInterpolatorFromMeasurements(originalDataPoints);
+      const targetFn = (t) => clamp01(getTargetRelAt(t));
 
-      // Build Gaussian Weighted Correction in printer space using CIE-exact density mapping
-      const labValues = labPoints.map(p => p.lab);
-      const D_values = labValues.map(L => cieDensityFromLstar(L));
-      const Dmax = Math.max(...D_values, 1e-6);
-
-      const correctionPoints = labPoints.map(point => {
-        const pos = Math.max(0, Math.min(1, point.input / 100));
-        const actualDensity = cieDensityFromLstar(point.lab) / Dmax; // normalized 0..1
-        const expectedDensity = getTargetRelAt(pos);
-        return {
-          position: pos,
-          // Stable sign convention: expected minus actual
-          correction: (expectedDensity - actualDensity),
-          originalLab: point.lab,
-          originalInput: point.input
-        };
-      });
-
-      // Local adaptive bandwidth (σ) for Gaussian weights
-      // σ(t) = clamp(floor=0.02, alpha * s_local(t), ceil=0.15)
-      // s_local(t): median distance to K nearest measured positions (handles uneven spacing)
-      const positionsOnly = correctionPoints.map(p => p.position);
-      const K_NEIGHBORS = LAB_TUNING.get('K_NEIGHBORS', 6);
-      const SIGMA_FLOOR = 0.02;
-      const SIGMA_CEIL = 0.15;
-      const SIGMA_ALPHA = 3.0;
-      function localSigmaAt(t) {
-        const n = positionsOnly.length;
-        if (n <= 1) return SIGMA_CEIL; // fallback
-        // Binary search to find insertion index
-        let lo = 0, hi = n;
-        while (lo < hi) {
-          const mid = (lo + hi) >> 1;
-          if (positionsOnly[mid] < t) lo = mid + 1; else hi = mid;
-        }
-        // Gather K nearest distances from neighbors around index
-        const dists = [];
-        let L = lo - 1, R = lo;
-        while ((L >= 0 || R < n) && dists.length < K_NEIGHBORS) {
-          const dl = (L >= 0) ? Math.abs(t - positionsOnly[L]) : Infinity;
-          const dr = (R < n) ? Math.abs(t - positionsOnly[R]) : Infinity;
-          if (dl <= dr) { if (isFinite(dl)) dists.push(dl); L--; } else { if (isFinite(dr)) dists.push(dr); R++; }
-        }
-        if (dists.length === 0) return SIGMA_CEIL;
-        dists.sort((a,b)=>a-b);
-        const mid = dists.length >> 1;
-        const med = (dists.length % 2 === 0) ? 0.5*(dists[mid-1]+dists[mid]) : dists[mid];
-        const sigma = Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, SIGMA_ALPHA * med));
-        return sigma;
-      }
-
-      const samples = [];
+      const evaluator = helper.createEvaluator(1);
+      const samples = new Array(256);
       for (let i = 0; i < 256; i++) {
-        const position = i / 255;
-        let weightedCorrection = 0;
-        let totalWeight = 0;
-        const sigma = localSigmaAt(position);
-        const denom = 2 * sigma * sigma;
-        for (let j = 0; j < correctionPoints.length; j++) {
-          const d = Math.abs(position - correctionPoints[j].position);
-          const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
-          weightedCorrection += correctionPoints[j].correction * w;
-          totalWeight += w;
-        }
-        const baseline = position;
-        const finalCorrection = totalWeight > 0 ? (weightedCorrection / totalWeight) : 0;
-        const corrected = Math.max(0, Math.min(1, baseline + finalCorrection));
-        samples.push(corrected);
+        const t = i / 255;
+        samples[i] = clamp01(evaluator(t, targetFn));
       }
-      // Anchor endpoints
-      samples[0] = 0.0;
-      samples[samples.length - 1] = 1.0;
+      samples[0] = 0;
+      samples[255] = 1;
+      const monotonicSamples = enforceMonotonicSamples(samples);
 
       return {
         domainMin: 0.0,
         domainMax: 1.0,
-        samples: samples,
+        samples: monotonicSamples,
         originalData: originalDataPoints,
         format: `CGATS.17 (${extractionMethod})`,
         measurementSet,
         sourceSpace: DataSpace.SPACE.PRINTER,
         rawCgatsText: fileContent,
         getSmoothingControlPoints: function(smoothingPercent) {
-          // Local adaptive σ widened by smoothingPercent
           const sp = Math.max(0, Math.min(90, Number(smoothingPercent) || 0));
           const widen = 1 + (sp / 100);
+          const widenedEvaluator = helper.createEvaluator(widen);
           const dyn = new Array(256);
           for (let i = 0; i < 256; i++) {
-            const position = i / 255;
-            let weightedCorrection = 0;
-            let totalWeight = 0;
-            const sigma = localSigmaAt(position) * widen;
-            const denom = 2 * sigma * sigma;
-            for (let j = 0; j < correctionPoints.length; j++) {
-              const d = Math.abs(position - correctionPoints[j].position);
-              const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
-              weightedCorrection += correctionPoints[j].correction * w;
-              totalWeight += w;
-            }
-            const baseline = position;
-            const finalCorrection = totalWeight > 0 ? (weightedCorrection / totalWeight) : 0;
-            dyn[i] = Math.max(0, Math.min(1, baseline + finalCorrection));
+            const t = i / 255;
+            dyn[i] = clamp01(widenedEvaluator(t, targetFn));
           }
-          dyn[0] = 0.0;
-          dyn[255] = 1.0;
-
-          // Generate control points (sparse sample for interpolation)
-          const K = 21 - Math.floor(Math.max(0, Math.min(90, Number(sp) || 0)) / 10);
-          const controlPointCount = Math.max(3, K);
+          const monotonicDyn = enforceMonotonicSamples(dyn);
+          const controlPointCount = Math.max(3, 21 - Math.floor(sp / 10));
           const cpY = [];
           const cpX = [];
           for (let i = 0; i < controlPointCount; i++) {
-            const x = i / (controlPointCount - 1);
+            const x = i / (controlPointCount - 1 || 1);
             const idx = Math.round(x * 255);
             cpX.push(x);
-            cpY.push(dyn[idx]);
+            cpY.push(monotonicDyn[idx]);
           }
           return {
             samples: cpY,
@@ -16459,151 +16578,39 @@ DOMAIN_MAX 1.0 1.0 1.0
 
       for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed) continue; // skip empty
+        if (!trimmed) continue;
         if (trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
-        if (trimmed.toUpperCase().includes('GRAY') && trimmed.toUpperCase().includes('LAB_L')) continue; // header
+        if (trimmed.toUpperCase().includes('GRAY') && trimmed.toUpperCase().includes('LAB_L')) continue;
 
         const parts = trimmed.split(/\s+/);
-        if (parts.length >= 2) {
-          const grayPercent = parseFloat(parts[0]);
-          const labL = parseFloat(parts[1]);
+        if (parts.length < 2) continue;
 
-          // L* values must be 0-100 (CIE LAB standard). Gray input may be 0-100 or 0-255.
-          if (!isNaN(grayPercent) && !isNaN(labL) && grayPercent >= 0 && labL >= 0 && labL <= 100) {
-            // Auto-detect gray range: if gray value > 100, assume 0-255 range; otherwise 0-100 range
-            const normalizedGray = grayPercent > 100 ? (grayPercent / 255) * 100 : grayPercent;
-            dataPoints.push({ input: normalizedGray, lab: labL });
-          }
-        }
+        const grayPercent = parseFloat(parts[0]);
+        const labL = parseFloat(parts[1]);
+
+        if (!Number.isFinite(grayPercent) || !Number.isFinite(labL)) continue;
+        if (labL < 0 || labL > 100) continue;
+        const normalizedGray = grayPercent > 100 ? (grayPercent / 255) * 100 : grayPercent;
+        if (normalizedGray < 0) continue;
+
+        dataPoints.push({ input: normalizedGray, lab: labL });
       }
 
       if (dataPoints.length < 2) {
         throw new Error('Not enough valid LAB measurement data points found. Expected format: GRAY\tLAB_L\tLAB_A\tLAB_B');
       }
 
-      // Sort and capture original data for overlays/metadata
       dataPoints.sort((a, b) => a.input - b.input);
-      const originalDataPoints = [...dataPoints];
 
-      // Build Gaussian Weighted Correction in printer space using CIE-exact density mapping
-      const labValues = dataPoints.map(p => p.lab);
-      const D_values = labValues.map(L => cieDensityFromLstar(L));
-      const Dmax = Math.max(...D_values, 1e-6);
-
-      const correctionPoints = dataPoints.map(point => {
-        const pos = Math.max(0, Math.min(1, point.input / 100));
-        const actualDensity = cieDensityFromLstar(point.lab) / Dmax; // normalized 0..1
-        const expectedDensity = getTargetRelAt(pos);
-        return {
-          position: pos,
-          // Stable sign convention: expected minus actual
-          correction: (expectedDensity - actualDensity),
-          originalLab: point.lab,
-          originalInput: point.input
-        };
-      });
-
-      // Local adaptive bandwidth (σ) for Gaussian weights
-      // σ(t) = clamp(floor=0.02, alpha * s_local(t), ceil=0.15)
-      // s_local(t): median distance to K nearest measured positions (handles uneven spacing)
-      const positionsOnly = correctionPoints.map(p => p.position);
-      const K_NEIGHBORS = LAB_TUNING.get('K_NEIGHBORS', 6);
-      const SIGMA_FLOOR = 0.02;
-      const SIGMA_CEIL = 0.15;
-      const SIGMA_ALPHA = 3.0;
-      function localSigmaAt(t) {
-        const n = positionsOnly.length;
-        if (n <= 1) return SIGMA_CEIL; // fallback
-        // Binary search to find insertion index
-        let lo = 0, hi = n;
-        while (lo < hi) {
-          const mid = (lo + hi) >> 1;
-          if (positionsOnly[mid] < t) lo = mid + 1; else hi = mid;
-        }
-        // Gather K nearest distances from neighbors around index
-        const dists = [];
-        let L = lo - 1, R = lo;
-        while ((L >= 0 || R < n) && dists.length < K_NEIGHBORS) {
-          const dl = (L >= 0) ? Math.abs(t - positionsOnly[L]) : Infinity;
-          const dr = (R < n) ? Math.abs(t - positionsOnly[R]) : Infinity;
-          if (dl <= dr) { if (isFinite(dl)) dists.push(dl); L--; } else { if (isFinite(dr)) dists.push(dr); R++; }
-        }
-        if (dists.length === 0) return SIGMA_CEIL;
-        dists.sort((a,b)=>a-b);
-        const mid = dists.length >> 1;
-        const med = (dists.length % 2 === 0) ? 0.5*(dists[mid-1]+dists[mid]) : dists[mid];
-        const sigma = Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, SIGMA_ALPHA * med));
-        return sigma;
+      const base = buildLabLinearizationFromOriginal(dataPoints);
+      if (!base || !Array.isArray(base.samples)) {
+        throw new Error('Failed to construct LAB linearization curve.');
       }
 
-      const samples = [];
-      for (let i = 0; i < 256; i++) {
-        const position = i / 255;
-        let weightedCorrection = 0;
-        let totalWeight = 0;
-        const sigma = localSigmaAt(position);
-        const denom = 2 * sigma * sigma;
-        for (let j = 0; j < correctionPoints.length; j++) {
-          const d = Math.abs(position - correctionPoints[j].position);
-          const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
-          weightedCorrection += correctionPoints[j].correction * w;
-          totalWeight += w;
-        }
-        const baseline = position;
-        const finalCorrection = totalWeight > 0 ? (weightedCorrection / totalWeight) : 0;
-        const corrected = Math.max(0, Math.min(1, baseline + finalCorrection));
-        samples.push(corrected);
-      }
-      // Anchor endpoints
-      samples[0] = 0.0;
-      samples[samples.length - 1] = 1.0;
-
-      // Return LAB linearization object with optional Gaussian smoothing provider
       return {
-        domainMin: 0.0,
-        domainMax: 1.0,
-        samples: samples,
-        originalData: originalDataPoints,
-        format: 'LAB Data',
-        sourceSpace: DataSpace.SPACE.PRINTER,
-        getSmoothingControlPoints: function(smoothingPercent) {
-          // Local adaptive σ widened by smoothingPercent
-          const sp = Math.max(0, Math.min(90, Number(smoothingPercent) || 0));
-          const widen = 1 + (sp / 100);
-          const dyn = new Array(256);
-          for (let i = 0; i < 256; i++) {
-            const position = i / 255;
-            let weightedCorrection = 0;
-            let totalWeight = 0;
-            const sigmaLocal = localSigmaAt(position) * widen;
-            const sigma = Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, sigmaLocal));
-            const denom = 2 * sigma * sigma;
-            for (let j = 0; j < correctionPoints.length; j++) {
-              const d = Math.abs(position - correctionPoints[j].position);
-              const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
-              weightedCorrection += correctionPoints[j].correction * w;
-              totalWeight += w;
-            }
-            const baseline = position;
-            const finalCorrection = totalWeight > 0 ? (weightedCorrection / totalWeight) : 0;
-            dyn[i] = Math.max(0, Math.min(1, baseline + finalCorrection));
-          }
-          dyn[0] = 0.0;
-          dyn[dyn.length - 1] = 1.0;
-          // Produce evenly spaced control points from dynamic curve
-          const controlPointCount = Math.max(3, 21 - Math.floor(sp / 10));
-          const cpY = [];
-          const cpX = [];
-          for (let i = 0; i < controlPointCount; i++) {
-            const x = i / (controlPointCount - 1);
-            const idx = Math.round(x * 255);
-            cpX.push(x);
-            cpY.push(dyn[idx]);
-          }
-        // Apply dual-axis transformation after interpolation to match industry-standard plot orientation
-        // Signal to apply1DLUT() to perform horizontal + vertical flips on the final mapping
-          return { samples: cpY, xCoords: cpX, controlPointCount, needsDualTransformation: false, influenceRadius: null };
-        }
+        ...base,
+        filename: filename || 'LAB Data',
+        originalData: dataPoints
       };
     }
 
@@ -17964,7 +17971,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             percentHistoryCache.value = currentValue;
             const pct = parseFloat(currentValue);
             if (!isNaN(pct)) {
-              showStatus(`${channelName} ink limit changed to ${pct.toFixed(1)}%`);
+              showStatus(`${channelName} ink limit changed to ${pct.toFixed(2)}%`);
             }
           }
         }, 1000); // Record action 1 second after user stops typing
@@ -17981,7 +17988,7 @@ DOMAIN_MAX 1.0 1.0 1.0
             const e = parseInt(currentValue, 10);
             if (!isNaN(e)) {
               const pct = InputValidator.computePercentFromEnd(e);
-              showStatus(`${channelName} ink limit changed to ${pct.toFixed(1)}%`);
+              showStatus(`${channelName} ink limit changed to ${pct.toFixed(2)}%`);
             }
           }
         }, 1000); // Record action 1 second after user stops typing
@@ -18134,8 +18141,8 @@ DOMAIN_MAX 1.0 1.0 1.0
 
         const e = InputValidator.validateInput(endInput, InputValidator.clampEnd);
         const p = InputValidator.computePercentFromEnd(e);
-        if (DEBUG_LOGS) console.log(`[DEBUG END CHANGE] ${tr.dataset.channel}: End changed to ${e} (${p.toFixed(1)}%) via end input`);
-        percentInput.value = p.toFixed(1);
+        if (DEBUG_LOGS) console.log(`[DEBUG END CHANGE] ${tr.dataset.channel}: End changed to ${e} (${p.toFixed(2)}%) via end input`);
+        percentInput.value = p.toFixed(2);
         
         // If user manually changes from 0 to non-0, clear disabled state
         if (e > 0 && tr.hasAttribute('data-user-disabled')) {
@@ -18379,7 +18386,7 @@ DOMAIN_MAX 1.0 1.0 1.0
           lines.push("#   " + name + ": disabled");
         } else {
           const isWhole = Math.abs(p - Math.round(p)) < 1e-9;
-          const percentFormatted = isWhole ? String(Math.round(p)) : p.toFixed(1);
+          const percentFormatted = isWhole ? String(Math.round(p)) : p.toFixed(2);
           lines.push("#   " + name + ": = " + percentFormatted + "%");
         }
       });
@@ -18392,7 +18399,7 @@ DOMAIN_MAX 1.0 1.0 1.0
       const lines = [
         "## QuadToneRIP " + p.channels.join(","),
         "# Printer: " + p.name,
-        `# quadGEN ${APP_VERSION} by David Marsh`
+        `# quadGEN ${APP_DISPLAY_VERSION} by David Marsh`
       ];
       // Positive-only workflow: no Print Intent annotation
       
@@ -18917,7 +18924,7 @@ DOMAIN_MAX 1.0 1.0 1.0
                   const percentInput = row.querySelector('.percent-input');
                   if (percentInput) {
                     const pct = InputValidator.computePercentFromEnd(endVal);
-                    percentInput.value = pct.toFixed(1);
+                    percentInput.value = pct.toFixed(2);
                     percentInput.dispatchEvent(new Event('input', { bubbles: true }));
                   } else {
                     endInput.value = String(endVal);
@@ -19981,6 +19988,11 @@ DOMAIN_MAX 1.0 1.0 1.0
       validateLstarInputs();
     }
 
+        if (elements.lstarInputs) {
+      elements.lstarInputs.addEventListener('input', validateLstarInputs);
+      elements.lstarInputs.addEventListener('change', validateLstarInputs);
+    }
+
     
     function validateLstarInputs() {
       // Validate measured inputs and update measured swatches
@@ -20117,319 +20129,101 @@ DOMAIN_MAX 1.0 1.0 1.0
     }
     
     function parseManualLstarData(validation) {
-      const measuredPairs = validation.measuredPairs || [];
-      const measuredXs = measuredPairs.map(p => p.x);
-      const measuredL = measuredPairs.map(p => p.l);
-      const N = measuredL.length;
-      // Auto-detect range for input values: if any input value > 100, assume 0-255 range; otherwise 0-100 range
-      // L* values are always 0-100 by CIE LAB standard
-      const maxInputValue = measuredXs.length > 0 ? Math.max(...measuredXs) : 0;
+      const measuredPairs = Array.isArray(validation?.measuredPairs) ? validation.measuredPairs : [];
+      if (!measuredPairs.length) {
+        throw new Error('At least five L* measurements are required.');
+      }
+
+      const maxInputValue = measuredPairs.reduce((max, pair) => {
+        const value = Number(pair?.x ?? 0);
+        return Number.isFinite(value) ? Math.max(max, value) : max;
+      }, 0);
       const divisor = maxInputValue > 100 ? 255 : 100;
-      const posNorm = measuredXs.map(v => Math.max(0, Math.min(divisor, v)) / divisor);
-      const expectedDensity = posNorm.map(t => getTargetRelAt(t));
-      const Dvals = measuredL.map(L => cieDensityFromLstar(L));
-      const Dmax = Math.max(...Dvals, 1e-6);
-      const actualDensity = Dvals.map(D => D / Dmax);
-      const correctionPoints = posNorm.map((pos, i) => ({
-        position: pos,
-        correction: (expectedDensity[i] - actualDensity[i]),
-        originalLab: measuredL[i],
-        originalInput: measuredXs[i]
-      }));
-      const positionsOnly = correctionPoints.map(p => p.position);
-      const K_NEIGHBORS = LAB_TUNING.get('K_NEIGHBORS', 6);
-      const SIGMA_FLOOR = 0.02;
-      const SIGMA_CEIL = 0.15;
-      const SIGMA_ALPHA = 3.0;
-      function localSigmaAt(t) {
-        const n = positionsOnly.length;
-        if (n <= 1) return SIGMA_CEIL;
-        let lo = 0, hi = n;
-        while (lo < hi) {
-          const mid = (lo + hi) >> 1;
-          if (positionsOnly[mid] < t) lo = mid + 1; else hi = mid;
-        }
-        const dists = [];
-        let L = lo - 1, R = lo;
-        while ((L >= 0 || R < n) && dists.length < K_NEIGHBORS) {
-          const dl = (L >= 0) ? Math.abs(t - positionsOnly[L]) : Infinity;
-          const dr = (R < n) ? Math.abs(t - positionsOnly[R]) : Infinity;
-          if (dl <= dr) { if (isFinite(dl)) dists.push(dl); L--; } else { if (isFinite(dr)) dists.push(dr); R++; }
-        }
-        if (dists.length === 0) return SIGMA_CEIL;
-        dists.sort((a,b)=>a-b);
-        const mid = dists.length >> 1;
-        const med = (dists.length % 2 === 0) ? 0.5*(dists[mid-1]+dists[mid]) : dists[mid];
-        return Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, SIGMA_ALPHA * med));
+
+      const normalizedPoints = measuredPairs.map(pair => {
+        const rawInput = Number(pair?.x ?? 0);
+        const labValue = Number(pair?.l ?? 0);
+        const clampedInput = Math.max(0, Math.min(divisor, rawInput));
+        const normalizedInput = divisor > 0 ? (clampedInput / divisor) * 100 : 0;
+        return {
+          input: Math.max(0, Math.min(100, normalizedInput)),
+          lab: Math.max(0, Math.min(100, labValue))
+        };
+      });
+
+      normalizedPoints.sort((a, b) => a.input - b.input);
+
+      const base = buildManualLinearizationFromOriginal(normalizedPoints);
+      if (!base || !Array.isArray(base.samples)) {
+        throw new Error('Failed to construct Manual L* linearization curve.');
       }
-      const samples = new Array(256);
-      for (let i = 0; i < 256; i++) {
-        const t = i / 255;
-        const sigma = localSigmaAt(t);
-        const denom = 2 * sigma * sigma;
-        let num = 0, den = 0;
-        for (let j = 0; j < correctionPoints.length; j++) {
-          const d = Math.abs(t - correctionPoints[j].position);
-          const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
-          num += correctionPoints[j].correction * w;
-          den += w;
-        }
-        const corr = den > 0 ? (num / den) : 0;
-        samples[i] = Math.max(0, Math.min(1, t + corr));
-      }
-      samples[0] = 0.0;
-      samples[255] = 1.0;
-      const originalData = measuredL.map((lab, i) => ({ input: measuredXs[i], lab }));
+
       return {
-        domainMin: 0.0,
-        domainMax: 1.0,
-        samples,
-        originalData,
-        format: 'Manual L* Entry',
-        sourceSpace: DataSpace.SPACE.PRINTER,
-        getSmoothingControlPoints: function(smoothingPercent) {
-          const sp = Math.max(0, Math.min(90, Number(smoothingPercent) || 0));
-          const widen = 1 + (sp / 100);
-          const dyn = new Array(256);
-          for (let i = 0; i < 256; i++) {
-            const t = i / 255;
-            const sigmaLocal = localSigmaAt(t) * widen;
-            const sigma = Math.min(SIGMA_CEIL, Math.max(SIGMA_FLOOR, sigmaLocal));
-            const denom = 2 * sigma * sigma;
-            let num = 0, den = 0;
-            for (let j = 0; j < correctionPoints.length; j++) {
-              const d = Math.abs(t - correctionPoints[j].position);
-              const w = Math.exp(-(d * d) / Math.max(1e-9, denom));
-              num += correctionPoints[j].correction * w;
-              den += w;
-            }
-            const corr = den > 0 ? (num / den) : 0;
-            dyn[i] = Math.max(0, Math.min(1, t + corr));
-          }
-          dyn[0] = 0.0;
-          dyn[255] = 1.0;
-          const controlPointCount = Math.max(3, 21 - Math.floor(sp / 10));
-          const cpY = [];
-          const cpX = [];
-          for (let i = 0; i < controlPointCount; i++) {
-            const x = i / (controlPointCount - 1);
-            const idx = Math.round(x * 255);
-            cpX.push(x);
-            cpY.push(dyn[idx]);
-          }
-          return { samples: cpY, xCoords: cpX, controlPointCount, needsDualTransformation: false, influenceRadius: null };
-        }
+        ...base,
+        filename: `Manual-L-${normalizedPoints.length}pts`,
+        originalData: measuredPairs.map(pair => ({ input: Number(pair?.x ?? 0), lab: Number(pair?.l ?? 0) }))
       };
     }
-    
-    // Modal event handlers (Manual L*)
-    elements.manualLstarBtn.addEventListener('click', () => {
-      updateLstarInputs();
-      elements.lstarModal.classList.remove('hidden');
-      try {
-        document.documentElement.classList.add('overflow-hidden');
-        document.body.classList.add('overflow-hidden');
-      } catch (err) {}
-    });
-    
-    elements.closeLstarModal.addEventListener('click', () => {
-      elements.lstarModal.classList.add('hidden');
-      try {
-        document.documentElement.classList.remove('overflow-hidden');
-        document.body.classList.remove('overflow-hidden');
-      } catch (err) {}
-    });
-    
-    elements.cancelLstar.addEventListener('click', () => {
-      elements.lstarModal.classList.add('hidden');
-      try {
-        document.documentElement.classList.remove('overflow-hidden');
-        document.body.classList.remove('overflow-hidden');
-      } catch (err) {}
-    });
-    
-    elements.lstarModal.addEventListener('click', (e) => {
-      if (e.target === elements.lstarModal) {
-        elements.lstarModal.classList.add('hidden');
-        try {
-          document.documentElement.classList.remove('overflow-hidden');
-          document.body.classList.remove('overflow-hidden');
-        } catch (err) {}
-      }
-    });
-    
-    elements.addLstarInput.addEventListener('click', () => {
-      if (lstarInputCount < 50) { // Increased maximum for more measurement points
-        lstarInputCount++;
-        updateLstarInputs();
-      }
-    });
-    
-    elements.removeLstarInput.addEventListener('click', () => {
-      if (lstarInputCount > 5) {
-        lstarInputCount--;
-        updateLstarInputs();
-      }
-    });
-    
-    // Live validation as user types
-    elements.lstarInputs.addEventListener('input', validateLstarInputs);
-    
-    // Handle direct input in the count field
-    elements.lstarCountInput.addEventListener('input', (e) => {
-      const value = parseInt(e.target.value);
-      if (!isNaN(value) && value >= 5 && value <= 50) {
-        lstarInputCount = value;
-        updateLstarInputs();
-      }
-    });
 
-    // Link toggle removed: Target X% is always linked to Measured X% in this simplified workflow
-    
-    elements.generateFromLstar.addEventListener('click', () => {
-      const validation = validateLstarInputs();
-      if (!validation.valid) return;
-      
-      try {
-        const correctionData = parseManualLstarData(validation);
-        
-        // Apply the correction as global linearization
-        correctionData.filename = `Manual-L-${validation.values.length}pts`;
+    if (elements.manualLstarBtn) {
+      elements.manualLstarBtn.addEventListener('click', () => {
+        try { updateLstarInputs(); } catch (err) {}
+        if (elements.lstarModal) {
+          elements.lstarModal.classList.remove('hidden');
+          try { document.documentElement.classList.add('overflow-hidden'); document.body.classList.add('overflow-hidden'); } catch (err) {}
+        }
+      });
+    }
+
+    if (elements.generateFromLstar) {
+      elements.generateFromLstar.addEventListener('click', () => {
+        const validation = validateLstarInputs();
+        if (!validation.valid) return;
+        try { CurveHistory.captureState('Before: Manual L* generate'); } catch (err) {}
+        let correctionData;
+        try {
+          correctionData = parseManualLstarData(validation);
+        } catch (error) {
+          console.error('Error processing L* values:', error);
+          showStatus(`Error processing L* values: ${error.message}`);
+          return;
+        }
+        correctionData.filename = correctionData.filename || `Manual-L-${validation.values.length}pts`;
+        correctionData.format = correctionData.format || 'Manual L* Entry';
+        correctionData.edited = false;
         linearizationData = normalizeLinearizationEntry(correctionData);
         linearizationApplied = true;
-        
-        // Update UI to show applied correction
-        elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: Manual L* (${getBasePointCountLabel(correctionData)})`);
-        elements.globalLinearizationToggle.disabled = false;
-        elements.globalLinearizationToggle.checked = true;
+        if (elements.globalLinearizationBtn) {
+          elements.globalLinearizationBtn.setAttribute('data-tooltip', `Loaded: Manual L* (${getBasePointCountLabel(correctionData)})`);
+        }
+        if (elements.globalLinearizationToggle) {
+          elements.globalLinearizationToggle.disabled = false;
+          elements.globalLinearizationToggle.checked = true;
+        }
         try { updateRevertButtonsState(); } catch (err) {}
-        
-        // Show file info
-        elements.globalLinearizationInfo.classList.remove('hidden');
-        elements.globalLinearizationFilename.textContent = `Manual L* Entry`;
-        elements.globalLinearizationDetails.textContent = ` (${getBasePointCountLabel(correctionData)})`;
-        try { updateIntentDetailLabel(); } catch (err) {}
+        try { const rev = document.getElementById('revertGlobalToMeasurementBtn'); if (rev) { rev.disabled = false; rev.removeAttribute('disabled'); } } catch (err) {}
+        if (elements.globalLinearizationInfo) elements.globalLinearizationInfo.classList.remove('hidden');
         if (elements.globalLinearizationHint) elements.globalLinearizationHint.classList.add('hidden');
-        
-        // Save the values for re-population
-        const inputs = elements.lstarInputs.querySelectorAll('.lstar-input');
-        lastLstarValues = Array.from(inputs).map(input => input.value);
-        lstarInputCount = validation.values.length;
-        
-        // Update interpolation controls
+        if (elements.globalLinearizationFilename) elements.globalLinearizationFilename.textContent = 'Manual L* Entry';
+        if (elements.globalLinearizationDetails) elements.globalLinearizationDetails.textContent = ` (${getBasePointCountLabel(correctionData)})`;
+        try { refreshGlobalLinearizationDisplay(); } catch (err) {}
         updateInterpolationControls();
         updatePreview();
-        
-        // Update filename to reflect current state
-        updateFilename();
-        
-        elements.lstarModal.classList.add('hidden');
-        
-        // Status note: CIE density; Gaussian-weighted reconstruction with PCHIP interpolation (Manual L*)
-        showStatus(`Applied manual L* correction curve (${getBasePointCountLabel(correctionData)}) (CIE density; Gaussian-weighted reconstruction with PCHIP interpolation)`);
         try { postGlobalDeltaChatSummary(); } catch (err) {}
-      } catch (error) {
-        console.error('Error processing L* values:', error);
-        showStatus(`Error processing L* values: ${error.message}`);
-      }
-    });
-
-    // Save Manual L* entries as a .txt file (Color-Muse format)
-    elements.saveLstarTxt.addEventListener('click', () => {
-      const validation = validateLstarInputs();
-      if (!validation.valid) {
-        // Prompt user to fix entries before saving
-        elements.lstarValidation.textContent = 'Please fix errors and complete all fields before saving .txt';
-        elements.lstarValidation.classList.remove('hidden');
-        elements.lstarValidation.classList.remove('text-center');
-        return;
-      }
-      const measuredPairs = validation.measuredPairs || [];
-      // Header and columns match Color-Muse-Data.txt
-      const header = 'GRAY\tLAB_L\tLAB_A\tLAB_B\n';
-      const lines = measuredPairs.map(p => {
-        const gray = Number(p.x).toFixed(2);
-        const labL = Number(p.l).toFixed(2);
-        return `${gray}\t${labL}\t0.00\t0.00`;
-      });
-      const content = header + lines.join('\n') + '\n';
-      const filename = 'LAB-Data.txt';
-      downloadFile(content, filename, 'text/plain');
-    });
-
-    // Contrast Intent: main dropdown and modal logic
-    if (elements.contrastIntentSelect) {
-      elements.contrastIntentSelect.addEventListener('change', (e)=>{
-        const v = e.target.value;
-        if (v === 'enter_custom') {
-          try { document.documentElement.classList.add('overflow-hidden'); document.body.classList.add('overflow-hidden'); } catch (err) {}
-          elements.intentModal.classList.remove('hidden');
-          try {
-            elements.intentPresetSelect.value = contrastIntent?.id || 'linear';
-            updatePresetDescription();
-            syncPresetControlValuesFromState();
-            // Jump to Custom tab for quicker edits
-            setActiveIntentTab('custom');
-            // Validate any prefilled paste data on open
-            try { if (typeof scheduleAutoParseForPasteArea === 'function') scheduleAutoParseForPasteArea(); } catch (err) {}
-            // Reset the dropdown away from 'enter_custom' so selecting it again will fire 'change'
-            try {
-              const idStr = String(contrastIntent?.id || 'linear');
-              const desired = idStr.startsWith('custom') ? 'custom' : idStr;
-              const opts = Array.from(elements.contrastIntentSelect.options).map(o=>o.value);
-              elements.contrastIntentSelect.value = opts.includes(desired) ? desired : (opts.includes('linear') ? 'linear' : opts[0]);
-            } catch (err) {}
-          } catch (err) {}
-        } else {
-          if (v === 'custom') {
-            // Apply existing custom intent or build from saved prefs/paste
-            const idStr = String(contrastIntent?.id || 'linear');
-            if (idStr.startsWith('custom')) {
-              // Re-apply to ensure consistent state
-              setContrastIntent(contrastIntent.id, contrastIntent.params || {}, 'custom');
-            } else {
-              const prefs = loadCustomPrefs ? loadCustomPrefs() : { gamma:1.00, gain:0.55, shoulder:0.35, pasteText:'' };
-              // Priority: imported samples → pasted → filmic → gamma
-              let applied = false;
-              try {
-                const saved = JSON.parse(localStorage.getItem('customIntentSamplesV1')||'null');
-                if (saved && Array.isArray(saved.samples) && saved.samples.length >= 2) {
-                  const fn = buildTargetFnFromSamples(saved.samples);
-                  const nm = saved.filename ? `Custom (imported: ${saved.filename})` : 'Custom (imported)';
-                  setContrastIntent('custom_points', { name: nm, targetFn: fn }, 'custom');
-                  applied = true;
-                }
-              } catch (err) {}
-              if (!applied && prefs.pasteText && parseIntentPaste) {
-                try {
-                  const parsed = parseIntentPaste(String(prefs.pasteText));
-                  if (parsed && parsed.ok && typeof parsed.targetFn === 'function') {
-                    setContrastIntent('custom_points', { name: parsed.name || 'Custom (pasted)', targetFn: parsed.targetFn }, 'custom');
-                    applied = true;
-                  }
-                } catch (err) {}
-              }
-              if (!applied) {
-                const g = Number(prefs.gamma||1.00), gain = Number(prefs.gain||0.55), shoulder = Number(prefs.shoulder||0.35);
-                if (Math.abs(gain-0.55)>1e-3 || Math.abs(shoulder-0.35)>1e-3) {
-                  setContrastIntent('custom_filmic', { gain, shoulder }, 'custom');
-                } else {
-                  setContrastIntent('custom_gamma', { gamma: g }, 'custom');
-                }
-              }
-            }
-            // Keep selection on 'custom'
-            elements.contrastIntentSelect.value = 'custom';
-            return;
-          }
-          // Use central preset definitions
-          const preset = getPreset(v);
-          if (preset) {
-            setContrastIntent(preset.id, preset.params, 'preset');
-          } else {
-            setContrastIntent('linear', {}, 'preset');
-          }
+        try {
+          const channelNames = getCurrentPrinter().channels;
+          channelNames.forEach(channelName => {
+            updateProcessingDetail(channelName);
+          });
+        } catch (err) {}
+        updateFilename();
+        lastLstarValues = validation.values.map(entry => String(entry.value ?? ''));
+        lstarInputCount = validation.values.length;
+        if (elements.lstarModal) {
+          elements.lstarModal.classList.add('hidden');
+          try { document.documentElement.classList.remove('overflow-hidden'); document.body.classList.remove('overflow-hidden'); } catch (err) {}
         }
+        showStatus(`Applied manual L* correction curve (${getBasePointCountLabel(correctionData)}) (Manual L* inversion with PCHIP smoothing)`);
       });
     }
 
@@ -21474,7 +21268,7 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
 
     // Help popup content (initialize tabs and default content)
     function populateHelp() {
-      try { document.getElementById('helpAppVersion').textContent = APP_VERSION; } catch (err) {}
+      try { document.getElementById('helpAppVersion').textContent = APP_DISPLAY_VERSION; } catch (err) {}
       setHelpActiveTab('readme');
     }
 
@@ -21743,10 +21537,10 @@ Scope: This license applies to this HTML file (quadgen.html) only.</div>
     
     // Update version displays using centralized variable
     function updateVersionDisplays() {
-      document.title = `quadGEN ${APP_VERSION}`;
-      document.getElementById('appVersion').textContent = APP_VERSION;
-      
-      try { document.getElementById('helpAppVersion').textContent = APP_VERSION; } catch (err) {}
+      document.title = `quadGEN ${APP_DISPLAY_VERSION}`;
+      const footerVersion = document.getElementById('appVersion');
+      if (footerVersion) footerVersion.textContent = APP_DISPLAY_VERSION;
+      try { document.getElementById('helpAppVersion').textContent = APP_DISPLAY_VERSION; } catch (err) {}
     }
     
     // Initial setup with error handling
